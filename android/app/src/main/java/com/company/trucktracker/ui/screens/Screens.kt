@@ -59,12 +59,16 @@ fun SplashScreen(isLoading: Boolean, onSessionChecked: (Boolean) -> Unit) {
 // -------------------------------------------------------------
 @Composable
 fun LoginScreen(
+    currentBaseUrl: String = "http://10.0.2.2:5000/",
+    onUpdateBaseUrl: (String) -> Unit = {},
     onLoginSubmit: (String, String) -> Unit,
     isLoading: Boolean,
     errorMessage: String?
 ) {
     var email by remember { mutableStateOf("rahul@company.com") }
     var password by remember { mutableStateOf("driver123") }
+    var showServerConfig by remember { mutableStateOf(false) }
+    var serverUrlInput by remember { mutableStateOf(currentBaseUrl) }
 
     Column(
         modifier = Modifier
@@ -129,6 +133,61 @@ fun LoginScreen(
             enabled = !isLoading && email.isNotEmpty() && password.isNotEmpty(),
             onClick = { onLoginSubmit(email, password) }
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Server: ${serverUrlInput.take(24)}...",
+                color = TextMuted,
+                fontSize = 11.sp
+            )
+            TextButton(onClick = { showServerConfig = !showServerConfig }) {
+                Text(if (showServerConfig) "Hide" else "Configure", color = ChampagneGold, fontSize = 12.sp)
+            }
+        }
+
+        if (showServerConfig) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CharcoalCard),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("API Base URL (HTTPS or LAN)", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = serverUrlInput,
+                        onValueChange = { serverUrlInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ChampagneGold,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val cleanUrl = serverUrlInput.trim()
+                            val formattedUrl = if (!cleanUrl.endsWith("/")) "$cleanUrl/" else cleanUrl
+                            serverUrlInput = formattedUrl
+                            onUpdateBaseUrl(formattedUrl)
+                            showServerConfig = false
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ChampagneGold),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ChampagneGold)
+                    ) {
+                        Text("SAVE SERVER URL", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -20,8 +20,8 @@ class TruckTrackerApp : Application() {
 
         apiClient = ApiClient(this)
         networkMonitor = NetworkMonitor(this)
-        syncManager = SyncManager(this, apiClient.apiService, networkMonitor)
-        driverRepository = DriverRepository(this, apiClient.apiService, networkMonitor, apiClient.preferenceManager)
+        syncManager = SyncManager(this, { apiClient.apiService }, networkMonitor)
+        driverRepository = DriverRepository(this, { apiClient.apiService }, networkMonitor, apiClient.preferenceManager)
         locationService = LocationService(this)
     }
 }

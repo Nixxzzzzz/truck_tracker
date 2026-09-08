@@ -16,10 +16,11 @@ import java.util.*
 
 class DriverRepository(
     private val context: Context,
-    private val apiService: TruckTrackerApiService,
+    private val apiServiceProvider: () -> TruckTrackerApiService,
     private val networkMonitor: NetworkMonitor,
     private val preferenceManager: PreferenceManager
 ) {
+    private val apiService get() = apiServiceProvider()
     private val dao = AppDatabase.getDatabase(context).offlineDao()
     private val gson = Gson()
 

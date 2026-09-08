@@ -8,8 +8,17 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import kotlinx.coroutines.tasks.await
+import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.math.*
+
+private suspend fun <T> Task<T>.awaitResult(): T? = suspendCancellableCoroutine { cont ->
+    addOnSuccessListener { result -> cont.resume(result) }
+    addOnFailureListener { exception -> cont.resumeWithException(exception) }
+    addOnCanceledListener { cont.cancel() }
+}
 
 sealed class LocationResult {
     data class Success(
@@ -41,7 +50,7 @@ class LocationService(private val context: Context) {
             val location: Location? = fusedLocationClient.getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 cts.token
-            ).await()
+            ).awaitResult()
 
             if (location != null) {
                 LocationResult.Success(
@@ -52,7 +61,7 @@ class LocationService(private val context: Context) {
                 )
             } else {
                 // Fallback to last known location if immediate fix is unavailable
-                val lastLocation: Location? = fusedLocationClient.lastLocation.await()
+                val lastLocation: Location? = fusedLocationClient.lastLocation.awaitResult()
                 if (lastLocation != null) {
                     LocationResult.Success(
                         latitude = lastLocation.latitude,
@@ -82,12 +91,12 @@ class LocationService(private val context: Context) {
         targetLng: Double,
         radiusMeters: Double = 150.0
     ): Pair<Boolean, Double> {
-        val distance = calculateDistanceMeters(deviceLat, deviceLng, targetLat, targetLng)
-        val isInside = distance <= radiusMeters
-        return Pair(isInside, distance)
+        return LocationUtils.verifyGeofence(deviceLat, deviceLng, targetLat, targetLng, radiusMeters)
     }
+}
 
-    private fun calculateDistanceMeters(
+object LocationUtils {
+    fun calculateDistanceMeters(
         lat1: Double, lon1: Double,
         lat2: Double, lon2: Double
     ): Double {
@@ -99,5 +108,17 @@ class LocationService(private val context: Context) {
                 sin(dLon / 2).pow(2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return r * c
+    }
+
+    fun verifyGeofence(
+        deviceLat: Double,
+        deviceLng: Double,
+        targetLat: Double,
+        targetLng: Double,
+        radiusMeters: Double = 150.0
+    ): Pair<Boolean, Double> {
+        val distance = calculateDistanceMeters(deviceLat, deviceLng, targetLat, targetLng)
+        val isInside = distance <= radiusMeters
+        return Pair(isInside, distance)
     }
 }

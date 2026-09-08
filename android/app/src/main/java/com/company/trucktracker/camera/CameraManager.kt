@@ -8,9 +8,9 @@ import androidx.core.content.ContextCompat
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCancellableCoroutine
 
 class CameraManager(private val context: Context) {
 

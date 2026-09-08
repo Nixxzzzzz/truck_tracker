@@ -106,6 +106,8 @@ fun MainAppHost(app: TruckTrackerApp) {
 
         "LOGIN" -> {
             LoginScreen(
+                currentBaseUrl = app.apiClient.preferenceManager.getBaseUrl(),
+                onUpdateBaseUrl = { url -> app.apiClient.preferenceManager.saveBaseUrl(url) },
                 isLoading = isLoading,
                 errorMessage = errorMessage,
                 onLoginSubmit = { email, password ->

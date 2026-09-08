@@ -26,12 +26,30 @@ class ApiClient(private val context: Context) {
             .build()
     }
 
-    val apiService: TruckTrackerApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(preferenceManager.getBaseUrl())
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(TruckTrackerApiService::class.java)
-    }
+    @Volatile
+    private var cachedService: TruckTrackerApiService? = null
+    @Volatile
+    private var lastBaseUrl: String? = null
+
+    val apiService: TruckTrackerApiService
+        get() {
+            var url = preferenceManager.getBaseUrl()
+            if (!url.endsWith("/")) {
+                url = "$url/"
+            }
+            if (cachedService == null || lastBaseUrl != url) {
+                synchronized(this) {
+                    if (cachedService == null || lastBaseUrl != url) {
+                        lastBaseUrl = url
+                        cachedService = Retrofit.Builder()
+                            .baseUrl(url)
+                            .client(okHttpClient)
+                            .addConverterFactory(GsonConverterFactory.create())
+                            .build()
+                            .create(TruckTrackerApiService::class.java)
+                    }
+                }
+            }
+            return cachedService!!
+        }
 }

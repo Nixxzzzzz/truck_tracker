@@ -17,9 +17,10 @@ import kotlinx.coroutines.sync.withLock
 
 class SyncManager(
     private val context: Context,
-    private val apiService: TruckTrackerApiService,
+    private val apiServiceProvider: () -> TruckTrackerApiService,
     private val networkMonitor: NetworkMonitor
 ) {
+    private val apiService get() = apiServiceProvider()
     private val dao = AppDatabase.getDatabase(context).offlineDao()
     private val syncMutex = Mutex()
     private val scope = CoroutineScope(Dispatchers.IO)
