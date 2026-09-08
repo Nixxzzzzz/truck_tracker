@@ -1,0 +1,78 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { initDatabase } from './db';
+import authRoutes from './routes/auth';
+import driverRoutes from './routes/driver';
+import tripsRoutes from './routes/trips';
+import fleetRoutes from './routes/fleet';
+import reportsRoutes from './routes/reports';
+import photosRoutes from './routes/photos';
+import googleSheetsRoutes from './routes/googleSheetsRoutes';
+import { UPLOADS_DIR } from './services/photoStorage';
+
+dotenv.config();
+
+// Initialize database schema
+initDatabase();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static file serving for photo uploads
+app.use('/uploads/photos', express.static(UPLOADS_DIR));
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/driver', driverRoutes);
+app.use('/api/trips', tripsRoutes);
+app.use('/api/fleet', fleetRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/photos', photosRoutes);
+app.use('/api/google-sheets', googleSheetsRoutes);
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'TruckTracker Operational API'
+  });
+});
+
+// Serve frontend client in production if built
+const clientDist = path.resolve(__dirname, '../../client/dist');
+app.use(express.static(clientDist));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+    return next();
+  }
+  const indexPath = path.join(clientDist, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) next();
+  });
+});
+
+// Global error handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[TruckTracker Error]', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal operational server error'
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`=================================================`);
+  console.log(`🚀 TruckTracker Server active on http://localhost:${PORT}`);
+  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`=================================================`);
+});
