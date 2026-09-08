@@ -21,13 +21,16 @@ import { StatusBadge } from '../components/StatusBadge';
 import { CameraModal } from '../components/CameraModal';
 import { DelayModal } from '../components/DelayModal';
 import { offlineQueue } from '../services/offlineQueue';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 interface Props {
   currentUser: User;
   onLogout: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
-export const DriverView: React.FC<Props> = ({ currentUser, onLogout }) => {
+export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme }) => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -293,6 +296,10 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout }) => {
               {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
               {isOnline ? 'Online' : 'Offline'}
             </div>
+
+            {onToggleTheme && (
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} size={14} />
+            )}
 
             <button
               onClick={onLogout}

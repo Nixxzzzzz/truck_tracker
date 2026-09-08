@@ -23,9 +23,10 @@ interface Props {
   tripId: string;
   onClose: () => void;
   onRefresh?: () => void;
+  theme?: 'dark' | 'light';
 }
 
-export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh }) => {
+export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, theme = 'dark' }) => {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [activeTab, setActiveTab] = useState<'timeline' | 'map' | 'stops' | 'photos' | 'delays' | 'audit'>('timeline');
   const [loading, setLoading] = useState(true);
@@ -288,6 +289,7 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh })
                 stops={trip.stops}
                 events={trip.events}
                 height="450px"
+                theme={theme}
               />
               <div style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', gap: '16px' }}>
                 <div><span style={{ color: 'var(--accent-gold)' }}>●</span> HQ Base</div>

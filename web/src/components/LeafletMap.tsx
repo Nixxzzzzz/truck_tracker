@@ -7,16 +7,19 @@ interface Props {
   stops?: TripStop[];
   events?: TripEvent[];
   height?: string;
+  theme?: 'dark' | 'light';
 }
 
 export const LeafletMap: React.FC<Props> = ({
   baseLocation,
   stops = [],
   events = [],
-  height = '380px'
+  height = '380px',
+  theme = 'dark'
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -34,16 +37,29 @@ export const LeafletMap: React.FC<Props> = ({
         scrollWheelZoom: false
       });
 
-      // CartoDB Dark Matter tiles for luxury dark aesthetic
-      L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        {
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-          maxZoom: 19
-        }
-      ).addTo(map);
+      const tileUrl = theme === 'light'
+        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 19
+      }).addTo(map);
+
+      tileLayerRef.current = tiles;
       mapInstanceRef.current = map;
+    } else if (tileLayerRef.current) {
+      // Update tile layer on theme switch
+      mapInstanceRef.current.removeLayer(tileLayerRef.current);
+      const tileUrl = theme === 'light'
+        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 19
+      }).addTo(mapInstanceRef.current);
+      tileLayerRef.current = tiles;
     }
 
     const map = mapInstanceRef.current;
@@ -144,7 +160,7 @@ export const LeafletMap: React.FC<Props> = ({
     if (latLngs.length > 0) {
       map.fitBounds(L.latLngBounds(latLngs), { padding: [30, 30], maxZoom: 15 });
     }
-  }, [baseLocation, stops, events]);
+  }, [baseLocation, stops, events, theme]);
 
   return (
     <div

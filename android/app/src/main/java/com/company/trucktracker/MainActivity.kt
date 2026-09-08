@@ -42,8 +42,17 @@ class MainActivity : ComponentActivity() {
         requestHardwarePermissions()
 
         setContent {
-            TruckTrackerTheme {
-                MainAppHost(app = app)
+            var isDarkTheme by remember { mutableStateOf<Boolean>(app.apiClient.preferenceManager.isDarkTheme()) }
+            TruckTrackerTheme(darkTheme = isDarkTheme) {
+                MainAppHost(
+                    app = app,
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = {
+                        val newMode = isDarkTheme.not()
+                        isDarkTheme = newMode
+                        app.apiClient.preferenceManager.setDarkTheme(newMode)
+                    }
+                )
             }
         }
     }
@@ -65,7 +74,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainAppHost(app: TruckTrackerApp) {
+fun MainAppHost(
+    app: TruckTrackerApp,
+    isDarkTheme: Boolean = true,
+    onToggleTheme: () -> Unit = {}
+) {
     var currentScreen by remember { mutableStateOf("SPLASH") }
     var currentUser by remember { mutableStateOf<User?>(app.driverRepository.getCurrentUser()) }
     var activeTrip by remember { mutableStateOf<Trip?>(null) }
@@ -110,6 +123,8 @@ fun MainAppHost(app: TruckTrackerApp) {
                 onUpdateBaseUrl = { url -> app.apiClient.preferenceManager.saveBaseUrl(url) },
                 isLoading = isLoading,
                 errorMessage = errorMessage,
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
                 onLoginSubmit = { email, password ->
                     isLoading = true
                     errorMessage = null
@@ -134,6 +149,8 @@ fun MainAppHost(app: TruckTrackerApp) {
                 driverName = currentUser?.name ?: "Driver",
                 activeTrip = activeTrip,
                 pendingQueueCount = pendingQueueCount,
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
                 onStartTrip = {
                     activeTrip?.let { trip ->
                         scope.launch {

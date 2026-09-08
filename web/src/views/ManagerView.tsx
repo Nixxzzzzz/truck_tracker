@@ -23,13 +23,16 @@ import { Trip, User, Vehicle, Driver, Destination } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { TripCreatorModal } from '../components/TripCreatorModal';
 import { TripDetailModal } from '../components/TripDetailModal';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 interface Props {
   currentUser: User;
   onLogout: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
-export const ManagerView: React.FC<Props> = ({ currentUser, onLogout }) => {
+export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme }) => {
   const [activeTab, setActiveTab] = useState<'operations' | 'fleet' | 'reports' | 'sheets'>('operations');
   const [trips, setTrips] = useState<Trip[]>([]);
   const [attention, setAttention] = useState<any>(null);
@@ -216,6 +219,10 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout }) => {
           >
             <Plus size={16} /> New Trip
           </button>
+
+          {onToggleTheme && (
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+          )}
 
           <div style={{ height: '24px', width: '1px', backgroundColor: 'var(--border-subtle)' }} />
 
@@ -842,6 +849,7 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout }) => {
           tripId={selectedTripId}
           onClose={() => setSelectedTripId(null)}
           onRefresh={loadDashboardData}
+          theme={theme}
         />
       )}
     </div>

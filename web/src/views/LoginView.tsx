@@ -3,11 +3,15 @@ import { Truck, ShieldCheck, ArrowRight, Lock, Mail } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
 
+import { ThemeToggle } from '../components/ThemeToggle';
+
 interface Props {
   onLoginSuccess: (user: User, token: string) => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
-export const LoginView: React.FC<Props> = ({ onLoginSuccess }) => {
+export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onToggleTheme }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,9 +46,15 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px'
+        padding: '20px',
+        position: 'relative'
       }}
     >
+      {onToggleTheme && (
+        <div style={{ position: 'absolute', top: '24px', right: '24px' }}>
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} showLabel />
+        </div>
+      )}
       <div
         className="card card-gold-border"
         style={{

@@ -61,9 +61,11 @@ fun SplashScreen(isLoading: Boolean, onSessionChecked: (Boolean) -> Unit) {
 fun LoginScreen(
     currentBaseUrl: String = "http://10.0.2.2:5000/",
     onUpdateBaseUrl: (String) -> Unit = {},
-    onLoginSubmit: (String, String) -> Unit,
     isLoading: Boolean,
-    errorMessage: String?
+    errorMessage: String?,
+    isDarkTheme: Boolean = true,
+    onToggleTheme: () -> Unit = {},
+    onLoginSubmit: (String, String) -> Unit
 ) {
     var email by remember { mutableStateOf("rahul@company.com") }
     var password by remember { mutableStateOf("driver123") }
@@ -73,18 +75,32 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CharcoalBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            Icons.Default.LocalShipping,
-            contentDescription = null,
-            tint = ChampagneGold,
-            modifier = Modifier.size(48.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.LocalShipping,
+                contentDescription = null,
+                tint = ChampagneGold,
+                modifier = Modifier.size(48.dp)
+            )
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                    contentDescription = "Toggle Theme",
+                    tint = ChampagneGold,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Driver Sign In", style = MaterialTheme.typography.headlineMedium)
+        Text("Driver Sign In", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Text("Access assigned logistics routes", color = TextSecondary, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -199,6 +215,8 @@ fun DriverHomeScreen(
     driverName: String,
     activeTrip: Trip?,
     pendingQueueCount: Int,
+    isDarkTheme: Boolean = true,
+    onToggleTheme: () -> Unit = {},
     onStartTrip: () -> Unit,
     onContinueTrip: () -> Unit,
     onViewTrips: () -> Unit,
@@ -209,7 +227,7 @@ fun DriverHomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CharcoalBg)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Offline Banner
         OfflineQueueBanner(pendingQueueCount)
@@ -224,10 +242,20 @@ fun DriverHomeScreen(
         ) {
             Column {
                 Text("WELCOME BACK", color = ChampagneGold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(driverName, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(driverName, color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            IconButton(onClick = onViewProfile) {
-                Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = TextSecondary, modifier = Modifier.size(32.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onToggleTheme) {
+                    Icon(
+                        if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = "Toggle Theme",
+                        tint = ChampagneGold,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                IconButton(onClick = onViewProfile) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = TextSecondary, modifier = Modifier.size(32.dp))
+                }
             }
         }
 

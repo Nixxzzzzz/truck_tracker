@@ -55,6 +55,14 @@ class PreferenceManager(context: Context) {
         return prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
     }
 
+    fun isDarkTheme(): Boolean {
+        return prefs.getBoolean(KEY_DARK_THEME, true)
+    }
+
+    fun setDarkTheme(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DARK_THEME, enabled).apply()
+    }
+
     fun clear() {
         prefs.edit().remove(KEY_AUTH_TOKEN).remove(KEY_USER).apply()
     }
@@ -63,6 +71,7 @@ class PreferenceManager(context: Context) {
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USER = "user_profile"
         private const val KEY_BASE_URL = "base_url"
+        private const val KEY_DARK_THEME = "dark_theme"
         // 10.0.2.2 is Android emulator host loopback to localhost:5000
         const val DEFAULT_BASE_URL = "http://10.0.2.2:5000/"
     }
