@@ -1,6 +1,46 @@
 # 🚀 TruckTracker — Deployment & Operations Guide
 
-## 1. Prerequisites & Environment
+## 1. Production Architecture Topology
+
+```mermaid
+graph TD
+    subgraph Clients["Fleet & Operations Clients"]
+        Drivers["📱 Android Phones (Field Drivers)<br/>(HTTPS / 4G / 5G / Wi-Fi)"]
+        Managers["💻 Web Browsers (Dispatch Managers)<br/>(HTTPS / Desktop LAN)"]
+    end
+
+    subgraph Edge["Edge & Security Layer"]
+        Proxy["🛡️ Nginx / Caddy / Cloudflare Proxy<br/>(TLS 1.3 Termination :443)"]
+    end
+
+    subgraph Application["TruckTracker Application Tier"]
+        ExpressApp["⚙️ Node.js 24 + Express Server (:5000)<br/>• REST API Endpoints<br/>• Static Photo Streamer"]
+        StaticWeb["🌐 Web Dashboard Static Bundle<br/>(/web/dist)"]
+    end
+
+    subgraph DataTier["Data Persistence Tier"]
+        SQLiteDB[("🗄️ SQLite Database (WAL Mode)<br/>truck_tracker.sqlite")]
+        PhotoDir[("📁 Local Photo Proof Directory<br/>/server/uploads/photos/")]
+        Backups[("💾 Automated Hot Backups<br/>/server/data/backups/")]
+    end
+
+    subgraph Cloud["External Replica"]
+        GSheets[("📈 Google Cloud Sheets API<br/>(8 Operational Tabs)")]
+    end
+
+    Drivers -->|HTTPS :443| Proxy
+    Managers -->|HTTPS :443| Proxy
+
+    Proxy -->|Proxy Pass /api & /uploads| ExpressApp
+    Proxy -->|Serve Static SPA| StaticWeb
+
+    ExpressApp --> SQLiteDB
+    ExpressApp --> PhotoDir
+    ExpressApp -.->|Asynchronous Sync| GSheets
+    SQLiteDB -.->|Nightly Backup| Backups
+```
+
+---
 
 - **Server Runtime**: Node.js v22.5+ or v24+ (Node 24 recommended for native `node:sqlite` DatabaseSync)
 - **Android Build Environment**: Android SDK 34, JDK 17, Gradle 8.7+

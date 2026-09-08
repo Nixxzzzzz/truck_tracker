@@ -28,30 +28,90 @@
 
 ---
 
-## 🗺️ Multi-Stop Route Topology (Single Trip Record)
+## 🗺️ Multi-Stop Route Topology & Lifecycle
 
 TruckTracker natively models complex logistics journeys where **a single trip record contains multiple sequential stops**:
 
-```text
-COMPANY DEPOT (HQ)
-       │
-       ▼
-   STOP 1: ABC Warehouse  ───► Arrived 09:14 AM  •  Activity (Delivery)  •  Departed 09:42 AM
-       │
-       ▼
-   STOP 2: XYZ Store      ───► Arrived 10:31 AM  •  Delay (Traffic 22m)  •  Departed 11:20 AM
-       │
-       ▼
-   STOP 3: PQR Depot      ───► Arrived 12:05 PM  •  Activity (Pickup)    •  Departed 12:35 PM
-       │
-       ▼
-   RETURN JOURNEY         ───► Started 12:36 PM
-       │
-       ▼
-   COMPANY DEPOT (HQ)     ───► Arrived 01:42 PM  •  Trip Completed 01:45 PM
+```mermaid
+graph LR
+    DepotStart["🏢 Company Depot<br/>(Trip Start)"] --> Stop1["📦 Stop 1: ABC Warehouse<br/>(Delivery + Photo)"]
+    Stop1 --> Stop2["🏪 Stop 2: XYZ Retail<br/>(Traffic Delay 22m)"]
+    Stop2 --> Stop3["🏬 Stop 3: Central Depot<br/>(Cargo Pickup)"]
+    Stop3 --> ReturnJ["🚚 Return Journey<br/>(En Route to Base)"]
+    ReturnJ --> DepotEnd["🏁 Company Depot<br/>(Base Arrival & Completion)"]
+
+    style DepotStart fill:#242A35,stroke:#C5A059,stroke-width:2px,color:#F5F5F7
+    style Stop1 fill:#1A1E26,stroke:#34D399,stroke-width:1px,color:#F5F5F7
+    style Stop2 fill:#1A1E26,stroke:#F87171,stroke-width:1px,color:#F5F5F7
+    style Stop3 fill:#1A1E26,stroke:#60A5FA,stroke-width:1px,color:#F5F5F7
+    style ReturnJ fill:#1A1E26,stroke:#FBBF24,stroke-width:1px,color:#F5F5F7
+    style DepotEnd fill:#242A35,stroke:#C5A059,stroke-width:2px,color:#F5F5F7
+```
+
+### Authoritative Trip State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> PLANNED : Manager Dispatches Route
+    PLANNED --> IN_PROGRESS : Driver Taps 'START TRIP'
+    
+    state IN_PROGRESS {
+        [*] --> Stop_Approaching
+        Stop_Approaching --> Stop_Arrived : Haversine Geofence Verified (<=250m)
+        Stop_Arrived --> Activity_Complete : Unload/Load + Required Photo
+        Activity_Complete --> Stop_Departed : Driver Taps 'DEPART'
+        Stop_Departed --> Stop_Approaching : More Stops Remaining
+    }
+    
+    IN_PROGRESS --> DELAYED : Driver Reports Traffic / Breakdown
+    DELAYED --> IN_PROGRESS : Driver Taps 'RESOLVE DELAY'
+    
+    IN_PROGRESS --> RETURNING : All Destination Stops Departed
+    RETURNING --> BASE_ARRIVED : Reached Depot Gate
+    BASE_ARRIVED --> COMPLETED : Driver Taps 'COMPLETE TRIP'
+    COMPLETED --> [*]
 ```
 
 All operational events, delay records, and captured proof photos link directly to the parent `trip_id` and specific `stop_id`.
+
+---
+
+## 🏛️ Multi-Client System Architecture
+
+```mermaid
+graph TD
+    subgraph Drivers["Field Operations"]
+        AndroidApp["📱 Native Android Driver App<br/>(Kotlin + Jetpack Compose)"]
+    end
+
+    subgraph Managers["Dispatch Operations"]
+        WebApp["💻 Web Manager Command Center<br/>(React 19 + TypeScript + Leaflet)"]
+    end
+
+    subgraph Shared["Canonical Contracts"]
+        Contracts["📦 Shared Models & Contracts<br/>(/shared/models.ts, events.ts)"]
+    end
+
+    subgraph Backend["Authoritative Backend Engine"]
+        API["🚀 Express + Node.js 24 Engine<br/>• State Machine Validation<br/>• Server Timestamps<br/>• Haversine Geofence (100-250m)<br/>• Photo Proof Storage"]
+    end
+
+    subgraph Storage["Primary Storage"]
+        DB[("🗄️ SQLite Database (WAL Mode)<br/>truck_tracker.sqlite")]
+    end
+
+    subgraph External["External Reporting Replica"]
+        Sheets[("📊 Google Sheets<br/>8-Tab Sync Replica")]
+    end
+
+    AndroidApp -->|HTTPS / REST API| API
+    WebApp -->|HTTPS / REST API| API
+    AndroidApp -.->|Imports| Contracts
+    WebApp -.->|Imports| Contracts
+    API -.->|Implements| Contracts
+    API --> DB
+    API -.->|Async Queue| Sheets
+```
 
 ---
 
@@ -123,6 +183,33 @@ truck_tracker/
 * **Package:** `com.company.trucktracker.debug`
 * **SDK:** Min SDK 26 (Android 8.0) | Target SDK 34 (Android 14)
 * **Supported Architectures:** `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` (Universal)
+
+### Offline Queue & Auto-Draining Synchronization Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Driver as 📱 Driver (In Field)
+    participant App as Android Compose UI
+    participant Room as Room SQLite DB (offline_events)
+    participant Net as ConnectivityManager
+    participant Backend as Express API Engine
+
+    Driver->>App: Executes action while offline
+    App->>Room: Store event with UUID v4 idempotency_key (Status: PENDING)
+    App-->>Driver: Display "Saved — waiting for network"
+    
+    Note over Driver,Net: Network restored upon entering cellular area
+    Net->>App: onAvailable() Triggered
+    App->>Room: Query pending events ordered by timestamp ASC
+    loop Drain Each Event Sequentially
+        App->>Backend: POST /api/trips/:id/events (Payload + Idempotency Key)
+        Backend->>Backend: Deduplication check on idempotency_key
+        Backend-->>App: 200 OK
+        App->>Room: DELETE FROM offline_events WHERE id = :id
+    end
+    App-->>Driver: Banner clears (0 pending events)
+```
 
 ---
 

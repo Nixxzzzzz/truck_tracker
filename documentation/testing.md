@@ -1,6 +1,20 @@
 # 🧪 TruckTracker — Verification & Testing Protocol
 
-This document defines the comprehensive test protocols for TruckTracker across the backend, web command center, and Android driver client.
+```mermaid
+graph TD
+    TestRunner["🧪 TruckTracker Comprehensive Test Suite (46 Tests)"]
+    
+    TestRunner --> SuiteA["Suite A: Production Scenarios<br/>(20 Tests — 20 Passed)<br/>testProductionScenarios.ts"]
+    TestRunner --> SuiteB["Suite B: Lifecycle Workflow<br/>(20 Steps — 20 Passed)<br/>testWorkflow.ts"]
+    TestRunner --> SuiteC["Suite C: Android Unit Tests<br/>(6 Tests — 6 Passed)<br/>LocationGeofenceTest.kt"]
+    TestRunner --> SuiteD["Suite D: Web Production Build<br/>(0 TypeScript Errors)<br/>tsc && vite build"]
+
+    style TestRunner fill:#242A35,stroke:#C5A059,stroke-width:2px,color:#F5F5F7
+    style SuiteA fill:#1A1E26,stroke:#34D399,stroke-width:1px,color:#F5F5F7
+    style SuiteB fill:#1A1E26,stroke:#34D399,stroke-width:1px,color:#F5F5F7
+    style SuiteC fill:#1A1E26,stroke:#34D399,stroke-width:1px,color:#F5F5F7
+    style SuiteD fill:#1A1E26,stroke:#34D399,stroke-width:1px,color:#F5F5F7
+```
 
 ---
 

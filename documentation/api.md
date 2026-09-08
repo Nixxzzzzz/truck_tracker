@@ -1,6 +1,15 @@
 # 🌐 TruckTracker — REST API Specification
 
-All endpoints communicate using standard JSON payloads over HTTP/HTTPS. All driver and manager endpoints require a JWT Bearer token in the `Authorization` header (`Authorization: Bearer <token>`).
+```mermaid
+flowchart LR
+    Client["📱 Android / 💻 Web Client"] -->|Bearer JWT + JSON Payload| Gateway["Express API Gateway"]
+    Gateway --> Auth["🔐 Auth & RBAC Middleware<br/>(verifyToken & requireRole)"]
+    Auth --> Guard["🛡️ State Machine Guard<br/>(Transition & Geofence Validator)"]
+    Guard --> DB[("🗄️ SQLite WAL Database<br/>(Authoritative Write)")]
+    Guard -.-> Sheets["📊 Google Sheets Sync Queue<br/>(Asynchronous Replica)"]
+    DB --> Response["JSON Operational Response<br/>(200 OK / 201 Created)"]
+    Response --> Client
+```
 
 ---
 
