@@ -2,7 +2,8 @@
 
 > **A mission-critical internal company logistics and fleet-tracking platform connecting field drivers and operations managers through a single authoritative backend.**
 
-[![Build: Verified](https://img.shields.io/badge/Android%20Build-Verified%20(APK%20Generated)-34d399.svg)](#)
+[![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0%20(APK%20Available)-34d399.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(20.08%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/app-debug.apk)
 [![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
 [![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Authoritative)-3b82f6.svg)](#)
 [![Tests: 46 Passed](https://img.shields.io/badge/Automated%20Tests-46%20Passed%20%7C%200%20Failed-34d399.svg)](#)
