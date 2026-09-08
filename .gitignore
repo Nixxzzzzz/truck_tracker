@@ -1,13 +1,33 @@
-node_modules
-dist
+node_modules/
+dist/
+build/
+.gradle/
+*.apk
+*.aab
+local.properties
+
+# Server runtime data
+server/data/*.sqlite
+server/data/*.sqlite-shm
+server/data/*.sqlite-wal
+server/data/backups/
+server/uploads/photos/*
+!server/uploads/photos/.gitkeep
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
-data/backups/*.sqlite
-data/backups/*.sqlite-wal
-data/backups/*.sqlite-shm
+data/backups/
 uploads/photos/*
 !uploads/photos/.gitkeep
+
+# Environment and secrets
 .env
-.DS_Store
+*.pem
+*.key
+google_sheets_credentials.json
+server/google_sheets_credentials.json
+
+# Logs & OS
 *.log
+.DS_Store
+Thumbs.db

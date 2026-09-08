@@ -1,33 +1,36 @@
-# 🚛 TruckTracker — Internal Fleet & Vehicle Trip Tracking System
+# 🚛 TruckTracker — Internal Fleet & Multi-Client Logistics Operational System
 
-> **A professional, high-reliability logistics operational software designed specifically for company-owned fleets, drivers, and dispatch managers.**
+> **A mission-critical internal company logistics and fleet-tracking platform connecting field drivers and operations managers through a single authoritative backend.**
 
-[![Status: Production Ready](https://img.shields.io/badge/Status-Production%20Ready-34d399.svg)](#)
-[![Stack: Node 24 + SQLite + Vite React 19](https://img.shields.io/badge/Stack-Node%2024%20%7C%20SQLite%20%7C%20React%2019-c5a059.svg)](#)
-[![Theme: Luxury Dark Corporate](https://img.shields.io/badge/Design-Luxury%20Corporate%20Dark-c5a059.svg)](#)
-
----
-
-## 📋 Product Overview
-
-**TruckTracker** is an internal company logistics application built to streamline operations between dispatch managers and company drivers.
-
-### 🚫 What this application is NOT:
-- Not a public delivery marketplace or customer app
-- Not an Uber/Porter/Swiggy/Delhivery clone
-- Not a bloated HR/payroll portal
-- Not an expensive SaaS subscription platform
-
-### 🎯 Core Principles:
-1. **SIMPLE FOR THE DRIVER**: A mobile-first, step-by-step guided action flow designed for safe use when stopped (`START` → `ARRIVE` → `ACTIVITY` → `PHOTO` → `DEPART` → `RETURN` → `BASE` → `COMPLETE`).
-2. **CLEAR FOR THE MANAGER**: Real-time operational visibility, "Attention Required" exception monitoring, chronological event timelines, interactive GPS route maps, and daily reports.
-3. **ACCURATE FOR THE COMPANY**: Automatic server-side timestamps, non-fabricatable GPS event points, geofencing verification (100–250m radius), photo proof records, delay tracking, and Google Sheets operational sync.
+[![Build: Verified](https://img.shields.io/badge/Android%20Build-Verified%20(APK%20Generated)-34d399.svg)](#)
+[![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
+[![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Authoritative)-3b82f6.svg)](#)
+[![Tests: 46 Passed](https://img.shields.io/badge/Automated%20Tests-46%20Passed%20%7C%200%20Failed-34d399.svg)](#)
+[![Aesthetics: Luxury Corporate Dark](https://img.shields.io/badge/UI%2FUX-Luxury%20Corporate%20Dark-c5a059.svg)](#)
 
 ---
 
-## 🗺️ Single Trip, Multiple Destinations (Core Architecture)
+## 📋 System Purpose & Non-Negotiables
 
-A critical requirement of TruckTracker is that **one trip can contain 1, 2, 3, 5, or 10+ destination stops**:
+**TruckTracker** is built specifically for internal company logistics tracking of company-owned vehicles and employed drivers.
+
+### 🚫 What this system is NOT:
+* Not a public delivery marketplace or customer-facing tracking portal
+* Not an Uber, Porter, Swiggy, or Delhivery clone
+* Not a bloated generic HR/payroll system
+* Not an expensive multi-tenant SaaS fleet subscription
+
+### 🎯 Core Architecture & Operational Principles:
+1. **SHARED BACKEND AS SINGLE SOURCE OF TRUTH**: All business rules, trip state machines, event sequences, geofence radius validations (100–250m), server timestamps (`CURRENT_TIMESTAMP`), and photo proof requirements are enforced exclusively by the backend SQLite database.
+2. **NATIVE ANDROID DRIVER APP**: Kotlin + Jetpack Compose mobile client designed for safe, one-handed field operation while parked. Includes local Room persistence for offline event queuing, CameraX photo proof capture, and FusedLocationProviderClient GPS acquisition.
+3. **WEB MANAGER COMMAND CENTER**: React 19 + TypeScript + Leaflet.js desktop/tablet dispatch hub with real-time fleet map, multi-stop trip builder, photo inspection viewer, delay analytics, daily operational reports, and Google Sheets sync console.
+4. **SHARED CANONICAL DATA CONTRACTS**: Zero duplicated business definitions. Canonical TypeScript interfaces, event vocabulary, and API contracts are centralized in [`shared/`](file:///u:/tracktracker/shared/).
+
+---
+
+## 🗺️ Multi-Stop Route Topology (Single Trip Record)
+
+TruckTracker natively models complex logistics journeys where **a single trip record contains multiple sequential stops**:
 
 ```text
 COMPANY DEPOT (HQ)
@@ -48,184 +51,237 @@ COMPANY DEPOT (HQ)
    COMPANY DEPOT (HQ)     ───► Arrived 01:42 PM  •  Trip Completed 01:45 PM
 ```
 
-All stops and events belong to the **same parent trip record**, maintaining continuity of operational timeline, distance calculation, delays, and photo proofs.
+All operational events, delay records, and captured proof photos link directly to the parent `trip_id` and specific `stop_id`.
 
 ---
 
-## 🏗️ Multi-Client Architecture & Technology Stack
+## 🏗️ Repository Architecture
 
 ```text
 truck_tracker/
-├── android/                         # Native Android Driver Application (Kotlin + Jetpack Compose)
-│   ├── app/                         # App module, CameraX, Room Offline Queue, FusedLocation
-│   ├── gradle/                      # Version catalog and Gradle wrapper
-│   └── README.md
-├── web/                             # Web Manager Application (React 19 + TypeScript + Leaflet)
-│   ├── src/                         # Command Center, Route Map, Stop Editor, Reports
-│   └── README.md
-├── shared/                          # Canonical Models, Event Definitions & API Contracts
-│   ├── models.ts                    # Single authoritative data models
-│   ├── events.ts                    # Canonical operational events vocabulary
-│   ├── constants.ts                 # Geofence settings (100–250m) & API endpoints
-│   └── api-contracts.ts             # Network request/response schemas
-├── server/                          # Hardened Authoritative Backend (Node 24 + SQLite WAL)
-│   ├── src/                         # Express, state machines, photo streamer, Sheets engine
-│   └── data/                        # SQLite WAL database & automated backups
-└── documentation/                   # Complete Operational & Architectural Manuals
-    ├── architecture.md              # Detailed system architecture
-    ├── android.md                   # Android implementation & 20 screens guide
-    ├── web.md                       # Web Manager dashboard manual
-    ├── api.md                       # REST API specification
-    ├── deployment.md                # Deployment and HTTPS configuration
-    ├── testing.md                   # Testing protocols & scenarios
-    └── operations-manual.md         # Field driver & dispatch manager manuals
+├── android/                         # Native Android Driver Client (Kotlin + Jetpack Compose)
+│   ├── app/                         # App module (CameraX, Room Offline Queue, FusedLocation)
+│   │   ├── src/main/java/com/company/trucktracker/
+│   │   │   ├── camera/              # CameraManager (CameraX lifecycle-bound photo capture)
+│   │   │   ├── data/                # Room entities, DAOs, Retrofit API client, EncryptedSharedPreferences
+│   │   │   ├── location/            # LocationService (FusedLocation & Haversine geofence verification)
+│   │   │   ├── ui/                  # 20 Jetpack Compose screens, luxury theme, components
+│   │   │   ├── MainActivity.kt      # Application root host & runtime permissions
+│   │   │   └── TruckTrackerApp.kt   # Application container & dependency orchestration
+│   │   └── src/test/java/           # LocationGeofenceTest suite (6/6 unit tests passing)
+│   ├── gradle/                      # Version catalog (libs.versions.toml) and wrapper
+│   └── gradlew.bat                  # Gradle execution wrapper
+├── web/                             # Web Manager Command Center (React 19 + TypeScript + Leaflet)
+│   ├── src/
+│   │   ├── components/              # Command Center, Route Map, Stop Editor, Delay Modal, Reports
+│   │   ├── styles/                  # Luxury corporate dark theme design tokens & layout utilities
+│   │   └── api.ts                   # Authoritative backend API integration client
+│   └── package.json                 # Web client dependencies & build scripts
+├── server/                          # Authoritative Backend (Node.js 24 + Express + SQLite WAL)
+│   ├── src/
+│   │   ├── routes/                  # auth, driver, trips, fleet, reports, photos, google-sheets
+│   │   ├── services/                # Google Sheets 8-tab synchronizer & disk photo storage
+│   │   ├── db.ts                    # SQLite database schema, WAL configuration, and indexes
+│   │   ├── testProductionScenarios.ts # 20 automated real-world edge case tests
+│   │   ├── testWorkflow.ts          # 20 automated end-to-end lifecycle workflow tests
+│   │   └── backup.ts                # SQLite zero-downtime hot backup & restore tool
+│   └── data/                        # SQLite WAL database file (`truck_tracker.sqlite`)
+├── shared/                          # Canonical Shared Types & Contracts
+│   ├── models.ts                    # User, Trip, TripStop, TripEvent, TripDelay, Photo models
+│   ├── events.ts                    # Canonical event vocabulary
+│   ├── constants.ts                 # System constants, geofence radius (100–250m), API endpoints
+│   └── api-contracts.ts             # Typed REST request/response schemas
+└── documentation/                   # Complete Architectural & Operational Specifications
+    ├── architecture.md              # Detailed multi-client architecture & data contracts
+    ├── android.md                   # Native Android implementation & 20 screens reference
+    ├── web.md                       # Dispatch Manager Command Center manual
+    ├── api.md                       # REST API specification & event schema
+    ├── deployment.md                # LAN staging & production HTTPS reverse-proxy setup
+    ├── testing.md                   # Complete test matrix & scenario verification
+    └── operations-manual.md         # Field driver handbook & fleet manager SOP
 ```
-
-| Layer | Technology | Rationale |
-|---|---|---|
-| **Android Client** | Kotlin 2.0 + Jetpack Compose + CameraX + Room | Native mobile experience, one-handed operation, offline-first queue |
-| **Web Client** | Vite + React 19 + TypeScript + Leaflet.js | Desktop & tablet operations dashboard, interactive mapping, reports |
-| **Shared Contracts** | TypeScript & Serialized JSON Models | Canonical data contracts, zero duplicate business definitions |
-| **Backend Runtime** | Node.js 24 + Express + TypeScript | Fast asynchronous event processing, server-authoritative timestamps |
-| **Relational Database** | Node 24 Native `DatabaseSync` (`node:sqlite`) | Zero native compilation issues, WAL mode, foreign key cascading |
-| **Styling & Aesthetics** | Pure Vanilla CSS Design System | Custom luxury corporate dark theme (Charcoal, Slate, Champagne Gold) |
-| **Operational Sync** | Google Sheets 8-Tab Synchronization Engine | Dedicated operational tabs with retry mechanism |
 
 ---
 
-## ⚡ Quick Start & Setup
+## 📱 Native Android Driver Application
+
+### Key Features
+* **100% Jetpack Compose UI**: 20 distinct driver states adhering to the luxury corporate dark design system (Charcoal `#0E1013`, Slate `#242A35`, Warm Ivory `#F5F5F7`, Champagne Gold `#C5A059`).
+* **Hardware CameraX Integration**: Native photo capture with on-screen preview, retake capabilities, and background JPEG compression.
+* **FusedLocationProviderClient**: Precise GPS acquisition with automatic accuracy threshold detection (> 300m flagged as poor accuracy) and offline Haversine geofence calculation.
+* **Offline-First Room Queue**: All operational actions work seamlessly without an internet connection. Events are serialized with UUID v4 idempotency keys and stored in the local SQLite Room database (`offline_events`).
+* **Auto-Draining Sync Manager**: Monitors network connectivity via `ConnectivityManager` and automatically drains queued events sequentially upon network restoration without duplicate records.
+* **On-Device Server URL Configuration**: Dedicated server configuration panel on the Login Screen allows instant switching between:
+  - **Local LAN Server**: `http://192.168.1.5:5000/`
+  - **Local Emulator**: `http://10.0.2.2:5000/`
+  - **Production HTTPS**: `https://logistics.company.com/`
+* **Production HTTPS Network Security**: Hardened [`network_security_config.xml`](file:///u:/tracktracker/android/app/src/main/res/xml/network_security_config.xml) enforcing `cleartextTrafficPermitted="false"` across production endpoints with scoped local loopbacks for development.
+
+### Verified Debug APK Details
+* **Location:** `android/app/build/outputs/apk/debug/app-debug.apk`
+* **Size:** `20,088,272 bytes` (~20.08 MB)
+* **Package:** `com.company.trucktracker.debug`
+* **SDK:** Min SDK 26 (Android 8.0) | Target SDK 34 (Android 14)
+* **Supported Architectures:** `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` (Universal)
+
+---
+
+## ⚡ Quick Start & Development Setup
 
 ### 1. Prerequisites
-- **Node.js**: v22.5.0 or v24+ (Node 24 recommended)
-- **Git**
-- **Android SDK / Studio** (optional, for Android APK compilation)
+* **Node.js**: v22.5.0+ or v24+ (Node 24 recommended)
+* **Java Development Kit**: JDK 17 (Microsoft OpenJDK 17 or Eclipse Temurin 17)
+* **Android SDK**: Android SDK 34 platform & build tools (optional, for compiling Android APK)
 
-### 2. Clone Repository & Install Dependencies
+### 2. Clone & Install Workspace Dependencies
 ```bash
 git clone https://github.com/Nixxzzzzz/truck_tracker.git
 cd truck_tracker
 
-# Install server and web dependencies
+# Install server dependencies
 cd server && npm install
+
+# Install web dependencies
 cd ../web && npm install
 cd ..
 ```
 
-### 3. Seed Database with Realistic Fleet Data
+### 3. Initialize & Seed Authoritative Database
 ```bash
 cd server
 npx tsx src/seed.ts
 cd ..
 ```
 
-### 4. Run Development Servers
+### 4. Start Development Services
 ```bash
-# Terminal 1: Backend Server (Port 5000)
+# Terminal 1: Authoritative Backend Server (Port 5000)
 cd server
-npx tsx src/index.ts
+npm run dev
 
-# Terminal 2: Frontend Client (Port 5173)
-cd client
+# Terminal 2: Web Manager Command Center (Port 5173)
+cd web
 npm run dev
 ```
 
-Open your browser at **`http://localhost:5173`**.
+* Open Manager Command Center: **`http://localhost:5173`**
+* Backend API Health Check: **`http://localhost:5000/api/health`** or **`http://192.168.1.5:5000/api/health`**
 
 ---
 
-## 🔑 Default Seed Accounts
+## 📲 Android Build & Physical Device Testing
 
-The database comes pre-seeded with realistic logistics company data:
-
-| Role | Email | Password | Intended Interface |
-|---|---|---|---|
-| **Operations Manager** | `manager@company.com` | `manager123` | Desktop / Tablet Command Dashboard |
-| **Lead Driver (Rahul)** | `rahul@company.com` | `driver123` | Mobile-First Guided Driver Interface |
-| **Driver (Amit)** | `amit@company.com` | `driver123` | Mobile-First Guided Driver Interface |
-| **Driver Test Alias** | `driver@company.com` | `driver123` | Mobile-First Guided Driver Interface |
-
-> 💡 *A floating **QA Role Switcher** is pinned to the bottom-left corner of the interface, allowing immediate switching between the Mobile Driver View and Desktop Manager Command Center without re-authenticating.*
-
----
-
-## 📊 Google Sheets Operational Sync
-
-TruckTracker keeps company database records as the **primary source of truth**. Data is synchronized to 8 operational sheets:
-
-1. **`Trips`**: Trip ID, Date, Driver, Vehicle, Status, Starting Location, Planned Departure, Actual Start, Base Arrival, Completion, Delays, Distance
-2. **`Stops`**: Trip ID, Stop ID, Stop Number, Destination, Planned/Actual Arrival, Activity, Departure, Status, Delay Variance
-3. **`Events`**: Event ID, Trip ID, Event Type, Timestamp, Driver, Vehicle, Latitude, Longitude, GPS Accuracy
-4. **`Delays`**: Delay ID, Trip ID, Reason, Duration Minutes, Start/End Time, Driver, Location
-5. **`Activities`**: Activity ID, Type, Status, Completion Time, Quantity, Reference Number, Signoff
-6. **`Photos`**: Photo ID, Category, Driver, Vehicle, Timestamp, GPS, Storage URL
-7. **`Drivers`**: Driver ID, Name, Phone, Employee ID, Status, Assigned Vehicle
-8. **`Vehicles`**: Vehicle Plate Number, Model, Type, Status, Assigned Driver
-
-### Configuring Live Google Sheets:
-Set the following environment variables in `.env`:
-```env
-GOOGLE_SPREADSHEET_ID=your_spreadsheet_id_here
-GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
+### Compiling the APK
+From the root repository directory:
+```powershell
+cd android
+.\gradlew.bat assembleDebug testDebugUnitTest
 ```
-*If credentials are not supplied, TruckTracker automatically runs in **Local Operational Logging Mode**, maintaining sync logs with status `SYNCED`/`FAILED` and full retry capability.*
+* **APK Output:** `android/app/build/outputs/apk/debug/app-debug.apk`
+* **Unit Tests:** 6/6 unit tests executed and passed.
+
+### Installing onto a Physical Android Phone
+1. Enable **Developer Options** on the Android device (tap **Build Number** 7 times under **Settings → About Phone**).
+2. Enable **USB Debugging** in **Settings → Developer Options**.
+3. Connect the phone via USB and verify ADB detection:
+   ```powershell
+   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" devices -l
+   ```
+4. Install the APK:
+   ```powershell
+   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" install -r "android/app/build/outputs/apk/debug/app-debug.apk"
+   ```
+5. Launch the app:
+   ```powershell
+   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" shell am start -n com.company.trucktracker.debug/com.company.trucktracker.MainActivity
+   ```
+6. On the Sign In screen, tap **Configure** and enter your computer's Wi-Fi LAN address (`http://192.168.1.5:5000/`), then sign in with `rahul@company.com` / `driver123`.
 
 ---
 
-## 🧪 Automated Testing & Production Hardening
+## 🔑 Pre-Seeded Demonstration Accounts
 
-TruckTracker includes two complete automated verification suites covering end-to-end operational lifecycles and real-world edge cases.
+| Role | Email | Password | Primary Interface |
+|---|---|---|---|
+| **Logistics Manager** | `manager@company.com` | `manager123` | Desktop / Tablet Web Command Center |
+| **Field Driver (Rahul)** | `rahul@company.com` | `driver123` | Native Android Driver Application |
+| **Field Driver (Amit)** | `amit@company.com` | `driver123` | Native Android Driver Application |
+| **Field Driver (Test)** | `driver@company.com` | `driver123` | Native Android Driver Application |
 
-### 1. Production Hardening Test Suite (20 Real-World Scenarios)
-Verifies all 20 specific real-world edge cases specified in Section 29:
-```bash
+---
+
+## 🧪 Comprehensive Automated Test Suites
+
+### 1. Backend Production Scenarios Suite (20 Tests)
+```powershell
 cd server
 npx tsx src/testProductionScenarios.ts
 ```
-**Results: 20 PASSED, 0 FAILED**
-- ✅ **TEST 01**: Single destination normal trip (HQ → Stop 1 → Return → Base → Complete)
-- ✅ **TEST 02**: Two destination normal trip (HQ → Stop 1 → Stop 2 → Return → Base)
-- ✅ **TEST 03**: Five destination normal trip (Sequence preservation & stop counts)
-- ✅ **TEST 04**: Multiple destination trip with delay reporting
-- ✅ **TEST 05**: Multiple destination trip with multiple consecutive delays
-- ✅ **TEST 06**: Required delivery photo enforcement (strictly blocks completion without photo)
-- ✅ **TEST 07**: Optional photo allows continuation without blocker
-- ✅ **TEST 08**: GPS unavailable handling (records `GPS UNAVAILABLE`, never fabricates coordinates)
-- ✅ **TEST 09**: Poor GPS accuracy recorded faithfully (marks variance if > 300m)
-- ✅ **TEST 10**: Network unavailable offline event queue with idempotency keys
-- ✅ **TEST 11**: Network returns and synchronizes queue without duplicates
-- ✅ **TEST 12**: Failed activity flagged in manager's Attention Required feed
-- ✅ **TEST 13**: Invalid driver action state machine rejections (blocks premature departure, double completion, delay after completion)
-- ✅ **TEST 14**: Trip cancellation with mandatory audit log reason
-- ✅ **TEST 15**: Google Sheets sync failure logging (DB remains unaffected source of truth)
-- ✅ **TEST 16**: Google Sheets retry mechanism (retries and resolves failed syncs)
-- ✅ **TEST 17**: Manager edits trip before start with audit log tracking
-- ✅ **TEST 18**: Manager reorders destinations before start with automatic stop renumbering
-- ✅ **TEST 19**: Unauthorized driver access security guard (Driver A cannot access Driver B's trips)
-- ✅ **TEST 20**: Complete 10-stop trip & report calculations verification (trips, stops, delays, CSV export)
+* **Result:** **20 PASSED, 0 FAILED**
+* Tests single/multi-stop lifecycles, delay tracking, photo enforcement, GPS unavailable handling, offline event deduplication, state machine guard violations, and cross-driver trip authorization isolation (HTTP 404/403).
 
-### 2. Baseline Operational Lifecycle Test Suite (20 Workflow Steps)
-```bash
+### 2. Backend Workflow Lifecycle Suite (20 Tests)
+```powershell
 cd server
 npx tsx src/testWorkflow.ts
 ```
-**Results: 20 PASSED, 0 FAILED**
+* **Result:** **20 PASSED, 0 FAILED**
+* End-to-end multi-stop trip dispatch, geofencing, arrival/departure events, delay resolution, return journey, base arrival, trip completion, and CSV export generation.
+
+### 3. Android Unit Test Suite (6 Tests)
+```powershell
+cd android
+.\gradlew.bat testDebugUnitTest
+```
+* **Result:** **6 PASSED, 0 FAILED**
+* Verifies `LocationUtils` Haversine distance, geofence radius checks, GPS accuracy threshold gating, and UUID v4 idempotency generation.
+
+### 4. Web Production Compilation
+```powershell
+cd web
+npm run build
+```
+* **Result:** **PASS** (Zero TypeScript errors, production bundle compiled in 5.94s).
 
 ---
 
-## 💾 Database Backup & Restore Procedure
+## 📊 Google Sheets Live Synchronization
 
-TruckTracker uses Node 24 native SQLite in **WAL (Write-Ahead Logging)** mode for superior concurrency and durability.
+TruckTracker maintains an asynchronous 8-tab operational sync engine:
+* **`Trips`**: Master trip status, driver, vehicle, start, base arrival, completion, delays, distance.
+* **`Stops`**: Stop ID, destination, sequence number, arrival, departure, activity status.
+* **`Events`**: Immutable chronological event log with server timestamps and GPS coordinates.
+* **`Delays`**: Delay reasons, start/end timestamps, and duration minutes.
+* **`Activities`**: Cargo deliveries/pickups, quantities, reference numbers, signoffs.
+* **`Photos`**: Uploaded photo proofs, category, storage URL, timestamp, GPS.
+* **`Drivers`**: Active drivers, contact details, employee IDs, status.
+* **`Vehicles`**: Fleet vehicles, license plates, models, assignment status.
 
-### Automated Backup Command
-To perform a live, zero-downtime backup with WAL checkpointing and integrity verification:
+### Configuring Live Google Sheets:
+Place your Google Cloud Service Account credentials at:
+```text
+server/google_sheets_credentials.json
+```
+And add to `server/.env`:
+```env
+GOOGLE_SPREADSHEET_ID=your_spreadsheet_id_here
+```
+*When credentials are not supplied, TruckTracker runs in Local Queue Mode, maintaining sync status logs with complete retry capability without interrupting fleet operations.*
+
+---
+
+## 💾 Database Backup & Disaster Recovery
+
+TruckTracker utilizes SQLite in WAL mode with native hot backup support:
+
+### Create Live Backup Snapshot:
 ```bash
 cd server
 npx tsx src/backup.ts backup
 ```
-This produces a verified snapshot in `server/data/backups/truck_tracker_backup_<timestamp>.sqlite` and outputs table row counts.
+Produces an integrity-verified snapshot in `server/data/backups/truck_tracker_backup_<timestamp>.sqlite`.
 
-### Restore Command
-To restore from a backup snapshot:
+### Restore Backup Snapshot:
 ```bash
 cd server
 npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestamp>.sqlite
@@ -233,13 +289,17 @@ npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestam
 
 ---
 
-## 🔒 Security, Integrity & Offline Resilience
+## 📖 Complete Documentation Index
 
-- **Anti-Tampering Timestamps**: All operational timestamps (`actual_start_time`, `actual_arrival_time`, `actual_departure_time`, `delay_start_time`, `delay_end_time`, `return_start_time`, `base_arrival_time`, `trip_completion_time`) are generated strictly by the server. Changing the driver's phone clock has zero effect on operational records.
-- **Planned vs Actual Separation**: Planned arrival times are immutable records. Differences are recorded as operational variance metrics and never overwrite planned targets.
-- **Driver Trip Isolation**: Drivers can only query, view, or mutate trips explicitly assigned to their driver ID (`trip.driver_id === req.user.id`). Unauthorized requests return HTTP 404/403.
-- **Offline Event Queue**: When mobile network connectivity drops, events are stored locally in IndexedDB/LocalStorage with unique UUID idempotency keys. Upon network restoration, events are drained sequentially without duplicate creation.
-- **Google Sheets Resilience**: SQLite database remains the sole authoritative source of truth. Google Sheets is an asynchronous reporting replica; if Google Sheets API fails or network drops, failed records are logged and retried automatically without interrupting fleet operations.
+| Manual | Description |
+|---|---|
+| [**Architecture Manual**](file:///u:/tracktracker/documentation/architecture.md) | Multi-client system architecture, data flow, and database schema |
+| [**Android Manual**](file:///u:/tracktracker/documentation/android.md) | Native Android architecture, CameraX, Room queue, and 20 screens |
+| [**Web Manual**](file:///u:/tracktracker/documentation/web.md) | Dispatch Command Center, map visualization, and stop editor |
+| [**API Specification**](file:///u:/tracktracker/documentation/api.md) | Complete REST API endpoint reference and event schemas |
+| [**Deployment Guide**](file:///u:/tracktracker/documentation/deployment.md) | LAN Wi-Fi staging, Nginx/Caddy HTTPS reverse proxy, and systemd |
+| [**Testing Protocols**](file:///u:/tracktracker/documentation/testing.md) | Full 46-test automated matrix, test scenarios, and edge case checklist |
+| [**Operations Manual**](file:///u:/tracktracker/documentation/operations-manual.md) | Standard operating procedures for dispatchers and field drivers |
 
 ---
 
