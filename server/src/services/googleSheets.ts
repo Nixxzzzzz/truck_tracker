@@ -243,6 +243,78 @@ export class GoogleSheetsService {
   }
 
   /**
+   * Sync an activity record
+   */
+  public async syncActivity(activityId: string) {
+    const act = db.prepare(`SELECT * FROM activities WHERE id = ?`).get(activityId) as any;
+    if (!act) return;
+
+    // Row: Activity ID, Trip ID, Stop ID, Type, Status, Start Time, Completion Time, Quantity, Reference, Notes
+    const row = [
+      act.id,
+      act.trip_id,
+      act.stop_id,
+      act.activity_type,
+      act.status,
+      act.start_time || 'N/A',
+      act.completion_time || 'N/A',
+      act.quantity ?? 'N/A',
+      act.reference_number || 'N/A',
+      act.notes || ''
+    ];
+
+    await this.syncRecord('Activities', act.id, row);
+  }
+
+  /**
+   * Sync a driver profile
+   */
+  public async syncDriver(driverId: string) {
+    const driver = db.prepare(`SELECT d.*, u.name, u.email, u.phone, v.vehicle_number 
+      FROM drivers d 
+      JOIN users u ON d.user_id = u.id 
+      LEFT JOIN vehicles v ON d.assigned_vehicle_id = v.id 
+      WHERE d.id = ?`).get(driverId) as any;
+    if (!driver) return;
+
+    // Row: Driver ID, Name, Email, Phone, Employee ID, Status, Assigned Vehicle
+    const row = [
+      driver.id,
+      driver.name,
+      driver.email,
+      driver.phone || 'N/A',
+      driver.employee_id,
+      driver.status,
+      driver.vehicle_number || 'None'
+    ];
+
+    await this.syncRecord('Drivers', driver.id, row);
+  }
+
+  /**
+   * Sync a vehicle record
+   */
+  public async syncVehicle(vehicleId: string) {
+    const vehicle = db.prepare(`SELECT v.*, u.name as driver_name 
+      FROM vehicles v 
+      LEFT JOIN users u ON v.assigned_driver_id = u.id 
+      WHERE v.id = ?`).get(vehicleId) as any;
+    if (!vehicle) return;
+
+    // Row: Vehicle ID, Vehicle Number, Type, Model, Status, Assigned Driver
+    const row = [
+      vehicle.id,
+      vehicle.vehicle_number,
+      vehicle.vehicle_type,
+      vehicle.model,
+      vehicle.status,
+      vehicle.driver_name || 'Unassigned'
+    ];
+
+    await this.syncRecord('Vehicles', vehicle.id, row);
+  }
+
+  /**
    * Retry all failed sync items
    */
   public async retryFailed(): Promise<{ retried: number; succeeded: number }> {
@@ -263,6 +335,15 @@ export class GoogleSheetsService {
         succeeded++;
       } else if (item.sheet_name === 'Photos') {
         await this.syncPhoto(item.record_id);
+        succeeded++;
+      } else if (item.sheet_name === 'Activities') {
+        await this.syncActivity(item.record_id);
+        succeeded++;
+      } else if (item.sheet_name === 'Drivers') {
+        await this.syncDriver(item.record_id);
+        succeeded++;
+      } else if (item.sheet_name === 'Vehicles') {
+        await this.syncVehicle(item.record_id);
         succeeded++;
       }
     }

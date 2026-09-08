@@ -400,7 +400,11 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
   const { reason, description, stopId, latitude, longitude, gps_accuracy, photoId } = req.body;
 
   const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
-  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+  if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
+
+  if (trip.status === 'PLANNED' || trip.status === 'ASSIGNED') {
+    return res.status(400).json({ error: 'Cannot report delay on a trip that has not started yet' });
+  }
 
   if (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') {
     return res.status(400).json({ error: 'Cannot report delay on a completed or cancelled trip' });
@@ -408,6 +412,10 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
 
   const delayId = uuidv4();
   const now = new Date().toISOString();
+
+  // Validate GPS coordinates: never fabricate
+  const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
+  const isPoorAccuracy = hasGps && typeof gps_accuracy === 'number' && gps_accuracy > 300;
 
   db.prepare(`
     INSERT INTO delays (
@@ -423,13 +431,17 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
     reason || 'Traffic',
     description || null,
     now,
-    latitude ?? null,
-    longitude ?? null,
-    gps_accuracy ?? null,
+    hasGps ? latitude : null,
+    hasGps ? longitude : null,
+    hasGps ? gps_accuracy ?? null : null,
     photoId || null
   );
 
   db.prepare(`UPDATE trips SET status = 'DELAYED', updated_at = ? WHERE id = ?`).run(now, tripId);
+
+  const gpsNotice = hasGps
+    ? (isPoorAccuracy ? ` (Poor GPS accuracy: ±${Math.round(gps_accuracy!)}m)` : '')
+    : ' (GPS UNAVAILABLE)';
 
   recordEvent({
     tripId,
@@ -437,10 +449,10 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
     eventType: 'DELAY_REPORTED',
     driverId,
     vehicleId: trip.vehicle_id,
-    latitude,
-    longitude,
-    gpsAccuracy: gps_accuracy,
-    details: `Delay reported: ${reason}${description ? ` — ${description}` : ''}`,
+    latitude: hasGps ? latitude : undefined,
+    longitude: hasGps ? longitude : undefined,
+    gpsAccuracy: hasGps ? gps_accuracy : undefined,
+    details: `Delay reported: ${reason}${description ? ` — ${description}` : ''}${gpsNotice}`,
     timestamp: now
   });
 
@@ -456,6 +468,10 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
 router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const { id: tripId, delayId } = req.params;
   const driverId = req.user!.id;
+
+  // Strict check: trip must exist and belong to the authenticated driver
+  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   const delay = db.prepare(`SELECT * FROM delays WHERE id = ? AND trip_id = ?`).get(delayId, tripId) as any;
   if (!delay) return res.status(404).json({ error: 'Delay record not found' });
@@ -482,20 +498,22 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
 
   const totalDelay = sumDelay.total || 0;
 
-  // Restore trip status: check if currently at a stop or in progress
-  const atStop = db.prepare(`
-    SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ? AND status IN ('ARRIVED', 'IN_PROGRESS')
-  `).get(tripId) as { count: number };
-
-  const newStatus = atStop.count > 0 ? 'AT_DESTINATION' : 'IN_PROGRESS';
+  // Restore trip status: check if returning, at a stop, or in progress
+  let newStatus: string = 'IN_PROGRESS';
+  if (trip.return_start_time) {
+    newStatus = 'RETURNING';
+  } else {
+    const atStop = db.prepare(`
+      SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ? AND status IN ('ARRIVED', 'IN_PROGRESS')
+    `).get(tripId) as { count: number };
+    newStatus = atStop.count > 0 ? 'AT_DESTINATION' : 'IN_PROGRESS';
+  }
 
   db.prepare(`
     UPDATE trips
     SET total_delay_minutes = ?, status = ?, updated_at = ?
     WHERE id = ?
   `).run(totalDelay, newStatus, nowIso, tripId);
-
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip;
 
   recordEvent({
     tripId,
@@ -527,15 +545,34 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
   const { latitude, longitude, gps_accuracy } = req.body;
 
   const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
-  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+  if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
-  // Ensure no uncompleted required stops
-  const pendingStops = db.prepare(`
-    SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ? AND status = 'PENDING'
+  if (trip.status === 'RETURNING') {
+    return res.status(400).json({ error: 'Return journey is already in progress' });
+  }
+
+  if (trip.status === 'COMPLETED') {
+    return res.status(400).json({ error: 'Trip is already completed' });
+  }
+
+  if (trip.status === 'CANCELLED') {
+    return res.status(400).json({ error: 'Cannot start return on a cancelled trip' });
+  }
+
+  if (trip.status === 'ASSIGNED' || trip.status === 'PLANNED') {
+    return res.status(400).json({ error: 'Cannot start return journey before starting the trip' });
+  }
+
+  // Ensure all required destinations are completed or skipped/failed
+  const incompleteStops = db.prepare(`
+    SELECT COUNT(*) as count FROM trip_stops 
+    WHERE trip_id = ? AND status NOT IN ('COMPLETED', 'SKIPPED', 'FAILED')
   `).get(tripId) as { count: number };
 
-  if (pendingStops.count > 0) {
-    return res.status(400).json({ error: `Cannot start return journey: ${pendingStops.count} destinations remain incomplete` });
+  if (incompleteStops.count > 0) {
+    return res.status(400).json({ 
+      error: `Cannot start return journey: ${incompleteStops.count} destination stop(s) remain incomplete or un-departed` 
+    });
   }
 
   const now = new Date().toISOString();
@@ -546,15 +583,17 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
     WHERE id = ?
   `).run(now, now, tripId);
 
+  const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
+
   recordEvent({
     tripId,
     eventType: 'RETURN_STARTED',
     driverId,
     vehicleId: trip.vehicle_id,
-    latitude,
-    longitude,
-    gpsAccuracy: gps_accuracy,
-    details: `Return journey to base initiated`,
+    latitude: hasGps ? latitude : undefined,
+    longitude: hasGps ? longitude : undefined,
+    gpsAccuracy: hasGps ? gps_accuracy : undefined,
+    details: `Return journey to base initiated${hasGps ? '' : ' (GPS UNAVAILABLE)'}`,
     timestamp: now
   });
 
@@ -573,10 +612,22 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
   const { latitude, longitude, gps_accuracy } = req.body;
 
   const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
-  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+  if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
+
+  if (trip.status === 'COMPLETED') {
+    return res.status(400).json({ error: 'Trip is already completed' });
+  }
+
+  if (trip.status === 'CANCELLED') {
+    return res.status(400).json({ error: 'Cannot record base arrival on a cancelled trip' });
+  }
+
+  if (trip.base_arrival_time) {
+    return res.status(400).json({ error: 'Base arrival has already been recorded' });
+  }
 
   if (trip.status !== 'RETURNING' && trip.status !== 'IN_PROGRESS') {
-    return res.status(400).json({ error: 'Trip must be in returning status before base arrival' });
+    return res.status(400).json({ error: 'Trip must be in returning status before base arrival can be recorded' });
   }
 
   const now = new Date().toISOString();
@@ -587,15 +638,17 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
     WHERE id = ?
   `).run(now, now, tripId);
 
+  const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
+
   recordEvent({
     tripId,
     eventType: 'ARRIVED_BASE',
     driverId,
     vehicleId: trip.vehicle_id,
-    latitude,
-    longitude,
-    gpsAccuracy: gps_accuracy,
-    details: `Vehicle arrived back at base (${trip.starting_location})`,
+    latitude: hasGps ? latitude : undefined,
+    longitude: hasGps ? longitude : undefined,
+    gpsAccuracy: hasGps ? gps_accuracy : undefined,
+    details: `Vehicle arrived back at base (${trip.starting_location})${hasGps ? '' : ' (GPS UNAVAILABLE)'}`,
     timestamp: now
   });
 
@@ -614,7 +667,19 @@ router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res:
   const { latitude, longitude, gps_accuracy } = req.body;
 
   const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
-  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+  if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
+
+  if (trip.status === 'COMPLETED') {
+    return res.status(400).json({ error: 'Trip is already completed' });
+  }
+
+  if (trip.status === 'CANCELLED') {
+    return res.status(400).json({ error: 'Cannot complete a cancelled trip' });
+  }
+
+  if (trip.status === 'ASSIGNED' || trip.status === 'PLANNED') {
+    return res.status(400).json({ error: 'Cannot complete a trip that has not been started' });
+  }
 
   // Enforce base arrival
   if (!trip.base_arrival_time) {
@@ -643,14 +708,16 @@ router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res:
   db.prepare(`UPDATE vehicles SET status = 'AVAILABLE' WHERE id = ?`).run(trip.vehicle_id);
   db.prepare(`UPDATE drivers SET status = 'AVAILABLE' WHERE user_id = ?`).run(driverId);
 
+  const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
+
   recordEvent({
     tripId,
     eventType: 'TRIP_COMPLETED',
     driverId,
     vehicleId: trip.vehicle_id,
-    latitude,
-    longitude,
-    gpsAccuracy: gps_accuracy,
+    latitude: hasGps ? latitude : undefined,
+    longitude: hasGps ? longitude : undefined,
+    gpsAccuracy: hasGps ? gps_accuracy : undefined,
     details: `Trip marked completed. Distance: ${calculatedDistance ? `${calculatedDistance} km` : 'approximate/unavailable'}`,
     timestamp: now
   });

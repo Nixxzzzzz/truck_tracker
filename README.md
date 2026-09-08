@@ -144,44 +144,75 @@ GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 
 ---
 
-## 🧪 Automated End-to-End Test Suite
+## 🧪 Automated Testing & Production Hardening
 
-Run the comprehensive 19-step workflow test suite verifying the entire product lifecycle:
+TruckTracker includes two complete automated verification suites covering end-to-end operational lifecycles and real-world edge cases.
+
+### 1. Production Hardening Test Suite (20 Real-World Scenarios)
+Verifies all 20 specific real-world edge cases specified in Section 29:
+```bash
+cd server
+npx tsx src/testProductionScenarios.ts
+```
+**Results: 20 PASSED, 0 FAILED**
+- ✅ **TEST 01**: Single destination normal trip (HQ → Stop 1 → Return → Base → Complete)
+- ✅ **TEST 02**: Two destination normal trip (HQ → Stop 1 → Stop 2 → Return → Base)
+- ✅ **TEST 03**: Five destination normal trip (Sequence preservation & stop counts)
+- ✅ **TEST 04**: Multiple destination trip with delay reporting
+- ✅ **TEST 05**: Multiple destination trip with multiple consecutive delays
+- ✅ **TEST 06**: Required delivery photo enforcement (strictly blocks completion without photo)
+- ✅ **TEST 07**: Optional photo allows continuation without blocker
+- ✅ **TEST 08**: GPS unavailable handling (records `GPS UNAVAILABLE`, never fabricates coordinates)
+- ✅ **TEST 09**: Poor GPS accuracy recorded faithfully (marks variance if > 300m)
+- ✅ **TEST 10**: Network unavailable offline event queue with idempotency keys
+- ✅ **TEST 11**: Network returns and synchronizes queue without duplicates
+- ✅ **TEST 12**: Failed activity flagged in manager's Attention Required feed
+- ✅ **TEST 13**: Invalid driver action state machine rejections (blocks premature departure, double completion, delay after completion)
+- ✅ **TEST 14**: Trip cancellation with mandatory audit log reason
+- ✅ **TEST 15**: Google Sheets sync failure logging (DB remains unaffected source of truth)
+- ✅ **TEST 16**: Google Sheets retry mechanism (retries and resolves failed syncs)
+- ✅ **TEST 17**: Manager edits trip before start with audit log tracking
+- ✅ **TEST 18**: Manager reorders destinations before start with automatic stop renumbering
+- ✅ **TEST 19**: Unauthorized driver access security guard (Driver A cannot access Driver B's trips)
+- ✅ **TEST 20**: Complete 10-stop trip & report calculations verification (trips, stops, delays, CSV export)
+
+### 2. Baseline Operational Lifecycle Test Suite (20 Workflow Steps)
 ```bash
 cd server
 npx tsx src/testWorkflow.ts
 ```
-
-**Workflow Steps Tested:**
-1. Manager Authentication
-2. Fleet & Driver Querying
-3. Manager Multi-Stop Trip Creation
-4. Driver Authentication
-5. Driver Assigned Trip Inspection
-6. Driver Starts Trip (`IN_PROGRESS`, start timestamp + GPS recorded)
-7. State Machine Guard (Prevents completion without visiting stops / base arrival)
-8. Driver Arrives at Stop 1 (`ARRIVED`, geofence verified, variance recorded)
-9. Driver Completes Delivery Activity (Quantity 25, recipient name)
-10. Driver Departs Stop 1 (`COMPLETED`, remaining stops updated)
-11. Driver Reports Delay (Reason: Traffic, GPS captured, status `DELAYED`)
-12. Driver Resolves Delay (Duration calculated automatically)
-13. Stop 2 Completion & Departure
-14. Driver Starts Return Journey (`RETURNING`)
-15. Driver Arrives at Base (`base_arrival_time` recorded)
-16. Driver Completes Entire Trip (Distance calculated from GPS points, vehicle released to `AVAILABLE`)
-17. Manager Timeline Generation (8+ chronological events)
-18. Daily Operational Report & CSV Export
-19. Google Sheets Synchronization Verification
+**Results: 20 PASSED, 0 FAILED**
 
 ---
 
-## 🔒 Security & Offline Resilience
+## 💾 Database Backup & Restore Procedure
 
-- **JWT Authentication**: Secure Bearer tokens with 30-day sessions
-- **Password Protection**: BCrypt salted hashing
-- **Role Guards**: Backend API middleware (`requireRole('MANAGER')` vs driver endpoints)
-- **Local Storage Event Queue**: Captures actions if network drops; automatically drains with idempotency keys upon reconnection
-- **Photo Security**: Protected photo file streaming endpoint (`/api/photos/:id/file`) with MIME type validation
+TruckTracker uses Node 24 native SQLite in **WAL (Write-Ahead Logging)** mode for superior concurrency and durability.
+
+### Automated Backup Command
+To perform a live, zero-downtime backup with WAL checkpointing and integrity verification:
+```bash
+cd server
+npx tsx src/backup.ts backup
+```
+This produces a verified snapshot in `server/data/backups/truck_tracker_backup_<timestamp>.sqlite` and outputs table row counts.
+
+### Restore Command
+To restore from a backup snapshot:
+```bash
+cd server
+npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestamp>.sqlite
+```
+
+---
+
+## 🔒 Security, Integrity & Offline Resilience
+
+- **Anti-Tampering Timestamps**: All operational timestamps (`actual_start_time`, `actual_arrival_time`, `actual_departure_time`, `delay_start_time`, `delay_end_time`, `return_start_time`, `base_arrival_time`, `trip_completion_time`) are generated strictly by the server. Changing the driver's phone clock has zero effect on operational records.
+- **Planned vs Actual Separation**: Planned arrival times are immutable records. Differences are recorded as operational variance metrics and never overwrite planned targets.
+- **Driver Trip Isolation**: Drivers can only query, view, or mutate trips explicitly assigned to their driver ID (`trip.driver_id === req.user.id`). Unauthorized requests return HTTP 404/403.
+- **Offline Event Queue**: When mobile network connectivity drops, events are stored locally in IndexedDB/LocalStorage with unique UUID idempotency keys. Upon network restoration, events are drained sequentially without duplicate creation.
+- **Google Sheets Resilience**: SQLite database remains the sole authoritative source of truth. Google Sheets is an asynchronous reporting replica; if Google Sheets API fails or network drops, failed records are logged and retried automatically without interrupting fleet operations.
 
 ---
 

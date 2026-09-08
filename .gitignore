@@ -3,6 +3,9 @@ dist
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
+data/backups/*.sqlite
+data/backups/*.sqlite-wal
+data/backups/*.sqlite-shm
 uploads/photos/*
 !uploads/photos/.gitkeep
 .env

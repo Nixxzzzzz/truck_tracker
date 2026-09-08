@@ -43,7 +43,16 @@ router.post(
       return res.status(404).json({ error: 'Trip not found' });
     }
 
+    // Security check: Driver can only upload photos to their own assigned trips
+    if (req.user!.role === 'DRIVER' && trip.driver_id !== req.user!.id) {
+      fs.unlinkSync(req.file.path);
+      return res.status(403).json({ error: 'You are not authorized to upload photos to another driver\'s trip' });
+    }
+
     try {
+      // Always use authoritative server timestamp
+      const serverTimestamp = new Date().toISOString();
+
       const photo = await savePhotoRecord({
         tripId: trip_id,
         stopId: stop_id || undefined,
@@ -56,7 +65,7 @@ router.post(
         latitude: latitude ? parseFloat(latitude) : undefined,
         longitude: longitude ? parseFloat(longitude) : undefined,
         gpsAccuracy: gps_accuracy ? parseFloat(gps_accuracy) : undefined,
-        timestamp: timestamp || new Date().toISOString()
+        timestamp: serverTimestamp
       });
 
       return res.status(201).json({

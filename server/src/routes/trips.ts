@@ -58,12 +58,18 @@ router.get('/overview/attention', requireAuth, requireRole('MANAGER'), (_req, re
     WHERE t.status = 'ASSIGNED' AND t.date = ?
   `).all(today) as any[];
 
+  // 5. Vehicles under maintenance or inactive
+  const maintenanceVehicles = db.prepare(`
+    SELECT id, vehicle_number, model, status, notes FROM vehicles WHERE status IN ('MAINTENANCE', 'INACTIVE')
+  `).all();
+
   return res.json({
     delayedTrips,
     failedActivities,
     syncFailures,
     overdueTrips,
-    totalAttentionCount: delayedTrips.length + failedActivities.length + syncFailures.length
+    maintenanceVehicles,
+    totalAttentionCount: delayedTrips.length + failedActivities.length + syncFailures.length + maintenanceVehicles.length
   });
 });
 
@@ -379,6 +385,162 @@ router.put('/:id/stops/reorder', requireAuth, requireRole('MANAGER'), (req: Auth
     return res.json({ message: 'Stops reordered successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to reorder stops', details: err.message });
+  }
+});
+
+/**
+ * POST /api/trips/:id/stops
+ * Add a destination stop before trip starts
+ */
+router.post('/:id/stops', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const tripId = req.params.id;
+  const userId = req.user!.id;
+  const { destination_id, destination_name, address, latitude, longitude, geofence_radius_meters = 150, planned_arrival_time, notes } = req.body;
+
+  const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip | undefined;
+  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+  if (trip.status !== 'ASSIGNED' && trip.status !== 'PLANNED') {
+    return res.status(400).json({ error: 'Cannot add stops once trip has started' });
+  }
+
+  const stopCountRow = db.prepare(`SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ?`).get(tripId) as { count: number };
+  const nextStopNumber = stopCountRow.count + 1;
+  const stopId = uuidv4();
+
+  db.prepare(`
+    INSERT INTO trip_stops (
+      id, trip_id, destination_id, stop_number, destination_name, address, 
+      latitude, longitude, geofence_radius_meters, planned_arrival_time, status, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
+  `).run(
+    stopId,
+    tripId,
+    destination_id || null,
+    nextStopNumber,
+    destination_name || `Destination ${nextStopNumber}`,
+    address || 'Company Site',
+    latitude || 0,
+    longitude || 0,
+    geofence_radius_meters,
+    planned_arrival_time || trip.planned_departure_time,
+    notes || null
+  );
+
+  logAudit({
+    tripId,
+    action: 'STOP_ADDED',
+    newValue: `Added Stop ${nextStopNumber}: ${destination_name}`,
+    changedBy: userId
+  });
+
+  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
+
+  return res.status(201).json({ message: 'Stop added successfully', stopId, stop_number: nextStopNumber });
+});
+
+/**
+ * PUT /api/trips/:id/stops/:stopId
+ * Edit a destination stop before trip starts
+ */
+router.put('/:id/stops/:stopId', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id: tripId, stopId } = req.params;
+  const userId = req.user!.id;
+  const { destination_name, address, latitude, longitude, geofence_radius_meters, planned_arrival_time, notes } = req.body;
+
+  const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip | undefined;
+  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+  if (trip.status !== 'ASSIGNED' && trip.status !== 'PLANNED') {
+    return res.status(400).json({ error: 'Cannot edit stops once trip has started' });
+  }
+
+  const currentStop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
+  if (!currentStop) return res.status(404).json({ error: 'Stop not found on this trip' });
+
+  db.prepare(`
+    UPDATE trip_stops
+    SET destination_name = COALESCE(?, destination_name),
+        address = COALESCE(?, address),
+        latitude = COALESCE(?, latitude),
+        longitude = COALESCE(?, longitude),
+        geofence_radius_meters = COALESCE(?, geofence_radius_meters),
+        planned_arrival_time = COALESCE(?, planned_arrival_time),
+        notes = COALESCE(?, notes)
+    WHERE id = ? AND trip_id = ?
+  `).run(
+    destination_name || null,
+    address || null,
+    latitude ?? null,
+    longitude ?? null,
+    geofence_radius_meters ?? null,
+    planned_arrival_time || null,
+    notes || null,
+    stopId,
+    tripId
+  );
+
+  logAudit({
+    tripId,
+    action: 'STOP_EDITED',
+    fieldChanged: 'destination_name',
+    originalValue: currentStop.destination_name,
+    newValue: destination_name || currentStop.destination_name,
+    changedBy: userId,
+    reason: 'Manager edited stop details'
+  });
+
+  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
+
+  return res.json({ message: 'Stop updated successfully' });
+});
+
+/**
+ * DELETE /api/trips/:id/stops/:stopId
+ * Remove a destination stop before trip starts
+ */
+router.delete('/:id/stops/:stopId', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id: tripId, stopId } = req.params;
+  const userId = req.user!.id;
+
+  const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip | undefined;
+  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+  if (trip.status !== 'ASSIGNED' && trip.status !== 'PLANNED') {
+    return res.status(400).json({ error: 'Cannot remove stops once trip has started' });
+  }
+
+  const totalStopsRow = db.prepare(`SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ?`).get(tripId) as { count: number };
+  if (totalStopsRow.count <= 1) {
+    return res.status(400).json({ error: 'A trip must contain at least 1 destination stop' });
+  }
+
+  const currentStop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
+  if (!currentStop) return res.status(404).json({ error: 'Stop not found' });
+
+  const deleteTx = db.transaction(() => {
+    db.prepare(`DELETE FROM trip_stops WHERE id = ? AND trip_id = ?`).run(stopId, tripId);
+
+    // Re-index remaining stop numbers
+    const remainingStops = db.prepare(`SELECT id FROM trip_stops WHERE trip_id = ? ORDER BY stop_number ASC`).all(tripId) as Array<{ id: string }>;
+    remainingStops.forEach((s, idx) => {
+      db.prepare(`UPDATE trip_stops SET stop_number = ? WHERE id = ?`).run(idx + 1, s.id);
+    });
+
+    logAudit({
+      tripId,
+      action: 'STOP_REMOVED',
+      originalValue: currentStop.destination_name,
+      changedBy: userId
+    });
+  });
+
+  try {
+    deleteTx();
+    googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
+    return res.json({ message: 'Stop removed successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to remove stop', details: err.message });
   }
 });
 
