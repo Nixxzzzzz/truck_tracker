@@ -52,18 +52,44 @@ All stops and events belong to the **same parent trip record**, maintaining cont
 
 ---
 
-## 🏗️ Technology Stack
+## 🏗️ Multi-Client Architecture & Technology Stack
+
+```text
+truck_tracker/
+├── android/                         # Native Android Driver Application (Kotlin + Jetpack Compose)
+│   ├── app/                         # App module, CameraX, Room Offline Queue, FusedLocation
+│   ├── gradle/                      # Version catalog and Gradle wrapper
+│   └── README.md
+├── web/                             # Web Manager Application (React 19 + TypeScript + Leaflet)
+│   ├── src/                         # Command Center, Route Map, Stop Editor, Reports
+│   └── README.md
+├── shared/                          # Canonical Models, Event Definitions & API Contracts
+│   ├── models.ts                    # Single authoritative data models
+│   ├── events.ts                    # Canonical operational events vocabulary
+│   ├── constants.ts                 # Geofence settings (100–250m) & API endpoints
+│   └── api-contracts.ts             # Network request/response schemas
+├── server/                          # Hardened Authoritative Backend (Node 24 + SQLite WAL)
+│   ├── src/                         # Express, state machines, photo streamer, Sheets engine
+│   └── data/                        # SQLite WAL database & automated backups
+└── documentation/                   # Complete Operational & Architectural Manuals
+    ├── architecture.md              # Detailed system architecture
+    ├── android.md                   # Android implementation & 20 screens guide
+    ├── web.md                       # Web Manager dashboard manual
+    ├── api.md                       # REST API specification
+    ├── deployment.md                # Deployment and HTTPS configuration
+    ├── testing.md                   # Testing protocols & scenarios
+    └── operations-manual.md         # Field driver & dispatch manager manuals
+```
 
 | Layer | Technology | Rationale |
 |---|---|---|
-| **Backend Runtime** | Node.js 24 + Express + TypeScript | Modern, ultra-fast asynchronous I/O |
-| **Relational Database** | Node 24 Native `DatabaseSync` (`node:sqlite`) | High concurrency, zero external daemon requirements, zero native build issues, full WAL mode and foreign key cascading |
-| **Frontend Framework** | Vite + React 19 + TypeScript | Instant HMR, minimal bundle size, fast mobile rendering |
-| **Styling & Aesthetics** | Pure Vanilla CSS Design System | Custom luxury corporate dark tokens (Charcoal `#0e1013`, Slate `#1a1e26`, Champagne Gold `#c5a059`), zero heavy utility frameworks |
-| **Mapping Engine** | Leaflet.js + OpenStreetMap (CartoDB Dark) | Clean visual mapping of HQ depot, numbered stops, GPS breadcrumb coordinates, and vehicle route |
-| **Camera & Geolocation** | HTML5 MediaDevices & Geolocation API | Live camera stream with canvas snapshot + file picker fallback; high-accuracy GPS with accuracy variance |
-| **Offline Protection** | LocalStorage Event Queue with Idempotency | Automatic queueing during network dropouts; auto-drain upon reconnection |
-| **Operational Sync** | Google Sheets Synchronization Engine | Real-time synchronization for 8 operational tabs with retry mechanism |
+| **Android Client** | Kotlin 2.0 + Jetpack Compose + CameraX + Room | Native mobile experience, one-handed operation, offline-first queue |
+| **Web Client** | Vite + React 19 + TypeScript + Leaflet.js | Desktop & tablet operations dashboard, interactive mapping, reports |
+| **Shared Contracts** | TypeScript & Serialized JSON Models | Canonical data contracts, zero duplicate business definitions |
+| **Backend Runtime** | Node.js 24 + Express + TypeScript | Fast asynchronous event processing, server-authoritative timestamps |
+| **Relational Database** | Node 24 Native `DatabaseSync` (`node:sqlite`) | Zero native compilation issues, WAL mode, foreign key cascading |
+| **Styling & Aesthetics** | Pure Vanilla CSS Design System | Custom luxury corporate dark theme (Charcoal, Slate, Champagne Gold) |
+| **Operational Sync** | Google Sheets 8-Tab Synchronization Engine | Dedicated operational tabs with retry mechanism |
 
 ---
 
@@ -72,15 +98,16 @@ All stops and events belong to the **same parent trip record**, maintaining cont
 ### 1. Prerequisites
 - **Node.js**: v22.5.0 or v24+ (Node 24 recommended)
 - **Git**
+- **Android SDK / Studio** (optional, for Android APK compilation)
 
 ### 2. Clone Repository & Install Dependencies
 ```bash
 git clone https://github.com/Nixxzzzzz/truck_tracker.git
 cd truck_tracker
 
-# Install server and client dependencies
+# Install server and web dependencies
 cd server && npm install
-cd ../client && npm install
+cd ../web && npm install
 cd ..
 ```
 
