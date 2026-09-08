@@ -3,7 +3,7 @@
 > **A mission-critical internal company logistics and fleet-tracking platform connecting field drivers and operations managers through a single authoritative backend.**
 
 [![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0%20(APK%20Available)-34d399.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
-[![Download APK](https://img.shields.io/badge/Download-APK%20(20.08%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/app-debug.apk)
+[![Download APK](https://img.shields.io/badge/Download-TruckTracker--v1.0.0.apk%20(20%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk)
 [![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
 [![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Authoritative)-3b82f6.svg)](#)
 [![Tests: 46 Passed](https://img.shields.io/badge/Automated%20Tests-46%20Passed%20%7C%200%20Failed-34d399.svg)](#)
@@ -179,8 +179,8 @@ truck_tracker/
 * **Production HTTPS Network Security**: Hardened [`network_security_config.xml`](file:///u:/tracktracker/android/app/src/main/res/xml/network_security_config.xml) enforcing `cleartextTrafficPermitted="false"` across production endpoints with scoped local loopbacks for development.
 
 ### Verified Debug APK Details
-* **Location:** `android/app/build/outputs/apk/debug/app-debug.apk`
-* **Size:** `20,088,272 bytes` (~20.08 MB)
+* **Location:** `android/app/build/outputs/apk/debug/TruckTracker-v1.0.0.apk`
+* **Size:** `19,966,300 bytes` (~19.96 MB)
 * **Package:** `com.company.trucktracker.debug`
 * **SDK:** Min SDK 26 (Android 8.0) | Target SDK 34 (Android 14)
 * **Supported Architectures:** `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` (Universal)
@@ -265,7 +265,7 @@ From the root repository directory:
 cd android
 .\gradlew.bat assembleDebug testDebugUnitTest
 ```
-* **APK Output:** `android/app/build/outputs/apk/debug/app-debug.apk`
+* **APK Output:** `android/app/build/outputs/apk/debug/TruckTracker-v1.0.0.apk`
 * **Unit Tests:** 6/6 unit tests executed and passed.
 
 ### Installing onto a Physical Android Phone
@@ -277,7 +277,7 @@ cd android
    ```
 4. Install the APK:
    ```powershell
-   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" install -r "android/app/build/outputs/apk/debug/app-debug.apk"
+   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" install -r "android/app/build/outputs/apk/debug/TruckTracker-v1.0.0.apk"
    ```
 5. Launch the app:
    ```powershell
