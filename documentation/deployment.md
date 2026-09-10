@@ -147,28 +147,34 @@ npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestam
 
 ---
 
-## 8. Cloud & Container Deployment Options
+## 8. 100% Free Forever Deployment Guide ($0 Cost)
 
-### Option A: Docker Compose (All-in-One Self-Contained)
-Spins up both the Node.js API and the built Web Dashboard with persistent storage volumes:
-```bash
-docker compose up -d --build
-```
-* Dashboard & API available at: `http://localhost:5000`
-* Persistent SQLite volume: `tracker_data`
-* Persistent photo proofs volume: `tracker_photos`
+TruckTracker can be run and hosted **completely free of charge** ($0/month) with zero credit card requirements:
 
-### Option B: Vercel (Web Dashboard) + Cloud Backend
-1. **Frontend on Vercel**:
-   * Connect `Nixxzzzzz/truck_tracker` repository to Vercel.
-   * Root Directory: `web` (or leave default root, handled by `vercel.json`).
-   * Environment Variable: `VITE_API_BASE_URL=https://your-backend-api.com/api`
-2. **Backend on Render.com**:
-   * Connect repository to Render using the included `render.yaml` blueprint.
-   * Starter tier includes a 1 GB persistent disk for SQLite and photos.
+### Tier 1: 100% Free Web Dashboard (Vercel & GitHub Pages)
+* **Vercel Hobby Tier ($0 Forever)**:
+  * Connect `Nixxzzzzz/truck_tracker` on Vercel.
+  * Root Directory: `web` (handled automatically by `vercel.json`).
+  * Free unlimited builds, global CDN, automated HTTPS. No credit card required.
+* **GitHub Pages ($0 Forever)**:
+  * Automatically built and deployed on every push to `main` via `.github/workflows/deploy.yml`.
+  * In GitHub Settings → Pages, set Source to **Deploy from branch: `gh-pages`**.
 
-### Option C: GitHub Pages (Web Dashboard)
-Automated CI/CD is active via `.github/workflows/deploy.yml`:
-* Every push to `main` compiles the web bundle and pushes to the `gh-pages` branch.
-* Enable Pages under **Repository Settings → Pages → Deploy from branch `gh-pages`**.
+### Tier 2: 100% Free Backend ($0 Forever)
+* **Option A: Self-Hosted / Office PC + Free Cloudflare Tunnel (Recommended)**:
+  * Runs on any computer, home PC, or office laptop:
+    ```bash
+    npm run start
+    ```
+  * The Express server serves both the **REST API** and the compiled **Web Dashboard** at `http://localhost:5000`.
+  * To give drivers on 4G/5G mobile phones secure public HTTPS access for $0:
+    ```bash
+    # Run free Cloudflare Tunnel (no port forwarding, no static IP, 100% free)
+    cloudflared tunnel --url http://localhost:5000
+    ```
+  * Gives you a free `https://xxxx.trycloudflare.com` URL that works worldwide for both web managers and Android drivers!
+
+* **Option B: Free Cloud Web Service (Render Free Tier)**:
+  * Use the included `render.yaml` with `plan: free`.
+  * 100% free hosting for testing and lightweight operational monitoring.
 

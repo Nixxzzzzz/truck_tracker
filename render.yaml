@@ -2,7 +2,7 @@ services:
   - type: web
     name: truck-tracker-api
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build --workspace=web
     startCommand: npm run dev:server
     envVars:
@@ -12,9 +12,4 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
-      - key: UPLOADS_DIR
-        value: /var/data/uploads/photos
-    disk:
-      name: tracker-disk
-      mountPath: /var/data
-      sizeGB: 1
+
