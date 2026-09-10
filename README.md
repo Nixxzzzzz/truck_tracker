@@ -2,6 +2,7 @@
 
 > **A mission-critical internal company logistics and fleet-tracking platform connecting field drivers and operations managers through a single authoritative backend.**
 
+[![Live Web App](https://img.shields.io/badge/Live%20Web%20App-trucktracker--rho.vercel.app-000000.svg?logo=vercel)](https://trucktracker-rho.vercel.app)
 [![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0%20(APK%20Available)-34d399.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
 [![Download APK](https://img.shields.io/badge/Download-TruckTracker--v1.0.0.apk%20(20%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk)
 [![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
