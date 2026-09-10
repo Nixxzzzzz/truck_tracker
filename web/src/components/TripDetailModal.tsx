@@ -393,7 +393,7 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
                       }}
                     >
                       <img
-                        src={`/api/photos/${photo.id}/file`}
+                        src={api.photos.getPhotoUrl(photo.id)}
                         alt={photo.photo_type}
                         style={{ width: '100%', height: '140px', objectFit: 'cover' }}
                       />
@@ -522,7 +522,7 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
               </button>
             </div>
             <img
-              src={`/api/photos/${previewPhoto.id}/file`}
+              src={api.photos.getPhotoUrl(previewPhoto.id)}
               alt={previewPhoto.photo_type}
               style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
             />

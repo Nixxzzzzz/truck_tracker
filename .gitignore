@@ -29,5 +29,6 @@ server/google_sheets_credentials.json
 
 # Logs & OS
 *.log
+*output.txt
 .DS_Store
 Thumbs.db

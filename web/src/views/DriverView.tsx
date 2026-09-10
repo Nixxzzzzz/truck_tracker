@@ -63,16 +63,20 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   const loadTodayTrips = async () => {
     setLoading(true);
     try {
+      // Fast path: check for an already-active trip first (avoids scanning all today's trips)
+      const activeRes = await api.driver.getActiveTrip();
+      if (activeRes.trip) {
+        setActiveTrip(activeRes.trip);
+        // Still load the trip list for the sidebar, but don't block on it
+        api.driver.getTodayTrips().then((data) => setTrips(data.trips)).catch(() => {});
+        return;
+      }
+
+      // No active trip — load the full today list normally
       const data = await api.driver.getTodayTrips();
       setTrips(data.trips);
 
-      // Auto-select active or first trip
-      const ongoing = data.trips.find((t: Trip) =>
-        ['IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'].includes(t.status)
-      );
-      if (ongoing) {
-        loadTripDetails(ongoing.id);
-      } else if (data.trips.length > 0) {
+      if (data.trips.length > 0) {
         loadTripDetails(data.trips[0].id);
       } else {
         setActiveTrip(null);

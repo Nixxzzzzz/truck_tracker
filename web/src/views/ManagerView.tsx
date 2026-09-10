@@ -18,7 +18,7 @@ import {
   Database,
   ArrowRight
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, API_BASE } from '../services/api';
 import { Trip, User, Vehicle, Driver, Destination } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { TripCreatorModal } from '../components/TripCreatorModal';
@@ -58,10 +58,23 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
   // Google Sheets state
   const [sheetsStatus, setSheetsStatus] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [liveRefresh, setLiveRefresh] = useState(true);
 
+  // Auto-refresh live operations every 30 seconds when on operations tab
   useEffect(() => {
     loadDashboardData();
   }, [selectedDate, statusFilter]);
+
+  useEffect(() => {
+    if (!liveRefresh || activeTab !== 'operations') return;
+
+    const interval = setInterval(() => {
+      silentRefreshOperations();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [liveRefresh, activeTab, selectedDate, statusFilter]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -77,10 +90,31 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
 
       setTrips(tripsRes.trips);
       setAttention(attentionRes);
+      setLastRefresh(new Date());
     } catch (err) {
       console.error('Error loading dashboard:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Silent refresh: no loading spinner, for polling
+  const silentRefreshOperations = async () => {
+    try {
+      const [tripsRes, attentionRes] = await Promise.all([
+        api.manager.getTrips({
+          date: selectedDate,
+          status: statusFilter,
+          search: searchQuery
+        }),
+        api.manager.getAttention()
+      ]);
+      setTrips(tripsRes.trips);
+      setAttention(attentionRes);
+      setLastRefresh(new Date());
+    } catch (err) {
+      // Silent - don't disrupt UI on poll failure
+      console.warn('[AutoRefresh] Poll failed silently:', err);
     }
   };
 
@@ -427,8 +461,34 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
                   onChange={(e) => setSelectedDate(e.target.value)}
                 />
 
-                <button className="btn btn-secondary" onClick={loadDashboardData} style={{ padding: '8px 12px' }}>
+                <button className="btn btn-secondary" onClick={loadDashboardData} style={{ padding: '8px 12px' }} title="Refresh now">
                   <RefreshCw size={15} />
+                </button>
+
+                {/* Live refresh indicator */}
+                <button
+                  onClick={() => setLiveRefresh((prev) => !prev)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: liveRefresh ? 'rgba(52, 211, 153, 0.12)' : 'transparent',
+                    border: `1px solid ${liveRefresh ? 'rgba(52, 211, 153, 0.4)' : 'var(--border-subtle)'}`,
+                    borderRadius: 'var(--radius-full)',
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    color: liveRefresh ? 'var(--status-success)' : 'var(--text-muted)',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={liveRefresh ? 'Live auto-refresh ON (every 30s) — click to pause' : 'Auto-refresh paused — click to enable'}
+                >
+                  <span style={{
+                    width: '7px', height: '7px', borderRadius: '50%',
+                    backgroundColor: liveRefresh ? 'var(--status-success)' : 'var(--text-muted)',
+                    animation: liveRefresh ? 'pulse 2s ease-in-out infinite' : 'none'
+                  }} />
+                  {liveRefresh ? 'Live' : 'Paused'}
                 </button>
               </div>
             </div>
@@ -453,7 +513,7 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
               >
                 <h3 style={{ fontSize: '1.05rem' }}>Logistics Trips Register ({trips.length})</h3>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Showing schedule for {selectedDate}
+                  {selectedDate} &nbsp;•&nbsp; Updated {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
               </div>
 
@@ -675,7 +735,7 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
               </div>
 
               <a
-                href={`/api/reports/export?date=${selectedDate}`}
+                href={`${API_BASE}/reports/export?date=${selectedDate}`}
                 className="btn btn-primary"
                 download
               >

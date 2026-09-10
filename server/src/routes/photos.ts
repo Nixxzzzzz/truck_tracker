@@ -79,13 +79,55 @@ router.post(
 );
 
 /**
- * GET /api/photos/:id/file
- * Secure photo file streaming
+ * GET /api/photos/trip/:tripId
+ * List all photos for a trip (manager use)
  */
-router.get('/:id/file', (req, res) => {
+router.get('/trip/:tripId', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const { tripId } = req.params;
+
+  // Security: Drivers can only view photos on their own trips
+  const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as any;
+  if (!trip) {
+    return res.status(404).json({ error: 'Trip not found' });
+  }
+
+  if (req.user!.role === 'DRIVER' && trip.driver_id !== req.user!.id) {
+    return res.status(403).json({ error: 'Not authorized to view photos for this trip' });
+  }
+
+  const photos = db.prepare(`
+    SELECT p.*, ts.destination_name, ts.stop_number
+    FROM photos p
+    LEFT JOIN trip_stops ts ON p.stop_id = ts.id
+    WHERE p.trip_id = ?
+    ORDER BY p.timestamp ASC
+  `).all(tripId) as any[];
+
+  // Append a convenience URL for each photo
+  const photosWithUrl = photos.map((p) => ({
+    ...p,
+    url: `/api/photos/${p.id}/file`
+  }));
+
+  return res.json({ photos: photosWithUrl, total: photosWithUrl.length });
+});
+
+/**
+ * GET /api/photos/:id/file
+ * Secure photo file streaming — requires authentication
+ */
+router.get('/:id/file', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const photo = db.prepare(`SELECT * FROM photos WHERE id = ?`).get(req.params.id) as any;
   if (!photo) {
     return res.status(404).json({ error: 'Photo record not found' });
+  }
+
+  // Security: Drivers can only stream their own trip photos
+  if (req.user!.role === 'DRIVER') {
+    const trip = db.prepare(`SELECT driver_id FROM trips WHERE id = ?`).get(photo.trip_id) as any;
+    if (!trip || trip.driver_id !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized to view this photo' });
+    }
   }
 
   const filePath = path.join(UPLOADS_DIR, photo.file_path);
@@ -94,6 +136,7 @@ router.get('/:id/file', (req, res) => {
   }
 
   res.setHeader('Content-Type', photo.mime_type || 'image/jpeg');
+  res.setHeader('Cache-Control', 'private, max-age=3600');
   return res.sendFile(filePath);
 });
 

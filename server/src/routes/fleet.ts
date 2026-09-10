@@ -261,5 +261,38 @@ router.put('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: Authe
     return res.status(400).json({ error: err.message });
   }
 });
+router.delete('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  const destination = db.prepare(`SELECT * FROM destinations WHERE id = ?`).get(id) as any;
+  if (!destination) {
+    return res.status(404).json({ error: 'Destination not found' });
+  }
+
+  // Check if any active/in-progress trips currently reference this destination
+  const activeUsage = db.prepare(`
+    SELECT COUNT(*) as count FROM trip_stops ts
+    JOIN trips t ON ts.trip_id = t.id
+    WHERE ts.destination_id = ? AND t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+  `).get(id) as { count: number };
+
+  if (activeUsage.count > 0) {
+    return res.status(409).json({
+      error: `Cannot deactivate destination: it is referenced by ${activeUsage.count} active or in-progress trip(s). Complete or cancel those trips first.`
+    });
+  }
+
+  // Soft-delete: preserve historical trip/stop references
+  db.prepare(`UPDATE destinations SET is_active = 0 WHERE id = ?`).run(id);
+
+  logAudit({
+    action: 'DESTINATION_DEACTIVATED',
+    originalValue: destination.name,
+    changedBy: req.user!.id,
+    reason: `Destination '${destination.name}' soft-deleted by manager`
+  });
+
+  return res.json({ message: `Destination '${destination.name}' has been deactivated. Historical trip records are preserved.` });
+});
 
 export default router;

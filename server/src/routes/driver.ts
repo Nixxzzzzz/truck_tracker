@@ -48,6 +48,38 @@ function recordEvent(params: {
 }
 
 /**
+ * GET /api/driver/trips/active
+ * Returns the driver's single currently active trip with full stop/event detail.
+ * Preferred for fast initial load on Android startup or reconnect after offline period.
+ */
+router.get('/trips/active', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const driverId = req.user!.id;
+
+  const trip = db.prepare(`
+    SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
+    FROM trips t
+    JOIN vehicles v ON t.vehicle_id = v.id
+    WHERE t.driver_id = ? AND t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+    ORDER BY t.actual_start_time DESC
+    LIMIT 1
+  `).get(driverId) as any;
+
+  if (!trip) {
+    return res.json({ trip: null, message: 'No active trip found' });
+  }
+
+  trip.stops = db.prepare(`SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_number ASC`).all(trip.id);
+  for (const stop of trip.stops) {
+    stop.activities = db.prepare(`SELECT * FROM activities WHERE stop_id = ?`).all(stop.id);
+    stop.photos = db.prepare(`SELECT * FROM photos WHERE stop_id = ?`).all(stop.id);
+  }
+  trip.delays = db.prepare(`SELECT * FROM delays WHERE trip_id = ? AND is_resolved = 0 ORDER BY start_time DESC`).all(trip.id);
+  trip.events = db.prepare(`SELECT * FROM trip_events WHERE trip_id = ? ORDER BY timestamp ASC`).all(trip.id);
+
+  return res.json({ trip });
+});
+
+/**
  * GET /api/driver/trips/today
  * Returns trips assigned to the logged-in driver for today or currently active
  */

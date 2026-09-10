@@ -1,6 +1,6 @@
 import { offlineQueue } from './offlineQueue';
 
-const API_BASE = '/api';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('truck_tracker_token');
@@ -81,6 +81,7 @@ export const api = {
 
   driver: {
     getTodayTrips: () => request('/driver/trips/today'),
+    getActiveTrip: () => request('/driver/trips/active'),
     getTrip: (id: string) => request(`/driver/trips/${id}`),
     startTrip: (id: string, coords: any) =>
       request(`/driver/trips/${id}/start`, { method: 'POST', body: JSON.stringify(coords) }),
@@ -115,7 +116,9 @@ export const api = {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Photo upload failed');
       return data;
-    }
+    },
+    getTripPhotos: (tripId: string) => request(`/photos/trip/${tripId}`),
+    getPhotoUrl: (photoId: string) => `${API_BASE}/photos/${photoId}/file`
   },
 
   manager: {
@@ -144,7 +147,8 @@ export const api = {
     updateDriver: (id: string, data: any) => request(`/fleet/drivers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     getDestinations: () => request('/fleet/destinations'),
     createDestination: (data: any) => request('/fleet/destinations', { method: 'POST', body: JSON.stringify(data) }),
-    updateDestination: (id: string, data: any) => request(`/fleet/destinations/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+    updateDestination: (id: string, data: any) => request(`/fleet/destinations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteDestination: (id: string) => request(`/fleet/destinations/${id}`, { method: 'DELETE' })
   },
 
   reports: {

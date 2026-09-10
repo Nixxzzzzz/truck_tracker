@@ -116,6 +116,9 @@ Drivers can only query and mutate trips assigned to their driver ID (`trip.drive
 ### `GET /api/driver/assigned-trip`
 Returns the driver's current active or upcoming trip with full stop hierarchy.
 
+### `GET /api/driver/trips/active`
+Returns the driver's single currently active trip (status `IN_PROGRESS`, `AT_DESTINATION`, `DELAYED`, or `RETURNING`) with full stop, event, and open-delay detail. Returns `{ trip: null }` if no active trip. Used as the **fast-path** on Android startup and web reconnect — a single optimised query vs scanning all today's trips.
+
 ### `GET /api/driver/todays-trips`
 Returns all trips scheduled for today for the driver.
 
@@ -161,31 +164,53 @@ Uploads a multipart photo proof (`image/jpeg`, `image/png`, `image/webp`).
   - `longitude`: Number (optional)
   - `gps_accuracy`: Number (optional)
 
+### `GET /api/photos/trip/:tripId`
+Lists all photos uploaded on a trip, each with a `url` convenience field and joined `destination_name` / `stop_number` from the associated stop. Managers see all trip photos; drivers may only query their own assigned trips.
+
 ### `GET /api/photos/:id/file`
-Securely streams the photo file with MIME type validation.
+Securely streams the photo file with MIME type validation. **Requires authentication** (JWT Bearer). Drivers may only stream photos from their own trips.
 
 ---
 
-## 5. Reports & Google Sheets
+## 5. Fleet Management
 
-### `GET /api/reports/summary?range=daily|weekly|monthly`
-Retrieves aggregated fleet operational metrics calculated directly from database records.
+### `GET /api/fleet/destinations`
+Lists all active destination points.
 
-### `GET /api/reports/export/csv?range=daily|weekly|monthly`
+### `POST /api/fleet/destinations`
+Creates a new destination.
+
+### `PUT /api/fleet/destinations/:id`
+Updates destination fields. Pass `is_active: 0` to soft-deactivate.
+
+### `DELETE /api/fleet/destinations/:id`
+Soft-deactivates a destination (sets `is_active = 0`). **Refuses if any currently active or in-progress trips reference the destination.** Historical trip and stop records are never orphaned — the reference is preserved, the destination simply no longer appears in the trip creator dropdown. Logs a `DESTINATION_DEACTIVATED` audit entry.
+
+---
+
+## 6. Reports & Google Sheets
+
+### `GET /api/reports/daily?date=YYYY-MM-DD`
+Retrieves aggregated fleet operational metrics for a specific date.
+
+### `GET /api/reports/periodic?period=weekly|monthly`
+Aggregated metrics across the last 7 or 30 days.
+
+### `GET /api/reports/export?date=YYYY-MM-DD`
 Streams a formatted CSV operational report.
 
-### `POST /api/sheets/sync`
-Triggers immediate synchronization of pending records to Google Sheets.
-
-### `GET /api/sheets/status`
+### `GET /api/google-sheets/status`
 Returns synchronization status across all 8 sheets (*Trips, Stops, Events, Delays, Activities, Photos, Drivers, Vehicles*).
 
-### `POST /api/sheets/retry-failed`
+### `POST /api/google-sheets/sync-all`
+Triggers immediate synchronization of pending records to Google Sheets.
+
+### `POST /api/google-sheets/retry`
 Retries failed Google Sheets synchronization records.
 
 ---
 
-## 6. SQLite Database Backup
+## 7. SQLite Database Backup
 
 ### `POST /api/backup/create`
 Executes an atomic WAL checkpoint (`PRAGMA wal_checkpoint(TRUNCATE)`) and creates a verified snapshot in `server/data/backups/`.
