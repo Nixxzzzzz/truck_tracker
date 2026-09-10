@@ -35,19 +35,16 @@ jobs:
       - name: Build Web Application
         run: npm run build --workspace=web
 
-      - name: Upload GitHub Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: web-dist
           path: web/dist
 
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web/dist
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
