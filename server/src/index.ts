@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { initDatabase } from './db';
 import authRoutes from './routes/auth';
 import driverRoutes from './routes/driver';
@@ -50,13 +51,16 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Serve frontend client in production if built
+const webDist = path.resolve(__dirname, '../../web/dist');
 const clientDist = path.resolve(__dirname, '../../client/dist');
-app.use(express.static(clientDist));
+const staticDist = fs.existsSync(webDist) ? webDist : clientDist;
+
+app.use(express.static(staticDist));
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
     return next();
   }
-  const indexPath = path.join(clientDist, 'index.html');
+  const indexPath = path.join(staticDist, 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) next();
   });
