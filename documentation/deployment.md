@@ -144,3 +144,31 @@ Produces timestamped snapshots in `server/data/backups/truck_tracker_backup_<tim
 cd server
 npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestamp>.sqlite
 ```
+
+---
+
+## 8. Cloud & Container Deployment Options
+
+### Option A: Docker Compose (All-in-One Self-Contained)
+Spins up both the Node.js API and the built Web Dashboard with persistent storage volumes:
+```bash
+docker compose up -d --build
+```
+* Dashboard & API available at: `http://localhost:5000`
+* Persistent SQLite volume: `tracker_data`
+* Persistent photo proofs volume: `tracker_photos`
+
+### Option B: Vercel (Web Dashboard) + Cloud Backend
+1. **Frontend on Vercel**:
+   * Connect `Nixxzzzzz/truck_tracker` repository to Vercel.
+   * Root Directory: `web` (or leave default root, handled by `vercel.json`).
+   * Environment Variable: `VITE_API_BASE_URL=https://your-backend-api.com/api`
+2. **Backend on Render.com**:
+   * Connect repository to Render using the included `render.yaml` blueprint.
+   * Starter tier includes a 1 GB persistent disk for SQLite and photos.
+
+### Option C: GitHub Pages (Web Dashboard)
+Automated CI/CD is active via `.github/workflows/deploy.yml`:
+* Every push to `main` compiles the web bundle and pushes to the `gh-pages` branch.
+* Enable Pages under **Repository Settings → Pages → Deploy from branch `gh-pages`**.
+
