@@ -1060,24 +1060,30 @@ export const ManagerView: React.FC<Props> = ({
             />
           </div>
 
-          {dailyReport && dailyReport.overview && (
+          {reportsLoading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+              <KpiCard label="On-Time Arrival Rate" value="—" loading />
+              <KpiCard label="Total Destinations Visited" value="—" loading />
+              <KpiCard label="Total Delay Duration" value="—" loading />
+            </div>
+          ) : dailyReport && dailyReport.overview ? (
             <>
               {/* Summary KPIs */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
                 <KpiCard
                   label="On-Time Arrival Rate"
-                  value={`${dailyReport.overview.onTimePercentage}%`}
+                  value={`${dailyReport.overview.onTimePercentage ?? 0}%`}
                   subValue="SLA Geofence Verification"
                   variant="success"
                 />
                 <KpiCard
                   label="Total Destinations Visited"
-                  value={dailyReport.overview.totalDestinations}
+                  value={dailyReport.overview.totalDestinations ?? 0}
                   subValue="Customer stops executed"
                 />
                 <KpiCard
                   label="Total Delay Duration"
-                  value={dailyReport.overview.totalDelayFormatted}
+                  value={dailyReport.overview.totalDelayFormatted ?? '0m'}
                   subValue="Road bottlenecks & loading delays"
                   variant="warning"
                 />
@@ -1110,6 +1116,11 @@ export const ManagerView: React.FC<Props> = ({
                 </div>
               )}
             </>
+          ) : (
+            <EmptyState
+              title="No Report Data Available"
+              description={`No delivery records or dispatch metrics found for ${selectedDate}. Select another operational date or dispatch new deliveries.`}
+            />
           )}
         </div>
       )}
