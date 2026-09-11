@@ -88,44 +88,29 @@ export const App: React.FC = () => {
 
   return (
     <div>
-      {/* Floating QA Role & Theme Switcher Pill */}
+      {/* Floating Executive Demo Mode Switcher Bar */}
       <div
         style={{
           position: 'fixed',
-          bottom: '16px',
-          left: '16px',
-          zIndex: 999,
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
           backgroundColor: 'var(--bg-surface)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid var(--accent-gold-border)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid var(--accent-gold)',
           borderRadius: 'var(--radius-full)',
-          padding: '4px 10px',
+          padding: '6px 14px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          boxShadow: 'var(--shadow-md)',
-          fontSize: '0.75rem'
+          gap: '10px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+          fontSize: '0.8rem'
         }}
       >
-        <span style={{ color: 'var(--text-muted)' }}>QA Role:</span>
-        <button
-          onClick={() => setSimulatedRole('DRIVER')}
-          style={{
-            background: activeRole === 'DRIVER' ? 'var(--accent-gold)' : 'transparent',
-            color: activeRole === 'DRIVER' ? '#0e1013' : 'var(--text-secondary)',
-            border: 'none',
-            borderRadius: 'var(--radius-full)',
-            padding: '3px 8px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <Smartphone size={12} /> Driver
-        </button>
-
+        <span style={{ color: 'var(--accent-gold)', fontWeight: 700, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span>🌟</span> Executive Demo:
+        </span>
         <button
           onClick={() => setSimulatedRole('MANAGER')}
           style={{
@@ -133,20 +118,40 @@ export const App: React.FC = () => {
             color: activeRole === 'MANAGER' ? '#0e1013' : 'var(--text-secondary)',
             border: 'none',
             borderRadius: 'var(--radius-full)',
-            padding: '3px 8px',
+            padding: '5px 12px',
             cursor: 'pointer',
-            fontWeight: 600,
+            fontWeight: activeRole === 'MANAGER' ? 700 : 500,
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '6px',
+            transition: 'all 0.2s ease'
           }}
         >
-          <Monitor size={12} /> Manager
+          <Monitor size={14} /> Operations Command
         </button>
 
-        <div style={{ height: '14px', width: '1px', backgroundColor: 'var(--border-subtle)' }} />
+        <button
+          onClick={() => setSimulatedRole('DRIVER')}
+          style={{
+            background: activeRole === 'DRIVER' ? 'var(--accent-gold)' : 'transparent',
+            color: activeRole === 'DRIVER' ? '#0e1013' : 'var(--text-secondary)',
+            border: 'none',
+            borderRadius: 'var(--radius-full)',
+            padding: '5px 12px',
+            cursor: 'pointer',
+            fontWeight: activeRole === 'DRIVER' ? 700 : 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Smartphone size={14} /> Driver Mobile App
+        </button>
 
-        {/* Theme toggle in QA Pill */}
+        <div style={{ height: '16px', width: '1px', backgroundColor: 'var(--border-subtle)' }} />
+
+        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           style={{
@@ -154,17 +159,17 @@ export const App: React.FC = () => {
             color: 'var(--accent-gold)',
             border: 'none',
             borderRadius: 'var(--radius-full)',
-            padding: '3px 8px',
+            padding: '4px 8px',
             cursor: 'pointer',
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '5px'
           }}
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
         >
-          {theme === 'dark' ? <Sun size={12} /> : <Moon size={12} />}
-          {theme === 'dark' ? 'Light' : 'Dark'}
+          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+          <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
 
@@ -174,6 +179,7 @@ export const App: React.FC = () => {
           onLogout={handleLogout}
           theme={theme}
           onToggleTheme={toggleTheme}
+          onSwitchRole={(role) => setSimulatedRole(role)}
         />
       ) : (
         <ManagerView
@@ -181,6 +187,7 @@ export const App: React.FC = () => {
           onLogout={handleLogout}
           theme={theme}
           onToggleTheme={toggleTheme}
+          onSwitchRole={(role) => setSimulatedRole(role)}
         />
       )}
     </div>

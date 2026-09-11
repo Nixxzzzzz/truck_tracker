@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import { ExternalLink, Layers, Navigation, MapPin } from 'lucide-react';
 import { TripStop, TripEvent } from '../types';
 
 interface Props {
@@ -8,112 +9,195 @@ interface Props {
   events?: TripEvent[];
   height?: string;
   theme?: 'dark' | 'light';
+  showGoogleMapsButton?: boolean;
 }
+
+type MapLayerType = 'dark' | 'google-streets' | 'google-satellite';
 
 export const LeafletMap: React.FC<Props> = ({
   baseLocation,
   stops = [],
   events = [],
-  height = '380px',
-  theme = 'dark'
+  height = '420px',
+  theme = 'dark',
+  showGoogleMapsButton = true
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [mapLayer, setMapLayer] = useState<MapLayerType>(theme === 'light' ? 'google-streets' : 'dark');
+
+  // Build Google Maps Multi-Stop Direction URL
+  const getGoogleMapsUrl = (): string => {
+    const originLat = baseLocation?.latitude || 28.5355;
+    const originLng = baseLocation?.longitude || 77.268;
+
+    const validStops = stops.filter((s) => s.latitude && s.longitude);
+    if (validStops.length === 0) {
+      return `https://www.google.com/maps/search/?api=1&query=${originLat},${originLng}`;
+    }
+
+    const lastStop = validStops[validStops.length - 1];
+    const waypoints = validStops
+      .slice(0, -1)
+      .map((s) => `${s.latitude},${s.longitude}`)
+      .join('|');
+
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${lastStop.latitude},${lastStop.longitude}`;
+    if (waypoints) {
+      url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    }
+    return url;
+  };
+
+  const getTileUrl = (type: MapLayerType): { url: string; attribution: string; maxZoom: number } => {
+    switch (type) {
+      case 'google-satellite':
+        return {
+          url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+          attribution: '&copy; Google Maps Satellite',
+          maxZoom: 20
+        };
+      case 'google-streets':
+        return {
+          url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+          attribution: '&copy; Google Maps',
+          maxZoom: 20
+        };
+      case 'dark':
+      default:
+        return {
+          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; TruckTracker Telematics',
+          maxZoom: 19
+        };
+    }
+  };
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Default center (Bhopal company base if no coords)
     const defaultCenter: [number, number] = [
-      baseLocation?.latitude || 23.2599,
-      baseLocation?.longitude || 77.4126
+      baseLocation?.latitude || 28.5355,
+      baseLocation?.longitude || 77.268
     ];
 
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: defaultCenter,
         zoom: 12,
-        scrollWheelZoom: false
+        scrollWheelZoom: true
       });
 
-      const tileUrl = theme === 'light'
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-      const tiles = L.tileLayer(tileUrl, {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-        maxZoom: 19
-      }).addTo(map);
+      const { url, attribution, maxZoom } = getTileUrl(mapLayer);
+      const tiles = L.tileLayer(url, { attribution, maxZoom }).addTo(map);
 
       tileLayerRef.current = tiles;
       mapInstanceRef.current = map;
     } else if (tileLayerRef.current) {
-      // Update tile layer on theme switch
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
-      const tileUrl = theme === 'light'
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-      const tiles = L.tileLayer(tileUrl, {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-        maxZoom: 19
-      }).addTo(mapInstanceRef.current);
+      const { url, attribution, maxZoom } = getTileUrl(mapLayer);
+      const tiles = L.tileLayer(url, { attribution, maxZoom }).addTo(mapInstanceRef.current);
       tileLayerRef.current = tiles;
     }
 
     const map = mapInstanceRef.current;
 
-    // Clear previous layers (except tile layer)
+    // Clear previous layers
     map.eachLayer((layer) => {
-      if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+      if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.Circle) {
         map.removeLayer(layer);
       }
     });
 
     const latLngs: L.LatLngExpression[] = [];
 
-    // 1. Base / Depot Marker
+    // 1. Base / Depot Marker (Golden HQ Badge)
     if (baseLocation?.latitude && baseLocation?.longitude) {
       const baseIcon = L.divIcon({
         className: 'custom-map-icon',
-        html: `<div style="background:#c5a059;color:#0e1013;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 0 10px rgba(197,160,89,0.7);">HQ</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
+        html: `<div style="background:linear-gradient(135deg, #c5a059, #e6c887);color:#0d0e11;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;border:2px solid #ffffff;box-shadow:0 0 16px rgba(197,160,89,0.9);letter-spacing:0.5px;">HQ</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
       });
 
       const basePos: [number, number] = [baseLocation.latitude, baseLocation.longitude];
       L.marker(basePos, { icon: baseIcon })
         .addTo(map)
-        .bindPopup(`<b>Company Base</b><br>${baseLocation.name || 'Central Logistics Hub'}`);
+        .bindPopup(`
+          <div style="font-family:Inter,sans-serif;padding:4px;">
+            <div style="font-size:11px;font-weight:700;color:#c5a059;text-transform:uppercase;letter-spacing:0.5px;">Dispatch Headquarters</div>
+            <div style="font-size:14px;font-weight:700;color:#0f172a;margin:2px 0;">${baseLocation.name || 'Central Fleet Terminal'}</div>
+            <div style="font-size:11px;color:#64748b;">GPS: ${baseLocation.latitude.toFixed(4)}, ${baseLocation.longitude.toFixed(4)}</div>
+            <a href="https://www.google.com/maps/search/?api=1&query=${baseLocation.latitude},${baseLocation.longitude}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
+              📍 Open Location in Google Maps &rarr;
+            </a>
+          </div>
+        `);
       latLngs.push(basePos);
     }
 
-    // 2. Destination Stop Markers
+    // 2. Destination Stop Markers with Sequence Numbers & Geofence Rings
     stops.forEach((stop) => {
       if (stop.latitude && stop.longitude) {
         const isCompleted = stop.status === 'COMPLETED';
         const isArrived = stop.status === 'ARRIVED' || stop.status === 'IN_PROGRESS';
-        const color = isCompleted ? '#10b981' : isArrived ? '#c5a059' : '#38bdf8';
+        const bgGrad = isCompleted
+          ? 'linear-gradient(135deg, #10b981, #059669)'
+          : isArrived
+          ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+          : 'linear-gradient(135deg, #0284c7, #0369a1)';
 
         const stopIcon = L.divIcon({
           className: 'custom-map-icon',
-          html: `<div style="background:${color};color:#0e1013;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);">${stop.stop_number}</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
+          html: `<div style="background:${bgGrad};color:#ffffff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #ffffff;box-shadow:0 3px 10px rgba(0,0,0,0.6);">${stop.stop_number}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
         });
 
         const stopPos: [number, number] = [stop.latitude, stop.longitude];
+        
+        // Draw Geofence Radius Circle
+        L.circle(stopPos, {
+          radius: stop.geofence_radius_meters || 150,
+          color: isCompleted ? '#10b981' : '#38bdf8',
+          fillColor: isCompleted ? '#10b981' : '#38bdf8',
+          fillOpacity: 0.12,
+          weight: 1,
+          dashArray: '3, 4'
+        }).addTo(map);
+
         L.marker(stopPos, { icon: stopIcon })
           .addTo(map)
-          .bindPopup(
-            `<b>Stop ${stop.stop_number}: ${stop.destination_name}</b><br>${stop.address}<br>Status: <i>${stop.status}</i>`
-          );
+          .bindPopup(`
+            <div style="font-family:Inter,sans-serif;padding:4px;min-width:180px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:10px;font-weight:700;color:#c5a059;text-transform:uppercase;">Stop #${stop.stop_number}</span>
+                <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${isCompleted ? '#d1fae5' : '#e0f2fe'};color:${isCompleted ? '#065f46' : '#0369a1'};font-weight:700;">${stop.status}</span>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:#0f172a;margin:3px 0;">${stop.destination_name}</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:4px;">${stop.address}</div>
+              <div style="font-size:11px;color:#334155;">Planned: <b>${stop.planned_arrival_time}</b> ${stop.actual_arrival_time ? `&bull; Actual: <b>${new Date(stop.actual_arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b>` : ''}</div>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
+                🧭 Google Maps Directions &rarr;
+              </a>
+            </div>
+          `);
         latLngs.push(stopPos);
       }
     });
 
-    // 3. GPS Actual Breadcrumb Events
+    // 3. Planned Route Corridor Polyline (Connecting stops)
+    if (latLngs.length > 1) {
+      L.polyline(latLngs, {
+        color: '#38bdf8',
+        weight: 3,
+        opacity: 0.6,
+        dashArray: '8, 8'
+      }).addTo(map);
+    }
+
+    // 4. GPS Actual Breadcrumb Events & Active Vehicle
     const validEvents = events.filter(
       (e) => typeof e.latitude === 'number' && typeof e.longitude === 'number'
     );
@@ -127,52 +211,124 @@ export const LeafletMap: React.FC<Props> = ({
       // Route polyline in champagne gold
       L.polyline(eventPoints, {
         color: '#c5a059',
-        weight: 3,
-        opacity: 0.8,
-        dashArray: '6, 6'
+        weight: 4,
+        opacity: 0.9
       }).addTo(map);
 
-      // Latest known vehicle location
+      // Latest known vehicle location with animated pulse
       const latest = validEvents[validEvents.length - 1];
       const truckIcon = L.divIcon({
         className: 'custom-map-icon',
-        html: `<div style="background:#38bdf8;color:#0e1013;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;border:2px solid #fff;box-shadow:0 0 12px #38bdf8;">🚛</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
+        html: `
+          <div style="position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(56,189,248,0.4);animation:pulse 2s infinite;"></div>
+            <div style="background:linear-gradient(135deg, #0284c7, #38bdf8);color:#ffffff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;border:2px solid #ffffff;box-shadow:0 0 16px #38bdf8;z-index:2;">🚛</div>
+          </div>
+        `,
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
       });
 
       L.marker([latest.latitude!, latest.longitude!], { icon: truckIcon })
         .addTo(map)
-        .bindPopup(
-          `<b>Latest Vehicle GPS Position</b><br>Time: ${new Date(latest.timestamp).toLocaleTimeString()}<br>Accuracy: ±${Math.round(latest.gps_accuracy || 10)}m`
-        );
-    } else if (latLngs.length > 1) {
-      // Draw connecting line between planned stops
-      L.polyline(latLngs, {
-        color: '#6b7382',
-        weight: 2,
-        opacity: 0.5,
-        dashArray: '4, 4'
-      }).addTo(map);
+        .bindPopup(`
+          <div style="font-family:Inter,sans-serif;padding:4px;">
+            <div style="font-size:10px;font-weight:700;color:#0284c7;text-transform:uppercase;">Live Telematics Beacon</div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;margin:2px 0;">Active Vehicle Position</div>
+            <div style="font-size:11px;color:#334155;">Time: <b>${new Date(latest.timestamp).toLocaleTimeString()}</b></div>
+            <div style="font-size:11px;color:#334155;">GPS Accuracy: <b>&plusmn;${Math.round(latest.gps_accuracy || 8)}m (Cell/GPS)</b></div>
+            <a href="https://www.google.com/maps/search/?api=1&query=${latest.latitude},${latest.longitude}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
+              📍 Open Pin in Google Maps &rarr;
+            </a>
+          </div>
+        `);
     }
 
-    // Fit bounds if markers exist
+    // Auto-fit bounds
     if (latLngs.length > 0) {
-      map.fitBounds(L.latLngBounds(latLngs), { padding: [30, 30], maxZoom: 15 });
+      map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 15 });
     }
-  }, [baseLocation, stops, events, theme]);
+  }, [baseLocation, stops, events, mapLayer]);
 
   return (
-    <div
-      ref={mapContainerRef}
-      style={{
-        width: '100%',
-        height,
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-subtle)',
-        overflow: 'hidden',
-        zIndex: 1
-      }}
-    />
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Map Control Toolbar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
+          marginBottom: '10px'
+        }}
+      >
+        {/* Layer Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+          <button
+            type="button"
+            className={`btn ${mapLayer === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+            onClick={() => setMapLayer('dark')}
+          >
+            🌙 Telematics Dark
+          </button>
+          <button
+            type="button"
+            className={`btn ${mapLayer === 'google-streets' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+            onClick={() => setMapLayer('google-streets')}
+          >
+            🗺️ Google Streets
+          </button>
+          <button
+            type="button"
+            className={`btn ${mapLayer === 'google-satellite' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+            onClick={() => setMapLayer('google-satellite')}
+          >
+            🛰️ Google Satellite
+          </button>
+        </div>
+
+        {/* Google Maps External Routing Link */}
+        {showGoogleMapsButton && (
+          <a
+            href={getGoogleMapsUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              fontSize: '0.78rem',
+              color: 'var(--accent-gold)',
+              borderColor: 'rgba(197, 160, 89, 0.4)',
+              textDecoration: 'none'
+            }}
+            title="Open complete multi-stop turn-by-turn routing in Google Maps"
+          >
+            <Navigation size={13} />
+            <span>Open in Google Maps Directions</span>
+            <ExternalLink size={12} />
+          </a>
+        )}
+      </div>
+
+      {/* Leaflet Map Canvas */}
+      <div
+        ref={mapContainerRef}
+        style={{
+          width: '100%',
+          height,
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border-subtle)',
+          overflow: 'hidden',
+          zIndex: 1
+        }}
+      />
+    </div>
   );
 };

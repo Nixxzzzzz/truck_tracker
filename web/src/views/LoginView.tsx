@@ -33,6 +33,23 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
     }
   };
 
+  const handleQuickLogin = async (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await api.auth.login({ email: demoEmail, password: demoPassword });
+      localStorage.setItem('truck_tracker_token', data.token);
+      onLoginSuccess(data.user, data.token);
+    } catch (err: any) {
+      setError(err.message || 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const setDemoCredentials = (e: string, p: string) => {
     setEmail(e);
     setPassword(p);
@@ -151,29 +168,88 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
 
         {/* Quick Demo Access Credentials */}
         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '20px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px', textAlign: 'center' }}>
-            Instant Demo Sign-In
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+              Live Demonstration Profiles
+            </span>
+            <span style={{ fontSize: '0.68rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
+              ⚡ 1-Click Launch
+            </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+            {/* Executive Director All-Access Demo */}
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ justifyContent: 'space-between', padding: '10px 14px', fontSize: '0.82rem' }}
-              onClick={() => setDemoCredentials('manager@company.com', 'manager123')}
+              style={{
+                justifyContent: 'space-between',
+                padding: '11px 14px',
+                fontSize: '0.82rem',
+                border: '1px solid var(--accent-gold)',
+                backgroundColor: 'rgba(212, 168, 83, 0.08)'
+              }}
+              onClick={() => handleQuickLogin('director@company.com', 'director123')}
+              disabled={loading}
             >
-              <span>👔 Operations Manager (Desktop View)</span>
-              <span style={{ color: 'var(--accent-gold)' }}>manager123</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
+                <span style={{ fontSize: '1.1rem' }}>🌟</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--accent-gold)' }}>Executive Director (All-Access)</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Corporate Logistics & KPI Overview</div>
+                </div>
+              </div>
+              <span style={{
+                fontSize: '0.7rem',
+                backgroundColor: 'var(--accent-gold)',
+                color: '#0e1013',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: 700,
+                letterSpacing: '0.02em'
+              }}>
+                ENTER
+              </span>
             </button>
 
+            {/* Operations Manager Demo */}
             <button
               type="button"
               className="btn btn-secondary"
               style={{ justifyContent: 'space-between', padding: '10px 14px', fontSize: '0.82rem' }}
-              onClick={() => setDemoCredentials('rahul@company.com', 'driver123')}
+              onClick={() => handleQuickLogin('manager@company.com', 'manager123')}
+              disabled={loading}
             >
-              <span>🚛 Driver Rahul (Mobile View)</span>
-              <span style={{ color: 'var(--accent-gold)' }}>driver123</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
+                <span style={{ fontSize: '1rem' }}>👔</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>Operations Dispatch Manager</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fleet Management & Route Dispatch</div>
+                </div>
+              </div>
+              <span style={{ color: 'var(--accent-gold)', fontSize: '0.75rem', fontWeight: 600 }}>
+                1-Click
+              </span>
+            </button>
+
+            {/* Field Senior Driver Demo */}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ justifyContent: 'space-between', padding: '10px 14px', fontSize: '0.82rem' }}
+              onClick={() => handleQuickLogin('rahul@company.com', 'driver123')}
+              disabled={loading}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
+                <span style={{ fontSize: '1rem' }}>🚛</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>Senior Driver (Delhi-Noida Route)</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Mobile Proofs & Live Stop Progress</div>
+                </div>
+              </div>
+              <span style={{ color: 'var(--accent-gold)', fontSize: '0.75rem', fontWeight: 600 }}>
+                1-Click
+              </span>
             </button>
           </div>
         </div>

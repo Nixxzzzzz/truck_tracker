@@ -22,10 +22,12 @@ export async function seed() {
     DELETE FROM users;
   `);
 
+  const directorPasswordHash = await bcrypt.hash('director123', 10);
   const managerPasswordHash = await bcrypt.hash('manager123', 10);
   const driverPasswordHash = await bcrypt.hash('driver123', 10);
 
   // 1. Users
+  const directorId = uuidv4();
   const managerId = uuidv4();
   const driver1UserId = uuidv4();
   const driver2UserId = uuidv4();
@@ -37,6 +39,7 @@ export async function seed() {
     VALUES (?, ?, LOWER(?), ?, ?, ?)
   `);
 
+  insertUser.run(directorId, 'Vikram Singhania (VP Fleet & Logistics)', 'director@company.com', directorPasswordHash, 'MANAGER', '+91 99999 00001');
   insertUser.run(managerId, 'Sunil Mehta (Operations Manager)', 'manager@company.com', managerPasswordHash, 'MANAGER', '+91 98100 11223');
   insertUser.run(driver1UserId, 'Rahul Sharma (Senior Driver)', 'rahul@company.com', driverPasswordHash, 'DRIVER', '+91 98101 44556');
   insertUser.run(driver2UserId, 'Amit Verma (Express Driver)', 'amit@company.com', driverPasswordHash, 'DRIVER', '+91 98102 77889');
@@ -473,10 +476,11 @@ export async function seed() {
   console.log('✅ Database seeded with Delhi-Noida demo data successfully!');
   console.log('-------------------------------------------------');
   console.log('🔑 Credentials:');
-  console.log('   Manager: manager@company.com / manager123');
-  console.log('   Driver:  rahul@company.com   / driver123 (also driver@company.com)');
-  console.log('   Driver:  amit@company.com    / driver123');
-  console.log('   Driver:  rajesh@company.com  / driver123');
+  console.log('   Executive: director@company.com / director123');
+  console.log('   Manager:   manager@company.com  / manager123');
+  console.log('   Driver:    rahul@company.com    / driver123 (also driver@company.com)');
+  console.log('   Driver:    amit@company.com     / driver123');
+  console.log('   Driver:    rajesh@company.com   / driver123');
   console.log('-------------------------------------------------');
 }
 

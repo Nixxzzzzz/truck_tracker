@@ -153,7 +153,7 @@ router.get('/trips/:id', requireAuth, (req: AuthenticatedRequest, res: Response)
  * Driver starts the trip
  */
 router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const tripId = req.params.id;
+  const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
@@ -199,7 +199,8 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
  * Driver reaches a destination stop
  */
 router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { id: tripId, stopId } = req.params;
+  const tripId = String(req.params.id);
+  const stopId = String(req.params.stopId);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
@@ -302,7 +303,8 @@ router.post('/api/driver/trips/:id/stops/:stopId/complete-activity', requireAuth
 });
 
 router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { id: tripId, stopId } = req.params;
+  const tripId = String(req.params.id);
+  const stopId = String(req.params.stopId);
   const driverId = req.user!.id;
   const { activity_type, status, quantity, reference_number, recipient_name, notes, require_photo } = req.body;
 
@@ -368,7 +370,8 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
  * Driver departs from destination stop
  */
 router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { id: tripId, stopId } = req.params;
+  const tripId = String(req.params.id);
+  const stopId = String(req.params.stopId);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
@@ -427,7 +430,7 @@ router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedR
  * Driver reports a delay
  */
 router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const tripId = req.params.id;
+  const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { reason, description, stopId, latitude, longitude, gps_accuracy, photoId } = req.body;
 
@@ -498,7 +501,8 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
  * Driver marks active delay resolved
  */
 router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { id: tripId, delayId } = req.params;
+  const tripId = String(req.params.id);
+  const delayId = String(req.params.delayId);
   const driverId = req.user!.id;
 
   // Strict check: trip must exist and belong to the authenticated driver
@@ -572,7 +576,7 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
  * Driver finishes all stops and starts journey back to base
  */
 router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const tripId = req.params.id;
+  const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
@@ -639,7 +643,7 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
  * Driver arrives at company base
  */
 router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const tripId = req.params.id;
+  const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
@@ -694,7 +698,7 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
  * Driver completes the trip
  */
 router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const tripId = req.params.id;
+  const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 

@@ -93,7 +93,7 @@ export const api = {
         const normalizedEmail = body.email.trim().toLowerCase();
         const demoUser = DEMO_USERS[normalizedEmail];
         if (demoUser) {
-          const fakeToken = `demo_token_${demoUser.role.toLowerCase()}_${Date.now()}`;
+          const fakeToken = `demo_token_${normalizedEmail.includes('director') ? 'director_' : ''}${demoUser.role.toLowerCase()}_${Date.now()}`;
           localStorage.setItem('truck_tracker_token', fakeToken);
           localStorage.setItem('truck_tracker_is_demo', 'true');
           return { token: fakeToken, user: demoUser };
@@ -106,6 +106,9 @@ export const api = {
         return await request('/auth/me');
       } catch {
         const token = localStorage.getItem('truck_tracker_token') || '';
+        if (token.includes('director')) {
+          return { user: DEMO_USERS['director@company.com'] };
+        }
         if (token.includes('manager') || token.includes('demo_token_manager')) {
           return { user: DEMO_USERS['manager@company.com'] };
         }

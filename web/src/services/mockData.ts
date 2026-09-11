@@ -1,6 +1,13 @@
 import { User, Vehicle, Driver, Destination, Trip, Photo } from '../types';
 
 export const DEMO_USERS: Record<string, User> = {
+  'director@company.com': {
+    id: 'usr-dir-001',
+    name: 'Vikram Singhania (VP Fleet & Logistics)',
+    email: 'director@company.com',
+    role: 'MANAGER',
+    phone: '+91 99999 00001'
+  },
   'manager@company.com': {
     id: 'usr-mgr-001',
     name: 'Sunil Mehta (Operations Manager)',
@@ -113,7 +120,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+91 98103 99001',
     assigned_vehicle_id: 'v-003',
     assigned_vehicle_number: 'DL1L AA 3180',
-    status: 'ON_TRIP'
+    status: 'ON_TRIP'  // returning to base
   }
 ];
 
@@ -590,6 +597,8 @@ export const INITIAL_TRIPS: Trip[] = [
     created_by: 'usr-mgr-001',
     created_at: `${today}T06:00:00.000Z`,
     updated_at: `${today}T10:00:00.000Z`,
+    photos: [],
+    delays: [],
     stops: [
       {
         id: 'stp-del-201',
@@ -605,7 +614,9 @@ export const INITIAL_TRIPS: Trip[] = [
         actual_arrival_time: `${today}T07:12:00.000Z`,
         actual_departure_time: `${today}T07:45:00.000Z`,
         arrival_status: 'ON_TIME',
-        status: 'COMPLETED'
+        arrival_diff_minutes: -3,
+        status: 'COMPLETED',
+        notes: 'Delivered 24 auto component cartons (Hub bearings, brake pads). Signed: Vikas Malhotra'
       },
       {
         id: 'stp-del-202',
@@ -621,7 +632,131 @@ export const INITIAL_TRIPS: Trip[] = [
         actual_arrival_time: `${today}T08:28:00.000Z`,
         actual_departure_time: `${today}T09:10:00.000Z`,
         arrival_status: 'ON_TIME',
-        status: 'COMPLETED'
+        arrival_diff_minutes: -2,
+        status: 'COMPLETED',
+        notes: 'Unloaded 12 heavy-duty axle components at Container Bay C. Ref: PO-AUTO-4421'
+      }
+    ],
+    events: [
+      {
+        id: 'evt-02-01',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        event_type: 'TRIP_STARTED',
+        timestamp: `${today}T06:35:00.000Z`,
+        latitude: 28.5355,
+        longitude: 77.268,
+        gps_accuracy: 7.0,
+        details: 'Morning express dispatched from Okhla Hub — 06:35 AM'
+      },
+      {
+        id: 'evt-02-02',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        stop_id: 'stp-del-201',
+        event_type: 'STOP_ARRIVED',
+        timestamp: `${today}T07:12:00.000Z`,
+        latitude: 28.5709,
+        longitude: 77.3261,
+        gps_accuracy: 9.5,
+        details: 'Arrived Stop 1: Noida Sector 18 (-3m early). Geofence triggered at 148m radius'
+      },
+      {
+        id: 'evt-02-03',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        stop_id: 'stp-del-201',
+        event_type: 'ACTIVITY_COMPLETED',
+        timestamp: `${today}T07:40:00.000Z`,
+        latitude: 28.5708,
+        longitude: 77.326,
+        details: 'Unloaded 24 auto component cartons, delivery receipt signed by Vikas Malhotra'
+      },
+      {
+        id: 'evt-02-04',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        stop_id: 'stp-del-201',
+        event_type: 'STOP_DEPARTED',
+        timestamp: `${today}T07:45:00.000Z`,
+        latitude: 28.5707,
+        longitude: 77.326,
+        details: 'Departed Noida Sector 18 → Ecotech-III Greater Noida'
+      },
+      {
+        id: 'evt-02-05',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        stop_id: 'stp-del-202',
+        event_type: 'STOP_ARRIVED',
+        timestamp: `${today}T08:28:00.000Z`,
+        latitude: 28.4745,
+        longitude: 77.5038,
+        gps_accuracy: 6.0,
+        details: 'Arrived Stop 2: Ecotech-III Logistics Park (-2m early)'
+      },
+      {
+        id: 'evt-02-06',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        stop_id: 'stp-del-202',
+        event_type: 'ACTIVITY_COMPLETED',
+        timestamp: `${today}T09:05:00.000Z`,
+        latitude: 28.4744,
+        longitude: 77.504,
+        details: 'Unloaded 12 axle components at Container Bay C. All consignment verified'
+      },
+      {
+        id: 'evt-02-07',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        stop_id: 'stp-del-202',
+        event_type: 'STOP_DEPARTED',
+        timestamp: `${today}T09:10:00.000Z`,
+        latitude: 28.4743,
+        longitude: 77.5041,
+        details: 'All deliveries completed. Return journey to Okhla Base initiated'
+      },
+      {
+        id: 'evt-02-08',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        event_type: 'RETURN_STARTED',
+        timestamp: `${today}T09:15:00.000Z`,
+        latitude: 28.4744,
+        longitude: 77.504,
+        details: 'Return journey commenced from Greater Noida via NH-19'
+      },
+      {
+        id: 'evt-02-09',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        event_type: 'BASE_ARRIVED',
+        timestamp: `${today}T09:50:00.000Z`,
+        latitude: 28.5354,
+        longitude: 77.2679,
+        gps_accuracy: 5.5,
+        details: 'Returned to Okhla Hub. Vehicle secured at Bay 3'
+      },
+      {
+        id: 'evt-02-10',
+        trip_id: 'TR-DEL-2026-02',
+        driver_id: 'usr-drv-002',
+        vehicle_id: 'v-002',
+        event_type: 'TRIP_COMPLETED',
+        timestamp: `${today}T09:55:00.000Z`,
+        latitude: 28.5355,
+        longitude: 77.268,
+        details: '✅ Trip completed successfully. 0 delays. On-time performance: 100%'
       }
     ]
   },
@@ -639,14 +774,18 @@ export const INITIAL_TRIPS: Trip[] = [
     starting_longitude: 77.268,
     purpose: 'Central Delhi Commercial Supply & Noida Evening Handover',
     reference_number: 'PO-CP-7712',
-    planned_departure_time: '14:00',
-    status: 'ASSIGNED',
+    planned_departure_time: '09:00',
+    actual_start_time: `${today}T09:10:00.000Z`,
+    return_start_time: `${today}T12:30:00.000Z`,
+    status: 'RETURNING',
     total_delay_minutes: 0,
     calculated_distance_km: 38.2,
-    notes: 'Scheduled for afternoon dispatch upon vehicle inspection signoff',
+    notes: 'Heavy freight run completed. All 3 stops delivered. Returning to base via NH-48.',
     created_by: 'usr-mgr-001',
     created_at: `${today}T08:30:00.000Z`,
-    updated_at: `${today}T08:30:00.000Z`,
+    updated_at: `${today}T12:35:00.000Z`,
+    photos: [],
+    delays: [],
     stops: [
       {
         id: 'stp-del-301',
@@ -658,8 +797,13 @@ export const INITIAL_TRIPS: Trip[] = [
         latitude: 28.6315,
         longitude: 77.2167,
         geofence_radius_meters: 150,
-        planned_arrival_time: '14:45',
-        status: 'PENDING'
+        planned_arrival_time: '09:45',
+        actual_arrival_time: `${today}T09:48:00.000Z`,
+        actual_departure_time: `${today}T10:20:00.000Z`,
+        arrival_status: 'ON_TIME',
+        arrival_diff_minutes: 3,
+        status: 'COMPLETED',
+        notes: 'Delivered FMCG rapid replenishment stock. 32 pallets. Contact: Harish Verma'
       },
       {
         id: 'stp-del-302',
@@ -671,8 +815,13 @@ export const INITIAL_TRIPS: Trip[] = [
         latitude: 28.6015,
         longitude: 77.294,
         geofence_radius_meters: 150,
-        planned_arrival_time: '15:45',
-        status: 'PENDING'
+        planned_arrival_time: '10:45',
+        actual_arrival_time: `${today}T10:52:00.000Z`,
+        actual_departure_time: `${today}T11:25:00.000Z`,
+        arrival_status: 'ON_TIME',
+        arrival_diff_minutes: 7,
+        status: 'COMPLETED',
+        notes: 'Loaded return cargo: 28 empty crates for depot stock rotation'
       },
       {
         id: 'stp-del-303',
@@ -684,8 +833,149 @@ export const INITIAL_TRIPS: Trip[] = [
         latitude: 28.628,
         longitude: 77.368,
         geofence_radius_meters: 250,
-        planned_arrival_time: '16:45',
-        status: 'PENDING'
+        planned_arrival_time: '11:45',
+        actual_arrival_time: `${today}T11:55:00.000Z`,
+        actual_departure_time: `${today}T12:30:00.000Z`,
+        arrival_status: 'ON_TIME',
+        arrival_diff_minutes: 10,
+        status: 'COMPLETED',
+        notes: 'Final drop: 16 crates industrial electronics. Bay 4 docking confirmed.'
+      }
+    ],
+    events: [
+      {
+        id: 'evt-03-01',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        event_type: 'TRIP_STARTED',
+        timestamp: `${today}T09:10:00.000Z`,
+        latitude: 28.5355,
+        longitude: 77.268,
+        gps_accuracy: 8.0,
+        details: 'Heavy freight dispatch initiated — BharatBenz 24ft Container departing Okhla Hub'
+      },
+      {
+        id: 'evt-03-02',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-301',
+        event_type: 'STOP_ARRIVED',
+        timestamp: `${today}T09:48:00.000Z`,
+        latitude: 28.6316,
+        longitude: 77.2168,
+        gps_accuracy: 10.5,
+        details: 'Stop 1: Connaught Place Depot. +3m variance. Heavy vehicle bay access secured.'
+      },
+      {
+        id: 'evt-03-03',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-301',
+        event_type: 'ACTIVITY_COMPLETED',
+        timestamp: `${today}T10:15:00.000Z`,
+        latitude: 28.6315,
+        longitude: 77.2167,
+        details: '32 pallets FMCG offloaded. Receipt signed.'
+      },
+      {
+        id: 'evt-03-04',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-301',
+        event_type: 'STOP_DEPARTED',
+        timestamp: `${today}T10:20:00.000Z`,
+        latitude: 28.6314,
+        longitude: 77.2169,
+        details: 'Departed CP → Mayur Vihar. Ring Road corridor.'
+      },
+      {
+        id: 'evt-03-05',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-302',
+        event_type: 'STOP_ARRIVED',
+        timestamp: `${today}T10:52:00.000Z`,
+        latitude: 28.6016,
+        longitude: 77.2939,
+        gps_accuracy: 7.0,
+        details: 'Stop 2: Mayur Vihar Phase-1. Dock bay allocated on arrival.'
+      },
+      {
+        id: 'evt-03-06',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-302',
+        event_type: 'ACTIVITY_COMPLETED',
+        timestamp: `${today}T11:20:00.000Z`,
+        latitude: 28.6015,
+        longitude: 77.294,
+        details: 'Loaded 28 empty crates for depot rotation stock.'
+      },
+      {
+        id: 'evt-03-07',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-302',
+        event_type: 'STOP_DEPARTED',
+        timestamp: `${today}T11:25:00.000Z`,
+        latitude: 28.6014,
+        longitude: 77.2941,
+        details: 'En route to Noida Sector 62 — final drop of the run.'
+      },
+      {
+        id: 'evt-03-08',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-303',
+        event_type: 'STOP_ARRIVED',
+        timestamp: `${today}T11:55:00.000Z`,
+        latitude: 28.628,
+        longitude: 77.368,
+        gps_accuracy: 5.5,
+        details: 'Stop 3: Noida Sector 62 Electronic Hub. Bay 4 geofence verified (<230m).'
+      },
+      {
+        id: 'evt-03-09',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-303',
+        event_type: 'ACTIVITY_COMPLETED',
+        timestamp: `${today}T12:25:00.000Z`,
+        latitude: 28.628,
+        longitude: 77.368,
+        details: '16 industrial electronics crates unloaded. Supervisor Deepa Rastogi confirmed receipt.'
+      },
+      {
+        id: 'evt-03-10',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        stop_id: 'stp-del-303',
+        event_type: 'STOP_DEPARTED',
+        timestamp: `${today}T12:30:00.000Z`,
+        latitude: 28.6279,
+        longitude: 77.3681,
+        details: 'All 3 stops completed. Return to Okhla Base via NH-48 underway.'
+      },
+      {
+        id: 'evt-03-11',
+        trip_id: 'TR-DEL-2026-03',
+        driver_id: 'usr-drv-003',
+        vehicle_id: 'v-003',
+        event_type: 'RETURN_STARTED',
+        timestamp: `${today}T12:32:00.000Z`,
+        latitude: 28.628,
+        longitude: 77.368,
+        details: '🚛 Return journey active — ETA Okhla Base: 13:30'
       }
     ]
   }
@@ -731,7 +1021,11 @@ class MockStore {
   getPhotos(tripId: string): Photo[] {
     const trips = this.getTrips();
     const trip = trips.find((t) => t.id === tripId);
-    return trip?.photos || INITIAL_PHOTOS;
+    // Only return photos that belong to this specific trip
+    if (trip?.photos) return trip.photos;
+    // Fallback: return INITIAL_PHOTOS only for the primary demo trip
+    if (tripId === 'TR-DEL-2026-01') return INITIAL_PHOTOS;
+    return [];
   }
 
   saveTrip(trip: Trip): void {

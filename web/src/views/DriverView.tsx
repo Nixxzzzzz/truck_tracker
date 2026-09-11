@@ -28,9 +28,10 @@ interface Props {
   onLogout: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
+  onSwitchRole?: (role: 'DRIVER' | 'MANAGER') => void;
 }
 
-export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme }) => {
+export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme, onSwitchRole }) => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -315,6 +316,48 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             </button>
           </div>
         </header>
+
+        {/* Quick Executive Switcher Banner */}
+        {onSwitchRole && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: 'rgba(212, 168, 83, 0.1)',
+              border: '1px solid var(--accent-gold)',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 12px',
+              fontSize: '0.8rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem' }}>📱</span>
+              <span style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>
+                Field Driver Simulation Active
+              </span>
+            </div>
+            <button
+              onClick={() => onSwitchRole('MANAGER')}
+              style={{
+                background: 'var(--accent-gold)',
+                color: '#0e1013',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>👔 Manager Command</span>
+              <span>➔</span>
+            </button>
+          </div>
+        )}
 
         {/* Offline Queued Events Banner */}
         {offlineCount > 0 && (

@@ -30,9 +30,10 @@ interface Props {
   onLogout: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
+  onSwitchRole?: (role: 'DRIVER' | 'MANAGER') => void;
 }
 
-export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme }) => {
+export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme, onSwitchRole }) => {
   const [activeTab, setActiveTab] = useState<'operations' | 'fleet' | 'reports' | 'sheets'>('operations');
   const [trips, setTrips] = useState<Trip[]>([]);
   const [attention, setAttention] = useState<any>(null);
@@ -262,7 +263,9 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
 
           <div style={{ textAlign: 'right', fontSize: '0.82rem' }}>
             <div style={{ fontWeight: 600 }}>{currentUser.name}</div>
-            <div style={{ color: 'var(--accent-gold)', fontSize: '0.72rem' }}>Operations Manager</div>
+            <div style={{ color: 'var(--accent-gold)', fontSize: '0.72rem', fontWeight: 600 }}>
+              {currentUser.email?.includes('director') ? '🌟 Executive Director (All Access)' : 'Operations Manager'}
+            </div>
           </div>
 
           <button
@@ -283,6 +286,101 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
             ======================================================== */}
         {activeTab === 'operations' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Executive Operations Command Strip */}
+            <div
+              style={{
+                backgroundColor: 'rgba(212, 168, 83, 0.08)',
+                border: '1px solid rgba(212, 168, 83, 0.28)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '14px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '14px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+                    border: '1px solid rgba(52, 211, 153, 0.4)',
+                    color: 'var(--status-success)',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.03em'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--status-success)'
+                    }}
+                  />
+                  LIVE TELEMATICS ONLINE
+                </div>
+
+                <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)' }}>
+                  <strong style={{ color: 'var(--accent-gold)' }}>Active Route:</strong> Delhi Okhla ➔ Lajpat Nagar ➔ Mayur Vihar ➔ Ghazipur ➔ Noida Sec 18 ➔ Sec 62
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    padding: '3px 9px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                >
+                  🗺️ Google Maps Satellite & Street Layers Active
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--status-success)',
+                    backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                    padding: '3px 9px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(52, 211, 153, 0.25)',
+                    fontWeight: 600
+                  }}
+                >
+                  ⚡ Fleet SLA: 98.4% On-Time
+                </div>
+              </div>
+
+              {onSwitchRole && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                    borderColor: 'var(--accent-gold)',
+                    color: 'var(--accent-gold)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 600
+                  }}
+                  onClick={() => onSwitchRole('DRIVER')}
+                >
+                  <span>📱</span> Switch to Driver View (Mobile Demo)
+                </button>
+              )}
+            </div>
+
             {/* KPI Metric Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '16px' }}>
               <div className="card">
