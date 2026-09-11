@@ -41,6 +41,27 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   const [isDelayOpen, setIsDelayOpen] = useState(false);
   const [offlineCount, setOfflineCount] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+
+  useEffect(() => {
+    let watchId: number | null = null;
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setGpsAccuracy(Math.round(pos.coords.accuracy));
+        },
+        () => {
+          setGpsAccuracy(null);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+      );
+    }
+    return () => {
+      if (watchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadTodayTrips();
@@ -248,28 +269,6 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           gap: '14px'
         }}
       >
-        {/* Mobile App Device Top Status Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '5px 14px',
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '0.72rem',
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border-subtle)',
-            backdropFilter: 'blur(8px)'
-          }}
-        >
-          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>📍 GPS Active • 5G</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: 'var(--accent-gold)', fontWeight: 700, letterSpacing: '0.02em' }}>TruckTracker Driver v1.0.0</span>
-            <span>🔋 98%</span>
-          </div>
-        </div>
-
         {/* Top Driver Header */}
         <header
           style={{
@@ -321,6 +320,24 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Real Hardware Device GPS Status */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '0.72rem',
+                color: gpsAccuracy !== null ? 'var(--status-success)' : 'var(--text-muted)',
+                backgroundColor: gpsAccuracy !== null ? 'var(--status-success-bg)' : 'rgba(255, 255, 255, 0.05)',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-full)'
+              }}
+              title={gpsAccuracy !== null ? `Hardware GPS active: ±${gpsAccuracy}m` : 'Acquiring GPS fix...'}
+            >
+              <MapPin size={11} />
+              {gpsAccuracy !== null ? `GPS ±${gpsAccuracy}m` : 'GPS'}
+            </div>
+
             {/* Connection Status Indicator */}
             <div
               style={{
@@ -392,48 +409,6 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             <span>📥 Download APK</span>
           </a>
         </div>
-
-        {/* Quick Executive Switcher Banner */}
-        {onSwitchRole && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'rgba(212, 168, 83, 0.1)',
-              border: '1px solid var(--accent-gold)',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 12px',
-              fontSize: '0.8rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '1rem' }}>📱</span>
-              <span style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>
-                Field Driver Simulation Active (v1.0.0)
-              </span>
-            </div>
-            <button
-              onClick={() => onSwitchRole('MANAGER')}
-              style={{
-                background: 'var(--accent-gold)',
-                color: '#0e1013',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '4px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <span>👔 Manager Command</span>
-              <span>➔</span>
-            </button>
-          </div>
-        )}
 
         {/* Offline Queued Events Banner */}
         {offlineCount > 0 && (
