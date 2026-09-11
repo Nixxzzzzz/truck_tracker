@@ -103,13 +103,16 @@ export const App: React.FC = () => {
           padding: '6px 14px',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '8px',
           boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-          fontSize: '0.8rem'
+          fontSize: '0.8rem',
+          maxWidth: 'calc(100vw - 24px)',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap'
         }}
       >
         <span style={{ color: 'var(--accent-gold)', fontWeight: 700, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span>🌟</span> Executive Demo:
+          <span>🌟</span> Demo <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(212, 168, 83, 0.2)', border: '1px solid rgba(212, 168, 83, 0.4)' }}>v1.0.0</span>:
         </span>
         <button
           onClick={() => setSimulatedRole('MANAGER')}

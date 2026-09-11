@@ -237,19 +237,39 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', justifyContent: 'center', padding: '12px 12px 110px' }}>
       {/* Mobile Frame Container */}
       <div
         style={{
           width: '100%',
           maxWidth: '480px',
-          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
-          paddingBottom: '32px'
+          gap: '14px'
         }}
       >
+        {/* Mobile App Device Top Status Bar */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '5px 14px',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.72rem',
+            color: 'var(--text-muted)',
+            border: '1px solid var(--border-subtle)',
+            backdropFilter: 'blur(8px)'
+          }}
+        >
+          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>📍 GPS Active • 5G</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--accent-gold)', fontWeight: 700, letterSpacing: '0.02em' }}>TruckTracker Driver v1.0.0</span>
+            <span>🔋 98%</span>
+          </div>
+        </div>
+
         {/* Top Driver Header */}
         <header
           style={{
@@ -259,14 +279,15 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             padding: '12px 16px',
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)'
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.25)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '36px',
-                height: '36px',
+                width: '38px',
+                height: '38px',
                 borderRadius: '50%',
                 backgroundColor: 'var(--accent-gold-muted)',
                 border: '1px solid var(--accent-gold-border)',
@@ -279,8 +300,23 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
               <Truck size={20} />
             </div>
             <div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{currentUser.name}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Company Driver</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{currentUser.name}</span>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(212, 168, 83, 0.2)',
+                    color: 'var(--accent-gold)',
+                    fontWeight: 700,
+                    border: '1px solid rgba(212, 168, 83, 0.3)'
+                  }}
+                >
+                  v1.0.0
+                </span>
+              </div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Corporate Logistics Driver</div>
             </div>
           </div>
 
@@ -317,6 +353,46 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           </div>
         </header>
 
+        {/* Native Android APK Download Banner */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: 'rgba(212, 168, 83, 0.06)',
+            border: '1px solid rgba(212, 168, 83, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            padding: '8px 12px',
+            fontSize: '0.78rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem' }}>🤖</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Native Android App</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v1.0.0 APK • Geofencing & Offline Telemetry</div>
+            </div>
+          </div>
+          <a
+            href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{
+              padding: '4px 10px',
+              fontSize: '0.75rem',
+              color: 'var(--accent-gold)',
+              borderColor: 'rgba(212, 168, 83, 0.4)',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <span>📥 Download APK</span>
+          </a>
+        </div>
+
         {/* Quick Executive Switcher Banner */}
         {onSwitchRole && (
           <div
@@ -334,7 +410,7 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '1rem' }}>📱</span>
               <span style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>
-                Field Driver Simulation Active
+                Field Driver Simulation Active (v1.0.0)
               </span>
             </div>
             <button

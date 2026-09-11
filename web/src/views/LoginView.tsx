@@ -106,8 +106,11 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
           <h1 style={{ fontSize: '1.6rem', letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}>
             TruckTracker
           </h1>
-          <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', letterSpacing: '0.05em', fontWeight: 600, marginTop: '2px' }}>
-            INTERNAL FLEET LOGISTICS
+          <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', letterSpacing: '0.05em', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <span>INTERNAL FLEET LOGISTICS</span>
+            <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(212, 168, 83, 0.2)', border: '1px solid rgba(212, 168, 83, 0.3)' }}>
+              v1.0.0
+            </span>
           </div>
         </div>
 
@@ -251,6 +254,31 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
                 1-Click
               </span>
             </button>
+          </div>
+
+          {/* Android Mobile App Direct APK Link */}
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <a
+              href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.78rem',
+                color: 'var(--accent-gold)',
+                borderColor: 'rgba(212, 168, 83, 0.35)',
+                padding: '8px 16px',
+                textDecoration: 'none',
+                borderRadius: 'var(--radius-full)',
+                width: '100%',
+                justifyContent: 'center'
+              }}
+            >
+              <span>🤖</span> Download Android Driver App (v1.0.0 APK)
+            </a>
           </div>
         </div>
       </div>

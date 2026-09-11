@@ -72,7 +72,7 @@ class PreferenceManager(context: Context) {
         private const val KEY_USER = "user_profile"
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_DARK_THEME = "dark_theme"
-        // 10.0.2.2 is Android emulator host loopback to localhost:5000
-        const val DEFAULT_BASE_URL = "http://10.0.2.2:5000/"
+        // Production Render backend API URL
+        const val DEFAULT_BASE_URL = "https://truck-tracker-api-9yhq.onrender.com/"
     }
 }

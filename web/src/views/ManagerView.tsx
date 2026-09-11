@@ -206,8 +206,11 @@ export const ManagerView: React.FC<Props> = ({ currentUser, onLogout, theme = 'd
               <div style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}>
                 TruckTracker
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', letterSpacing: '0.04em', fontWeight: 600 }}>
-                INTERNAL LOGISTICS COMMAND
+              <div style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', letterSpacing: '0.04em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>INTERNAL LOGISTICS COMMAND</span>
+                <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid rgba(52, 211, 153, 0.3)', fontWeight: 700 }}>
+                  v1.0.0 LIVE
+                </span>
               </div>
             </div>
           </div>
