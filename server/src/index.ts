@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { initDatabase } from './db';
+import { initDatabase, db } from './db';
 import authRoutes from './routes/auth';
 import driverRoutes from './routes/driver';
 import tripsRoutes from './routes/trips';
@@ -17,6 +17,17 @@ dotenv.config();
 
 // Initialize database schema
 initDatabase();
+
+// Auto-seed demo data if database is fresh
+try {
+  const userCountRow = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number } | undefined;
+  if (!userCountRow || userCountRow.count === 0) {
+    console.log('🌱 Fresh database detected — auto-seeding fleet and demo routes...');
+    import('./seed').then(({ seed }) => seed()).catch((e) => console.error('[Auto-Seed Failed]', e));
+  }
+} catch (e) {
+  console.error('[DB Init Check Failed]', e);
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;

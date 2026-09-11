@@ -3,8 +3,8 @@ services:
     name: truck-tracker-api
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build --workspace=web
-    startCommand: npm run dev:server
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production

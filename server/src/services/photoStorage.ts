@@ -6,7 +6,7 @@ import { db } from '../db';
 import { PhotoType } from '../types';
 import { googleSheetsService } from './googleSheets';
 
-export const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/photos');
+export const UPLOADS_DIR = process.env.UPLOADS_DIR || path.resolve(__dirname, '../../uploads/photos');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }

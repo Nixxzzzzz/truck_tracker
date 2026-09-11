@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import fs from 'fs';
 
-const DB_DIR = path.resolve(__dirname, '../../data');
+const DB_DIR = process.env.DATA_DIR || path.resolve(__dirname, '../../data');
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }

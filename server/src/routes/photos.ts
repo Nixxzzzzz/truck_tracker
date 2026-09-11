@@ -15,7 +15,7 @@ const router = Router();
 router.post(
   '/upload',
   requireAuth,
-  uploadPhotoMiddleware.single('photo'),
+  uploadPhotoMiddleware.single('photo') as any,
   async (req: AuthenticatedRequest, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No photo file provided' });

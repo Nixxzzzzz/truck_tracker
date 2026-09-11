@@ -2,22 +2,26 @@
 # Multi-stage production build for TruckTracker
 
 # ==========================================
-# Stage 1: Build the Web Frontend
+# Stage 1: Build Frontend and Server
 # ==========================================
-FROM node:22-alpine AS web-builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy dependency manifests
 COPY package.json package-lock.json ./
 COPY web/package.json ./web/
 COPY server/package.json ./server/
+COPY shared/ ./shared/
 
-# Install dependencies for web workspace
-RUN npm ci --workspace=web
+# Install all workspace dependencies
+RUN npm ci
 
-# Copy web source and build
+# Copy sources
 COPY web/ ./web/
-RUN npm run build --workspace=web
+COPY server/ ./server/
+
+# Build web frontend and server TypeScript
+RUN npm run build --workspace=web && npm run build --workspace=server
 
 # ==========================================
 # Stage 2: Production Server Runner
@@ -28,28 +32,26 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Install build dependencies for better-sqlite3 native bindings
-RUN apk add --no-cache python3 make g++
-
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 
-# Install production dependencies
+# Install production-only dependencies
 RUN npm ci --workspace=server --omit=dev
 
-# Copy server application
-COPY server/ ./server/
+# Copy compiled backend output & static frontend assets
+COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/web/dist ./web/dist
 
-# Copy built frontend assets to web/dist (served directly by Express in production)
-COPY --from=web-builder /app/web/dist ./web/dist
+# Copy seed photo assets for demonstrations
+COPY server/uploads/ ./server/uploads/
 
-# Ensure persistent storage directories exist
-RUN mkdir -p /app/server/data /app/server/uploads/photos
+# Ensure persistent data directories exist
+RUN mkdir -p /app/server/data /app/server/uploads/photos /app/data /app/uploads/photos
 
 EXPOSE 5000
 
 # Volume mount points for SQLite database and uploaded photos
-VOLUME ["/app/server/data", "/app/server/uploads/photos"]
+VOLUME ["/app/data", "/app/uploads/photos"]
 
 WORKDIR /app/server
-CMD ["npm", "run", "dev"]
+CMD ["node", "dist/index.js"]

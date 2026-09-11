@@ -35,6 +35,9 @@ jobs:
       - name: Build Web Application
         run: npm run build --workspace=web
 
+      - name: Build & Verify Backend Server
+        run: npm run build --workspace=server
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
