@@ -22,9 +22,11 @@ import {
   Building2,
   ChevronDown,
   ChevronUp,
-  Map as MapIcon
+  Map as MapIcon,
+  RefreshCw
 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
+import { mockStore } from '../services/mockData';
 import { Trip, TripStop, User, Destination } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { CameraModal } from '../components/CameraModal';
@@ -73,15 +75,39 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   const [offlineCount, setOfflineCount] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
-  const [fleetDestinations, setFleetDestinations] = useState<Destination[]>([]);
+  const [isRealGps, setIsRealGps] = useState(false);
+  const [isRefreshingGps, setIsRefreshingGps] = useState(false);
+
+  // Initialize fleet destinations immediately from store so nearest facility never flashes empty
+  const [fleetDestinations, setFleetDestinations] = useState<Destination[]>(() => {
+    try {
+      return mockStore.getDestinations();
+    } catch {
+      return [];
+    }
+  });
+
   const [selectedNearestHub, setSelectedNearestHub] = useState<(Destination & { distanceKm: number; etaMinutes: number }) | null>(null);
   const [showAllNearby, setShowAllNearby] = useState(false);
-  const [driverCoords, setDriverCoords] = useState<{ latitude: number; longitude: number }>({
-    latitude: 28.5355,
-    longitude: 77.2680
+
+  // Driver coordinates state: pre-seeded with cached fix if exists
+  const [driverCoords, setDriverCoords] = useState<{ latitude: number; longitude: number }>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('tt_last_real_gps');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.latitude && parsed.longitude) {
+            return { latitude: parsed.latitude, longitude: parsed.longitude };
+          }
+        }
+      } catch {}
+    }
+    return { latitude: 28.5355, longitude: 77.2680 };
   });
 
   // Calculate real-time nearest fleet facilities dynamically from live GPS
+  // Filters out facilities closer than 50 meters (driver is already at that facility)
   const nearestLocations = useMemo(() => {
     if (!driverCoords || !fleetDestinations.length) return [];
     return fleetDestinations
@@ -94,24 +120,77 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           etaMinutes: estimateReachingTimeMinutes(dist)
         };
       })
+      .filter((d) => d.distanceKm > 0.05)
       .sort((a, b) => a.distanceKm - b.distanceKm);
   }, [driverCoords, fleetDestinations]);
 
   const closestHub = nearestLocations[0] || null;
 
+  // Active GPS refresh action
+  const handleRefreshGps = async () => {
+    setIsRefreshingGps(true);
+    try {
+      const fix = await getCurrentGpsPosition({ timeoutMs: 9000, preferHighAccuracy: true });
+      if (fix.latitude && fix.longitude) {
+        setDriverCoords({ latitude: fix.latitude, longitude: fix.longitude });
+        setGpsAccuracy(fix.gps_accuracy);
+        setIsRealGps(fix.isReal);
+        setGeofenceFeedback(
+          fix.isReal
+            ? `Live GPS Acquired: ${fix.latitude.toFixed(4)}°, ${fix.longitude.toFixed(4)}° (±${fix.gps_accuracy}m)`
+            : (fix.error || 'Using route corridor position')
+        );
+        setTimeout(() => setGeofenceFeedback(null), 4000);
+      }
+    } finally {
+      setIsRefreshingGps(false);
+    }
+  };
+
+  // Set simulated position on route for testing
+  const handleSimulateRoutePosition = () => {
+    setDriverCoords({ latitude: 28.5355, longitude: 77.2680 });
+    setGpsAccuracy(10);
+    setIsRealGps(false);
+    setGeofenceFeedback('Switched to Route Simulation: Company Depot, Okhla');
+    setTimeout(() => setGeofenceFeedback(null), 3000);
+  };
+
   useEffect(() => {
+    // Initial fetch of GPS
+    getCurrentGpsPosition({ timeoutMs: 5000 }).then((fix) => {
+      if (fix.isReal && fix.latitude && fix.longitude) {
+        setDriverCoords({ latitude: fix.latitude, longitude: fix.longitude });
+        setGpsAccuracy(fix.gps_accuracy);
+        setIsRealGps(true);
+      }
+    }).catch(() => {});
+
     let watchId: number | null = null;
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setGpsAccuracy(Math.round(pos.coords.accuracy));
+          setIsRealGps(true);
           setDriverCoords({
             latitude: Number(pos.coords.latitude.toFixed(6)),
             longitude: Number(pos.coords.longitude.toFixed(6))
           });
         },
         () => {
-          setGpsAccuracy(null);
+          // Standard accuracy fallback watcher
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setGpsAccuracy(Math.round(pos.coords.accuracy));
+              setIsRealGps(true);
+              setDriverCoords({
+                latitude: Number(pos.coords.latitude.toFixed(6)),
+                longitude: Number(pos.coords.longitude.toFixed(6))
+              });
+            },
+            () => {},
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+          );
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
       );
@@ -126,9 +205,9 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   useEffect(() => {
     loadTodayTrips();
 
-    // Fetch registered fleet destinations for real-time nearest facility tracking
+    // Fetch registered fleet destinations
     api.fleet.getDestinations().then((res) => {
-      if (res?.destinations) {
+      if (res?.destinations && res.destinations.length > 0) {
         setFleetDestinations(res.destinations);
       }
     }).catch(() => {});
@@ -743,6 +822,11 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                       longitude: 77.2680
                     }}
                     stops={activeTrip.stops || []}
+                    driverLocation={{
+                      latitude: driverCoords.latitude,
+                      longitude: driverCoords.longitude,
+                      accuracy: gpsAccuracy || undefined
+                    }}
                     height="240px"
                     theme={theme}
                     showGoogleMapsButton={false}
@@ -764,28 +848,60 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                   gap: '10px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div
                       style={{
-                        width: '26px',
-                        height: '26px',
+                        width: '28px',
+                        height: '28px',
                         borderRadius: 'var(--radius-full)',
                         backgroundColor: 'rgba(37, 211, 102, 0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'var(--accent-whatsapp)'
+                        color: 'var(--accent-whatsapp)',
+                        flexShrink: 0
                       }}
                     >
-                      <Radio size={14} />
+                      <Radio size={15} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-whatsapp)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>
-                        Nearest Fleet Hub Radar
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-whatsapp)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                          Nearest Fleet Hub Radar
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.64rem',
+                            padding: '1px 6px',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: isRealGps ? 'rgba(37,211,102,0.18)' : 'rgba(245,158,11,0.18)',
+                            color: isRealGps ? 'var(--accent-whatsapp)' : 'var(--status-delayed)',
+                            fontWeight: 700
+                          }}
+                        >
+                          {isRealGps ? 'LIVE SATELLITE GPS' : 'FLEET TELEMATICS'}
+                        </span>
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                        Tracked via GPS ({driverCoords.latitude.toFixed(4)}, {driverCoords.longitude.toFixed(4)})
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span>GPS: {driverCoords.latitude.toFixed(4)}°, {driverCoords.longitude.toFixed(4)}° {gpsAccuracy ? `(±${gpsAccuracy}m)` : ''}</span>
+                        <button
+                          type="button"
+                          onClick={handleRefreshGps}
+                          title="Acquire live GPS fix"
+                          disabled={isRefreshingGps}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--accent-whatsapp)',
+                            padding: '0 2px',
+                            display: 'inline-flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <RefreshCw size={11} className={isRefreshingGps ? 'spin-animation' : ''} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -815,6 +931,38 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                     )}
                   </div>
                 </div>
+
+                {/* Proximity notice if testing far from fleet depot */}
+                {closestHub.distanceKm > 50 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '6px 10px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.72rem',
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ color: 'var(--status-delayed)' }}>
+                      📍 Device is outside Delhi corridor ({closestHub.distanceKm} km).
+                    </span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleSimulateRoutePosition}
+                        style={{ padding: '2px 8px', fontSize: '0.68rem', borderColor: 'rgba(245,158,11,0.4)' }}
+                      >
+                        Snap GPS to Depot
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -1515,6 +1663,7 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           tripId={activeTrip.id}
           currentStopCount={activeTrip.stops?.length || 0}
           initialDestination={selectedNearestHub}
+          currentDriverCoords={driverCoords}
           onSuccess={(_newStop) => {
             loadTripDetails(activeTrip.id);
             setSelectedNearestHub(null);

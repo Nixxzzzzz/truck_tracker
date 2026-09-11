@@ -8,6 +8,7 @@ interface Props {
   tripId: string;
   currentStopCount: number;
   initialDestination?: (Destination & { distanceKm?: number }) | null;
+  currentDriverCoords?: { latitude: number; longitude: number };
   onSuccess: (newStop: TripStop) => void;
   onClose: () => void;
 }
@@ -29,13 +30,14 @@ export const AddCustomStopModal: React.FC<Props> = ({
   tripId,
   currentStopCount,
   initialDestination,
+  currentDriverCoords,
   onSuccess,
   onClose
 }) => {
   const [name, setName] = useState(initialDestination?.name || '');
   const [address, setAddress] = useState(initialDestination?.address || '');
-  const [latitude, setLatitude] = useState<number>(initialDestination?.latitude || 28.5355);
-  const [longitude, setLongitude] = useState<number>(initialDestination?.longitude || 77.2680);
+  const [latitude, setLatitude] = useState<number>(initialDestination?.latitude || currentDriverCoords?.latitude || 28.5355);
+  const [longitude, setLongitude] = useState<number>(initialDestination?.longitude || currentDriverCoords?.longitude || 77.2680);
   const [geofenceRadius, setGeofenceRadius] = useState(initialDestination?.geofence_radius_meters || 150);
   const [plannedTime, setPlannedTime] = useState('');
   const [notes, setNotes] = useState(
@@ -87,13 +89,17 @@ export const AddCustomStopModal: React.FC<Props> = ({
     }
   };
 
-  // Rank nearest destinations by distance from current pin
+  const originLat = currentDriverCoords?.latitude ?? latitude;
+  const originLng = currentDriverCoords?.longitude ?? longitude;
+
+  // Rank nearest destinations by distance from driver vehicle GPS
   const rankedDestinations = destinations
     .filter((d) => d.latitude && d.longitude)
     .map((d) => ({
       ...d,
-      distanceKm: calculateDistanceKm(latitude, longitude, d.latitude, d.longitude)
+      distanceKm: calculateDistanceKm(originLat, originLng, d.latitude, d.longitude)
     }))
+    .filter((d) => d.distanceKm > 0.05) // Filter out current facility if driver is already at depot/location
     .sort((a, b) => a.distanceKm - b.distanceKm);
 
   const selectDestination = (dest: Destination & { distanceKm: number }) => {

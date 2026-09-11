@@ -7,6 +7,7 @@ interface Props {
   baseLocation?: { name: string; latitude?: number; longitude?: number };
   stops?: TripStop[];
   events?: TripEvent[];
+  driverLocation?: { latitude: number; longitude: number; heading?: number; accuracy?: number };
   height?: string;
   theme?: 'dark' | 'light';
   showGoogleMapsButton?: boolean;
@@ -18,6 +19,7 @@ export const LeafletMap: React.FC<Props> = ({
   baseLocation,
   stops = [],
   events = [],
+  driverLocation,
   height = '420px',
   theme = 'dark',
   showGoogleMapsButton = true
@@ -244,6 +246,47 @@ export const LeafletMap: React.FC<Props> = ({
         `);
     }
 
+    // 5. Driver Live Navigation Beacon
+    if (driverLocation?.latitude && driverLocation?.longitude) {
+      const driverPos: [number, number] = [driverLocation.latitude, driverLocation.longitude];
+      latLngs.push(driverPos);
+
+      // Accuracy ring
+      if (driverLocation.accuracy) {
+        L.circle(driverPos, {
+          radius: Math.min(driverLocation.accuracy, 200),
+          color: '#25D366',
+          fillColor: '#25D366',
+          fillOpacity: 0.12,
+          weight: 1,
+          dashArray: '2, 3'
+        }).addTo(map);
+      }
+
+      const driverIcon = L.divIcon({
+        className: 'custom-map-icon',
+        html: `
+          <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(37,211,102,0.35);animation:pulse 1.8s infinite;"></div>
+            <div style="background:linear-gradient(135deg, #00a884, #25D366);color:#ffffff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;border:2.5px solid #ffffff;box-shadow:0 0 16px rgba(37,211,102,0.8);z-index:2;">🚚</div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      L.marker(driverPos, { icon: driverIcon, zIndexOffset: 1000 })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-family:Inter,sans-serif;padding:4px;">
+            <div style="font-size:10px;font-weight:700;color:#00a884;text-transform:uppercase;">Live Driver Beacon</div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;margin:2px 0;">Your Vehicle Position</div>
+            <div style="font-size:11px;color:#334155;">Coordinates: <b>${driverLocation.latitude.toFixed(4)}°, ${driverLocation.longitude.toFixed(4)}°</b></div>
+            ${driverLocation.accuracy ? `<div style="font-size:11px;color:#334155;">Precision: <b>&plusmn;${driverLocation.accuracy}m</b></div>` : ''}
+          </div>
+        `);
+    }
+
     // Auto-fit bounds in requestAnimationFrame to prevent main-thread INP blocking
     const rafId = requestAnimationFrame(() => {
       if (mapInstanceRef.current && latLngs.length > 0) {
@@ -259,7 +302,7 @@ export const LeafletMap: React.FC<Props> = ({
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [baseLocation, stops, events, mapLayer]);
+  }, [baseLocation, stops, events, driverLocation, mapLayer]);
 
   // Clean teardown on component unmount
   useEffect(() => {

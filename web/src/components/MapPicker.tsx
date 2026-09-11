@@ -165,13 +165,13 @@ export const MapPicker: React.FC<Props> = ({
   const handleUseCurrentLocation = async () => {
     setLocating(true);
     try {
-      const coords = await getCurrentGpsPosition();
+      const coords = await getCurrentGpsPosition({ preferHighAccuracy: true, timeoutMs: 9000 });
       if (coords.latitude && coords.longitude) {
         const newLat = Number(coords.latitude.toFixed(6));
         const newLng = Number(coords.longitude.toFixed(6));
         updatePosition(newLat, newLng, radius);
         if (mapRef.current) {
-          mapRef.current.setView([newLat, newLng], 15);
+          mapRef.current.setView([newLat, newLng], 16);
         }
       }
     } catch (e) {

@@ -17,15 +17,39 @@ function getAuthHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/**
- * Capture real device GPS coordinates with accuracy and guaranteed timeout
- */
-export async function getCurrentGpsPosition(): Promise<{
+export interface GpsPositionResult {
   latitude: number;
   longitude: number;
   gps_accuracy: number;
-}> {
-  const defaultCoords = { latitude: 28.5355, longitude: 77.2680, gps_accuracy: 25 };
+  isReal: boolean;
+  timestamp?: number;
+  error?: string;
+}
+
+/**
+ * Capture real device GPS coordinates with accuracy, dual-tier fallback, and guaranteed timeout
+ */
+export async function getCurrentGpsPosition(options?: {
+  timeoutMs?: number;
+  preferHighAccuracy?: boolean;
+}): Promise<GpsPositionResult> {
+  const timeout = options?.timeoutMs || 8000;
+
+  // Retrieve cached real fix if available
+  let cachedFix: GpsPositionResult | null = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('tt_last_real_gps');
+      if (stored) cachedFix = JSON.parse(stored);
+    } catch {}
+  }
+
+  const defaultCoords: GpsPositionResult = cachedFix || {
+    latitude: 28.5355,
+    longitude: 77.2680,
+    gps_accuracy: 25,
+    isReal: false
+  };
 
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     return defaultCoords;
@@ -33,33 +57,77 @@ export async function getCurrentGpsPosition(): Promise<{
 
   return new Promise((resolve) => {
     let resolved = false;
+
     const safetyTimer = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        resolve(defaultCoords);
+        resolve({
+          ...defaultCoords,
+          error: 'Location request timed out. Using last known location.'
+        });
       }
-    }, 3500);
+    }, timeout);
 
+    // Attempt 1: High accuracy (hardware GPS)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (!resolved) {
           resolved = true;
           clearTimeout(safetyTimer);
-          resolve({
+          const result: GpsPositionResult = {
             latitude: Number(pos.coords.latitude.toFixed(6)),
             longitude: Number(pos.coords.longitude.toFixed(6)),
-            gps_accuracy: Math.round(pos.coords.accuracy)
-          });
+            gps_accuracy: Math.round(pos.coords.accuracy),
+            isReal: true,
+            timestamp: pos.timestamp
+          };
+          try {
+            localStorage.setItem('tt_last_real_gps', JSON.stringify(result));
+          } catch {}
+          resolve(result);
         }
       },
-      (_err) => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(safetyTimer);
-          resolve(defaultCoords);
-        }
+      (err) => {
+        // Attempt 2: Standard accuracy (cellular / WiFi network positioning)
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(safetyTimer);
+              const result: GpsPositionResult = {
+                latitude: Number(pos.coords.latitude.toFixed(6)),
+                longitude: Number(pos.coords.longitude.toFixed(6)),
+                gps_accuracy: Math.round(pos.coords.accuracy),
+                isReal: true,
+                timestamp: pos.timestamp
+              };
+              try {
+                localStorage.setItem('tt_last_real_gps', JSON.stringify(result));
+              } catch {}
+              resolve(result);
+            }
+          },
+          (fallbackErr) => {
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(safetyTimer);
+              let errorMsg = 'Location unavailable';
+              if (err.code === 1 || fallbackErr.code === 1) {
+                errorMsg = 'Location permission denied by browser. Click site settings to allow location.';
+              } else if (err.code === 3 || fallbackErr.code === 3) {
+                errorMsg = 'GPS acquisition timed out.';
+              }
+              resolve({
+                ...defaultCoords,
+                isReal: false,
+                error: errorMsg
+              });
+            }
+          },
+          { enableHighAccuracy: false, timeout: Math.max(3000, timeout - 2000), maximumAge: 60000 }
+        );
       },
-      { enableHighAccuracy: false, timeout: 3000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: Math.max(3000, timeout - 2000), maximumAge: 10000 }
     );
   });
 }
