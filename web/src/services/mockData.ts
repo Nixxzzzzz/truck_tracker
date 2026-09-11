@@ -1121,6 +1121,60 @@ class MockStore {
     this.set('destinations', dests);
     return newDest;
   }
+
+  updateVehicle(id: string, data: Partial<Vehicle>): Vehicle | null {
+    const vehicles = this.getVehicles();
+    const idx = vehicles.findIndex((v) => v.id === id);
+    if (idx >= 0) {
+      vehicles[idx] = { ...vehicles[idx], ...data };
+      this.set('vehicles', vehicles);
+      return vehicles[idx];
+    }
+    return null;
+  }
+
+  deleteVehicle(id: string): boolean {
+    const vehicles = this.getVehicles();
+    const filtered = vehicles.filter((v) => v.id !== id);
+    this.set('vehicles', filtered);
+    return true;
+  }
+
+  updateDriver(id: string, data: Partial<Driver>): Driver | null {
+    const drivers = this.getDrivers();
+    const idx = drivers.findIndex((d) => d.id === id);
+    if (idx >= 0) {
+      drivers[idx] = { ...drivers[idx], ...data };
+      this.set('drivers', drivers);
+      return drivers[idx];
+    }
+    return null;
+  }
+
+  deleteDriver(id: string): boolean {
+    const drivers = this.getDrivers();
+    const filtered = drivers.filter((d) => d.id !== id);
+    this.set('drivers', filtered);
+    return true;
+  }
+
+  updateDestination(id: string, data: Partial<Destination>): Destination | null {
+    const dests = this.getDestinations();
+    const idx = dests.findIndex((d) => d.id === id);
+    if (idx >= 0) {
+      dests[idx] = { ...dests[idx], ...data };
+      this.set('destinations', dests);
+      return dests[idx];
+    }
+    return null;
+  }
+
+  deleteDestination(id: string): boolean {
+    const dests = this.getDestinations();
+    const filtered = dests.filter((d) => d.id !== id);
+    this.set('destinations', filtered);
+    return true;
+  }
 }
 
 export const mockStore = new MockStore();

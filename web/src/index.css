@@ -638,3 +638,152 @@ code, pre, .font-mono {
 .leaflet-popup-tip {
   background: #ffffff !important;
 }
+
+/* ==========================================================================
+   Enterprise Data Table System
+   ========================================================================== */
+
+.enterprise-table-container {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.enterprise-table-container:hover {
+  border-color: var(--border-medium);
+}
+
+.enterprise-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+  letter-spacing: -0.005em;
+}
+
+.enterprise-table thead {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-medium);
+}
+
+.enterprise-table th {
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  user-select: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.enterprise-table th.sortable:hover {
+  color: var(--accent-whatsapp);
+  background-color: var(--bg-surface-hover);
+}
+
+.enterprise-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.12s ease;
+}
+
+.enterprise-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.enterprise-table tbody tr:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.enterprise-table td {
+  padding: 13px 16px;
+  color: var(--text-primary);
+  vertical-align: middle;
+  line-height: 1.35;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints & Ergonomics
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .modal-content {
+    max-width: 92vw;
+  }
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* Modals full width on mobile */
+  .modal-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    max-height: 94vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+  }
+
+  /* Ensure touch target minimum 44px for drivers on road */
+  .btn {
+    min-height: 40px;
+  }
+
+  .btn-huge {
+    min-height: 52px;
+  }
+
+  /* Table padding on tablet/mobile */
+  .enterprise-table th,
+  .enterprise-table td {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra mobile compaction */
+  .card {
+    padding: 14px;
+  }
+
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .modal-content {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 96vh;
+  }
+
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-group .btn {
+    width: 100%;
+  }
+}
+
