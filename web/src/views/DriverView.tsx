@@ -14,13 +14,19 @@ import {
   RotateCcw,
   WifiOff,
   Wifi,
-  Smartphone
+  Smartphone,
+  Plus,
+  ExternalLink,
+  Compass,
+  Map as MapIcon
 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
 import { Trip, TripStop, User } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { CameraModal } from '../components/CameraModal';
 import { DelayModal } from '../components/DelayModal';
+import { AddCustomStopModal } from '../components/AddCustomStopModal';
+import { LeafletMap } from '../components/LeafletMap';
 import { offlineQueue } from '../services/offlineQueue';
 import { ThemeToggle } from '../components/ThemeToggle';
 
@@ -32,6 +38,24 @@ interface Props {
   onSwitchRole?: (role: 'DRIVER' | 'MANAGER') => void;
 }
 
+// Mathematical Haversine Distance in Kilometers
+function calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
+}
+
+// Estimated Reaching Time based on Urban Logistics Speed (avg 28 km/h ~ 0.47 km/min)
+function estimateReachingTimeMinutes(distanceKm: number): number {
+  return Math.max(3, Math.round(distanceKm / 0.47));
+}
+
 export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'dark', onToggleTheme, onSwitchRole }) => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
@@ -40,9 +64,15 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   const [geofenceFeedback, setGeofenceFeedback] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isDelayOpen, setIsDelayOpen] = useState(false);
+  const [isCustomStopOpen, setIsCustomStopOpen] = useState(false);
+  const [showRouteMap, setShowRouteMap] = useState(true);
   const [offlineCount, setOfflineCount] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [driverCoords, setDriverCoords] = useState<{ latitude: number; longitude: number }>({
+    latitude: 28.5355,
+    longitude: 77.2680
+  });
 
   useEffect(() => {
     let watchId: number | null = null;
@@ -50,6 +80,10 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setGpsAccuracy(Math.round(pos.coords.accuracy));
+          setDriverCoords({
+            latitude: Number(pos.coords.latitude.toFixed(6)),
+            longitude: Number(pos.coords.longitude.toFixed(6))
+          });
         },
         () => {
           setGpsAccuracy(null);
@@ -622,6 +656,69 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
               </div>
             )}
 
+            {/* LIVE DRIVER ROUTE MAP (Rapido Captain / Uber Driver Navigation) */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderBottom: showRouteMap ? '1px solid var(--border-subtle)' : 'none'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-whatsapp)',
+                      boxShadow: '0 0 6px var(--accent-whatsapp)'
+                    }}
+                  />
+                  <span style={{ fontSize: '0.84rem', fontWeight: 600 }}>Live Route Navigation Map</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    ({activeTrip.stops?.length || 0} stops • GPS active)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowRouteMap(!showRouteMap)}
+                  style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                >
+                  {showRouteMap ? 'Collapse Map' : 'Show Map'}
+                </button>
+              </div>
+
+              {showRouteMap && (
+                <div style={{ width: '100%', height: '240px', position: 'relative' }}>
+                  <LeafletMap
+                    baseLocation={{
+                      name: activeTrip.starting_location || 'Base Depot HQ',
+                      latitude: 28.5355,
+                      longitude: 77.2680
+                    }}
+                    stops={activeTrip.stops || []}
+                    height="240px"
+                    theme={theme}
+                    showGoogleMapsButton={false}
+                  />
+                </div>
+              )}
+            </div>
+
             {/* STAGE CONTROLLER ACTIONS */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
               {/* STAGE 1: Trip Not Started Yet */}
@@ -641,54 +738,159 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
               )}
 
               {/* STAGE 2: Trip In Progress - Stop Actions */}
-              {activeTrip.status === 'IN_PROGRESS' && currentStop && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div
-                    style={{
-                      padding: '14px',
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderRadius: 'var(--radius-md)',
-                      borderLeft: '4px solid var(--accent-gold)'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
-                      NEXT DESTINATION (STOP {currentStop.stop_number} OF {totalStopsCount})
-                    </div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 600, marginTop: '2px' }}>
-                      {currentStop.destination_name}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                      <MapPin size={14} /> {currentStop.address}
-                    </div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Planned Arrival: <b>{currentStop.planned_arrival_time}</b>
-                    </div>
-                  </div>
+              {activeTrip.status === 'IN_PROGRESS' && currentStop && (() => {
+                const distToCurrent = currentStop.latitude && currentStop.longitude && driverCoords
+                  ? calculateHaversineDistanceKm(driverCoords.latitude, driverCoords.longitude, currentStop.latitude, currentStop.longitude)
+                  : null;
+                const etaMins = distToCurrent !== null ? estimateReachingTimeMinutes(distToCurrent) : null;
+                const arrivalClock = etaMins !== null
+                  ? new Date(Date.now() + etaMins * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : currentStop.planned_arrival_time;
 
-                  <button
-                    className="btn btn-huge btn-primary"
-                    onClick={handleArriveAtStop}
-                    disabled={actionLoading}
-                  >
-                    <MapPin size={20} /> ARRIVED AT STOP
-                  </button>
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div
+                      style={{
+                        padding: '14px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        borderRadius: 'var(--radius-md)',
+                        borderLeft: '4px solid var(--accent-whatsapp)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--accent-whatsapp)', fontWeight: 700, letterSpacing: '0.5px' }}>
+                          NEXT DESTINATION (STOP {currentStop.stop_number} OF {totalStopsCount})
+                        </div>
+                        {distToCurrent !== null && (
+                          <div
+                            style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              backgroundColor: 'rgba(37, 211, 102, 0.15)',
+                              color: 'var(--accent-whatsapp)',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)'
+                            }}
+                          >
+                            📍 {distToCurrent} km away
+                          </div>
+                        )}
+                      </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 600 }}>
+                        {currentStop.destination_name}
+                      </div>
+
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <MapPin size={14} style={{ flexShrink: 0 }} />
+                        <span>{currentStop.address}</span>
+                      </div>
+
+                      {/* Distance, ETA & Coordinates Strip */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                          gap: '8px',
+                          paddingTop: '8px',
+                          borderTop: '1px solid var(--border-subtle)',
+                          fontSize: '0.78rem'
+                        }}
+                      >
+                        <div>
+                          <div style={{ color: 'var(--text-muted)' }}>Reaching Time (ETA)</div>
+                          <div style={{ fontWeight: 600, color: 'var(--accent-whatsapp)' }}>
+                            {etaMins !== null ? `~${etaMins} mins (${arrivalClock})` : currentStop.planned_arrival_time}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--text-muted)' }}>Coordinates</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem' }}>
+                            {currentStop.latitude?.toFixed(4)}, {currentStop.longitude?.toFixed(4)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Turn-by-Turn Google Navigation Button */}
+                      {currentStop.latitude && currentStop.longitude && (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${currentStop.latitude},${currentStop.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            marginTop: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            fontSize: '0.78rem',
+                            color: 'var(--accent-whatsapp)',
+                            borderColor: 'var(--border-medium)',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <Navigation size={13} />
+                          <span>Start Turn-by-Turn Google Navigation</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+
                     <button
-                      className="btn btn-secondary"
-                      onClick={() => setIsDelayOpen(true)}
+                      className="btn btn-huge btn-primary"
+                      onClick={handleArriveAtStop}
+                      disabled={actionLoading}
+                      style={{
+                        backgroundColor: 'var(--accent-whatsapp)',
+                        borderColor: 'var(--accent-whatsapp)',
+                        color: '#0b141a',
+                        fontWeight: 700
+                      }}
                     >
-                      <AlertTriangle size={16} /> Report Delay
+                      <MapPin size={20} /> ARRIVED AT STOP
                     </button>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setIsDelayOpen(true)}
+                      >
+                        <AlertTriangle size={16} /> Report Delay
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setIsCameraOpen(true)}
+                      >
+                        <Camera size={16} /> Take Photo
+                      </button>
+                    </div>
+
                     <button
+                      type="button"
                       className="btn btn-secondary"
-                      onClick={() => setIsCameraOpen(true)}
+                      onClick={() => setIsCustomStopOpen(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '10px 14px',
+                        borderStyle: 'dashed'
+                      }}
                     >
-                      <Camera size={16} /> Take Photo
+                      <Plus size={16} color="var(--accent-whatsapp)" />
+                      <span>Add Custom Stop (Emergency / Ad-hoc)</span>
                     </button>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* STAGE 3: At Destination (Arrived / In Progress Stop) */}
               {(activeTrip.status === 'AT_DESTINATION' || (activeTrip.status === 'IN_PROGRESS' && currentStop?.status === 'ARRIVED')) && currentStop && (
@@ -716,7 +918,7 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <button
                       className="btn btn-primary"
-                      style={{ padding: '14px' }}
+                      style={{ padding: '14px', backgroundColor: 'var(--accent-whatsapp)', borderColor: 'var(--accent-whatsapp)', color: '#0b141a', fontWeight: 700 }}
                       onClick={handleCompleteActivity}
                       disabled={actionLoading}
                     >
@@ -748,6 +950,24 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                       <Navigation size={16} /> DEPART STOP
                     </button>
                   </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setIsCustomStopOpen(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderStyle: 'dashed',
+                      fontSize: '0.78rem'
+                    }}
+                  >
+                    <Plus size={14} color="var(--accent-whatsapp)" />
+                    <span>Add Another Stop Next</span>
+                  </button>
                 </div>
               )}
 
@@ -870,56 +1090,142 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
 
             {/* Destination Stops List Accordion */}
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginTop: '4px' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase' }}>
-                Trip Route Stops ({activeTrip.stops?.length || 0})
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px'
+                }}
+              >
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Trip Route Stops ({activeTrip.stops?.length || 0})
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setIsCustomStopOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    color: 'var(--accent-whatsapp)',
+                    borderColor: 'var(--border-medium)'
+                  }}
+                >
+                  <Plus size={13} />
+                  <span>Add Custom Stop</span>
+                </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {activeTrip.stops?.map((stop) => {
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {activeTrip.stops?.map((stop, index) => {
                   const isCurrent = currentStop?.id === stop.id;
                   const isDone = stop.status === 'COMPLETED';
+
+                  // Calculate inter-stop leg distance
+                  const prevLat = index === 0 ? (28.5355) : (activeTrip.stops![index - 1].latitude || 28.5355);
+                  const prevLng = index === 0 ? (77.2680) : (activeTrip.stops![index - 1].longitude || 77.2680);
+                  const legDist = stop.latitude && stop.longitude
+                    ? calculateHaversineDistanceKm(prevLat, prevLng, stop.latitude, stop.longitude)
+                    : null;
+                  const legMins = legDist !== null ? estimateReachingTimeMinutes(legDist) : null;
 
                   return (
                     <div
                       key={stop.id}
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 12px',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        padding: '12px 14px',
                         backgroundColor: isCurrent ? 'var(--bg-surface-elevated)' : 'var(--bg-secondary)',
-                        border: `1px solid ${isCurrent ? 'var(--accent-gold-border)' : 'transparent'}`,
+                        border: `1px solid ${isCurrent ? 'var(--accent-whatsapp)' : 'var(--border-subtle)'}`,
                         borderRadius: 'var(--radius-md)',
-                        opacity: isDone ? 0.7 : 1
+                        opacity: isDone ? 0.75 : 1
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '50%',
-                            backgroundColor: isDone ? 'var(--status-success)' : isCurrent ? 'var(--accent-gold)' : 'var(--border-medium)',
-                            color: '#0d0e11',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {isDone ? '✓' : stop.stop_number}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{stop.destination_name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            Planned: {stop.planned_arrival_time}
-                            {stop.actual_arrival_time && ` • Actual: ${new Date(stop.actual_arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '50%',
+                              backgroundColor: isDone
+                                ? 'var(--status-success)'
+                                : isCurrent
+                                ? 'var(--accent-whatsapp)'
+                                : 'var(--border-medium)',
+                              color: isCurrent || isDone ? '#0d0e11' : 'var(--text-primary)',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {isDone ? '✓' : stop.stop_number}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{stop.destination_name}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {stop.address}
+                            </div>
                           </div>
                         </div>
+
+                        <StatusBadge status={stop.status} />
                       </div>
 
-                      <StatusBadge status={stop.status} />
+                      {/* Technical Route Telemetry: Coordinates, Leg Distance & Reaching Time */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '6px',
+                          paddingTop: '6px',
+                          borderTop: '1px dashed var(--border-subtle)',
+                          fontSize: '0.72rem',
+                          color: 'var(--text-secondary)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {legDist !== null && (
+                            <span style={{ fontWeight: 600, color: 'var(--accent-whatsapp)' }}>
+                              📏 {legDist} km from {index === 0 ? 'Depot' : `Stop #${index}`} (~{legMins}m)
+                            </span>
+                          )}
+                          {stop.latitude && stop.longitude && (
+                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                              GPS: {stop.latitude.toFixed(4)}, {stop.longitude.toFixed(4)}
+                            </span>
+                          )}
+                        </div>
+
+                        {stop.latitude && stop.longitude && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: 'var(--accent-whatsapp)',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              fontWeight: 600
+                            }}
+                          >
+                            <Navigation size={11} />
+                            <span>Navigate</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -981,6 +1287,18 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           stopId={currentStop?.id}
           onSuccess={() => loadTripDetails(activeTrip.id)}
           onClose={() => setIsDelayOpen(false)}
+        />
+      )}
+
+      {/* Add Custom Stop Modal */}
+      {isCustomStopOpen && activeTrip && (
+        <AddCustomStopModal
+          tripId={activeTrip.id}
+          currentStopCount={activeTrip.stops?.length || 0}
+          onSuccess={(_newStop) => {
+            loadTripDetails(activeTrip.id);
+          }}
+          onClose={() => setIsCustomStopOpen(false)}
         />
       )}
     </div>

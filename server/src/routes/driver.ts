@@ -216,6 +216,63 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
 });
 
 /**
+ * POST /api/driver/trips/:id/custom-stop
+ * Driver adds an ad-hoc custom stop during transit
+ */
+router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const tripId = String(req.params.id);
+  const { destination_name, address, latitude, longitude, geofence_radius_meters = 150, planned_arrival_time, notes } = req.body;
+
+  if (!destination_name) {
+    return res.status(400).json({ error: 'Destination name is required' });
+  }
+
+  const trip = getAuthorizedTrip(tripId, req.user!);
+  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+  // Get current stop count
+  const maxStop = db.prepare(`SELECT MAX(stop_number) as max_num FROM trip_stops WHERE trip_id = ?`).get(tripId) as any;
+  const nextNum = (maxStop?.max_num || 0) + 1;
+  const stopId = uuidv4();
+
+  try {
+    db.prepare(`
+      INSERT INTO trip_stops (
+        id, trip_id, stop_number, destination_name, address, 
+        latitude, longitude, geofence_radius_meters, planned_arrival_time, status, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
+    `).run(
+      stopId,
+      tripId,
+      nextNum,
+      destination_name,
+      address || 'Custom Stop Designated by Driver',
+      latitude || 28.5355,
+      longitude || 77.268,
+      geofence_radius_meters,
+      planned_arrival_time || '12:00',
+      notes || '[Driver Custom Stop]'
+    );
+
+    recordEvent({
+      tripId,
+      stopId,
+      eventType: 'CUSTOM_STOP_ADDED',
+      driverId: req.user!.id,
+      vehicleId: trip.vehicle_id,
+      latitude,
+      longitude,
+      details: `Driver added custom stop: ${destination_name} (Stop #${nextNum})`
+    });
+
+    const createdStop = db.prepare(`SELECT * FROM trip_stops WHERE id = ?`).get(stopId);
+    return res.status(201).json({ message: 'Custom stop added successfully', stop: createdStop });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to add custom stop: ' + err.message });
+  }
+});
+
+/**
  * POST /api/driver/trips/:id/stops/:stopId/arrive
  * Driver reaches a destination stop
  */

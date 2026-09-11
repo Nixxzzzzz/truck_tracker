@@ -21,13 +21,17 @@ import {
   Activity,
   Layers,
   Phone,
-  Compass
+  Compass,
+  RotateCcw
 } from 'lucide-react';
 import { api, API_BASE } from '../services/api';
 import { Trip, User, Vehicle, Driver, Destination } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { TripCreatorModal } from '../components/TripCreatorModal';
 import { TripDetailModal } from '../components/TripDetailModal';
+import { VehicleModal } from '../components/VehicleModal';
+import { DriverModal } from '../components/DriverModal';
+import { DestinationModal } from '../components/DestinationModal';
 import { LeafletMap } from '../components/LeafletMap';
 import { AppLayout } from '../components/layout/AppLayout';
 import { NavSection } from '../components/layout/Sidebar';
@@ -60,6 +64,9 @@ export const ManagerView: React.FC<Props> = ({
   // Filters for Operations Trips
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [filterDriverId, setFilterDriverId] = useState('');
+  const [filterVehicleId, setFilterVehicleId] = useState('');
+  const [filterDelaysOnly, setFilterDelaysOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Fleet Sub-Search & Filters
@@ -70,6 +77,9 @@ export const ManagerView: React.FC<Props> = ({
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
+  const [isDestinationModalOpen, setIsDestinationModalOpen] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   // Fleet state
@@ -360,6 +370,49 @@ export const ManagerView: React.FC<Props> = ({
     }
   ];
 
+  // Filter Reset & Helper State
+  const resetAllFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('');
+    setFilterDriverId('');
+    setFilterVehicleId('');
+    setFilterDelaysOnly(false);
+    setSelectedDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() ||
+    statusFilter ||
+    filterDriverId ||
+    filterVehicleId ||
+    filterDelaysOnly ||
+    selectedDate !== new Date().toISOString().split('T')[0]
+  );
+
+  // Filtered Trips Computation
+  const filteredTrips = trips.filter((trip) => {
+    if (statusFilter && trip.status !== statusFilter) return false;
+    if (filterDriverId && trip.driver_id !== filterDriverId && trip.driver_name !== filterDriverId) return false;
+    if (filterVehicleId && trip.vehicle_id !== filterVehicleId && trip.vehicle_number !== filterVehicleId) return false;
+    if (filterDelaysOnly && !(trip.total_delay_minutes && trip.total_delay_minutes > 0)) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match =
+        trip.id.toLowerCase().includes(q) ||
+        (trip.driver_name || '').toLowerCase().includes(q) ||
+        (trip.vehicle_number || '').toLowerCase().includes(q) ||
+        (trip.reference_number || '').toLowerCase().includes(q) ||
+        (trip.purpose || '').toLowerCase().includes(q) ||
+        (trip.stops || []).some(
+          (s) =>
+            (s.destination_name || '').toLowerCase().includes(q) ||
+            (s.address || '').toLowerCase().includes(q)
+        );
+      if (!match) return false;
+    }
+    return true;
+  });
+
   // Vehicles Filtered
   const filteredVehicles = vehicles.filter((v) => {
     const matchesSearch =
@@ -536,37 +589,101 @@ export const ManagerView: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Filter, Search & Refresh Toolbar */}
+          {/* Filter, Search & Refresh Multi-Criteria Toolbar */}
           <div
             style={{
               display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-              flexWrap: 'wrap',
+              flexDirection: 'column',
+              gap: '10px',
               backgroundColor: 'var(--bg-surface)',
-              padding: '12px 16px',
+              padding: '14px 16px',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
-              <Search size={15} color="var(--text-muted)" />
-              <input
-                type="text"
-                className="form-input"
-                style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                placeholder="Search trip ID, driver, vehicle..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && loadDashboardData()}
-              />
+            {/* Top row: Search input & Action Pills */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
+                <Search size={15} color="var(--text-muted)" />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                  placeholder="Search by Trip ID, driver, vehicle plate, reference no, or stop..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* Date Selector with Quick Presets */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Clock size={14} color="var(--text-muted)" />
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ padding: '5px 8px', fontSize: '0.8rem', width: 'auto' }}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '0.72rem',
+                    backgroundColor: selectedDate === new Date().toISOString().split('T')[0] ? 'var(--accent-whatsapp)' : 'var(--bg-secondary)',
+                    color: selectedDate === new Date().toISOString().split('T')[0] ? '#0b141a' : 'var(--text-secondary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Today
+                </button>
+              </div>
+
+              {/* Live auto-refresh toggle */}
+              <button
+                type="button"
+                onClick={() => setLiveRefresh((prev) => !prev)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: liveRefresh ? 'rgba(37, 211, 102, 0.12)' : 'transparent',
+                  border: `1px solid ${liveRefresh ? 'rgba(37, 211, 102, 0.35)' : 'var(--border-subtle)'}`,
+                  borderRadius: 'var(--radius-full)',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  fontSize: '0.74rem',
+                  color: liveRefresh ? 'var(--accent-whatsapp)' : 'var(--text-muted)',
+                  whiteSpace: 'nowrap'
+                }}
+                title={liveRefresh ? 'Live auto-refresh active (every 30s)' : 'Auto-refresh paused'}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: liveRefresh ? 'var(--accent-whatsapp)' : 'var(--text-muted)',
+                    animation: liveRefresh ? 'pulse 2s infinite ease-in-out' : 'none'
+                  }}
+                />
+                {liveRefresh ? 'Live Poll ON' : 'Paused'}
+              </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <Filter size={14} color="var(--text-muted)" />
+            {/* Bottom row: Filter Dropdowns & Toggles */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid var(--border-subtle)' }}>
+              <Filter size={13} color="var(--text-muted)" />
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Filters:</span>
+
+              {/* Status filter */}
               <select
                 className="form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
+                style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -580,51 +697,89 @@ export const ManagerView: React.FC<Props> = ({
                 <option value="CANCELLED">Cancelled</option>
               </select>
 
-              <input
-                type="date"
-                className="form-input"
-                style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
+              {/* Driver filter */}
+              <select
+                className="form-select"
+                style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+                value={filterDriverId}
+                onChange={(e) => setFilterDriverId(e.target.value)}
+              >
+                <option value="">All Drivers</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.name}>
+                    {d.name} ({d.employee_id})
+                  </option>
+                ))}
+              </select>
 
-              {/* Live auto-refresh toggle */}
+              {/* Vehicle filter */}
+              <select
+                className="form-select"
+                style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+                value={filterVehicleId}
+                onChange={(e) => setFilterVehicleId(e.target.value)}
+              >
+                <option value="">All Vehicles</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.vehicle_number}>
+                    {v.vehicle_number} ({v.model})
+                  </option>
+                ))}
+              </select>
+
+              {/* Delays Only Toggle Button */}
               <button
                 type="button"
-                onClick={() => setLiveRefresh((prev) => !prev)}
+                onClick={() => setFilterDelaysOnly(!filterDelaysOnly)}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  background: liveRefresh ? 'var(--status-success-bg)' : 'transparent',
-                  border: `1px solid ${liveRefresh ? 'var(--status-success-border)' : 'var(--border-subtle)'}`,
-                  borderRadius: 'var(--radius-full)',
-                  padding: '5px 10px',
-                  cursor: 'pointer',
+                  gap: '4px',
+                  padding: '4px 10px',
                   fontSize: '0.74rem',
-                  color: liveRefresh ? 'var(--status-success)' : 'var(--text-muted)',
-                  whiteSpace: 'nowrap'
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  border: filterDelaysOnly ? '1px solid var(--status-delayed)' : '1px solid var(--border-subtle)',
+                  backgroundColor: filterDelaysOnly ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                  color: filterDelaysOnly ? 'var(--status-delayed)' : 'var(--text-muted)',
+                  fontWeight: filterDelaysOnly ? 700 : 500
                 }}
-                title={liveRefresh ? 'Live auto-refresh active (every 30s)' : 'Auto-refresh paused'}
               >
-                <span
-                  style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: liveRefresh ? 'var(--status-success)' : 'var(--text-muted)',
-                    animation: liveRefresh ? 'pulse 2s infinite ease-in-out' : 'none'
-                  }}
-                />
-                {liveRefresh ? 'Live Poll ON' : 'Paused'}
+                <AlertTriangle size={12} />
+                <span>Exceptions / Delays Only</span>
               </button>
+
+              {/* Reset All Filters Button */}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 9px',
+                    fontSize: '0.74rem',
+                    color: 'var(--accent-whatsapp)'
+                  }}
+                  title="Clear all filters and search query"
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset Filters</span>
+                </button>
+              )}
+
+              <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                Showing <b>{filteredTrips.length}</b> of <b>{trips.length}</b> trips
+              </span>
             </div>
           </div>
 
           {/* Trips Register Table */}
           <EnterpriseTable
             columns={tripColumns}
-            data={trips}
+            data={filteredTrips}
             keyExtractor={(trip) => trip.id}
             loading={loading}
             onRowClick={(trip) => setSelectedTripId(trip.id)}
@@ -685,6 +840,22 @@ export const ManagerView: React.FC<Props> = ({
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}
             refreshing={refreshing}
+            actions={
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setIsVehicleModalOpen(true)}
+                style={{
+                  backgroundColor: 'var(--accent-whatsapp)',
+                  borderColor: 'var(--accent-whatsapp)',
+                  color: '#0b141a',
+                  fontWeight: 600
+                }}
+              >
+                <Plus size={14} />
+                <span>Add Vehicle</span>
+              </button>
+            }
           />
 
           {/* Quick Metrics */}
@@ -807,6 +978,22 @@ export const ManagerView: React.FC<Props> = ({
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}
             refreshing={refreshing}
+            actions={
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setIsDriverModalOpen(true)}
+                style={{
+                  backgroundColor: 'var(--accent-whatsapp)',
+                  borderColor: 'var(--accent-whatsapp)',
+                  color: '#0b141a',
+                  fontWeight: 600
+                }}
+              >
+                <Plus size={14} />
+                <span>Add Driver</span>
+              </button>
+            }
           />
 
           {/* Quick Metrics */}
@@ -924,6 +1111,22 @@ export const ManagerView: React.FC<Props> = ({
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}
             refreshing={refreshing}
+            actions={
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setIsDestinationModalOpen(true)}
+                style={{
+                  backgroundColor: 'var(--accent-whatsapp)',
+                  borderColor: 'var(--accent-whatsapp)',
+                  color: '#0b141a',
+                  fontWeight: 600
+                }}
+              >
+                <Plus size={14} />
+                <span>Add Destination (Map Pin)</span>
+              </button>
+            }
           />
 
           <div
@@ -1246,6 +1449,41 @@ export const ManagerView: React.FC<Props> = ({
             setIsCreateModalOpen(false);
           }}
           onClose={() => setIsCreateModalOpen(false)}
+        />
+      )}
+
+      {/* Vehicle Modal */}
+      {isVehicleModalOpen && (
+        <VehicleModal
+          drivers={drivers}
+          onSuccess={(newV) => {
+            setVehicles((prev) => [newV, ...prev]);
+            setIsVehicleModalOpen(false);
+          }}
+          onClose={() => setIsVehicleModalOpen(false)}
+        />
+      )}
+
+      {/* Driver Modal */}
+      {isDriverModalOpen && (
+        <DriverModal
+          vehicles={vehicles}
+          onSuccess={(newD) => {
+            setDrivers((prev) => [newD, ...prev]);
+            setIsDriverModalOpen(false);
+          }}
+          onClose={() => setIsDriverModalOpen(false)}
+        />
+      )}
+
+      {/* Destination Modal with Map Pin Picker */}
+      {isDestinationModalOpen && (
+        <DestinationModal
+          onSuccess={(newDest) => {
+            setDestinations((prev) => [newDest, ...prev]);
+            setIsDestinationModalOpen(false);
+          }}
+          onClose={() => setIsDestinationModalOpen(false)}
         />
       )}
 

@@ -4,46 +4,47 @@
    ========================================================================== */
 
 :root {
-  /* Surface & Background (Sleek Enterprise Slate Dark) */
-  --bg-primary: #0b0f19;
-  --bg-secondary: #101623;
-  --bg-surface: #151d2e;
-  --bg-surface-elevated: #1c263c;
-  --bg-surface-hover: #222f49;
-  --bg-sidebar: #0e1320;
-  --bg-header: rgba(16, 22, 35, 0.85);
+  /* Surface & Background (Sleek WhatsApp Dark & Enterprise Charcoal) */
+  --bg-primary: #0b141a;
+  --bg-secondary: #111b21;
+  --bg-surface: #111b21;
+  --bg-surface-elevated: #202c33;
+  --bg-surface-hover: #222e35;
+  --bg-sidebar: #111b21;
+  --bg-header: rgba(17, 27, 33, 0.92);
 
-  /* Primary Accent & Brand (Restrained Enterprise Cobalt & Operational Amber) */
-  --accent-primary: #2563eb;
-  --accent-primary-hover: #1d4ed8;
-  --accent-primary-subtle: rgba(37, 99, 235, 0.14);
-  --accent-primary-border: rgba(37, 99, 235, 0.35);
+  /* Primary Accent & Brand (WhatsApp Emerald & Precision Cyan) */
+  --accent-whatsapp: #25D366;
+  --accent-primary: #00a884;
+  --accent-primary-hover: #06cf9c;
+  --accent-primary-subtle: rgba(0, 168, 132, 0.15);
+  --accent-primary-border: rgba(37, 211, 102, 0.35);
 
-  --accent-gold: #d97706;
+  --accent-gold: #e5a93c;
   --accent-gold-light: #f59e0b;
-  --accent-gold-muted: rgba(217, 119, 6, 0.12);
-  --accent-gold-border: rgba(217, 119, 6, 0.3);
+  --accent-gold-muted: rgba(229, 169, 60, 0.14);
+  --accent-gold-border: rgba(229, 169, 60, 0.3);
 
-  /* High-Contrast Typography */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-inverse: #0b0f19;
+  /* High-Contrast Typography (WhatsApp readable scale) */
+  --text-primary: #e9edef;
+  --text-secondary: #8696a0;
+  --text-muted: #667781;
+  --text-inverse: #0b141a;
 
   /* Subtle Crisp Enterprise Borders */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.14);
-  --border-strong: rgba(255, 255, 255, 0.22);
-  --border-focus: var(--accent-primary);
+  --border-subtle: rgba(134, 150, 160, 0.15);
+  --border-medium: rgba(134, 150, 160, 0.25);
+  --border-strong: rgba(134, 150, 160, 0.38);
+  --border-focus: var(--accent-whatsapp);
 
   /* Semantic Status Colors (Never rely on color alone) */
   --status-in-progress: #0ea5e9;
   --status-in-progress-bg: rgba(14, 165, 233, 0.12);
   --status-in-progress-border: rgba(14, 165, 233, 0.3);
 
-  --status-success: #10b981;
-  --status-success-bg: rgba(16, 185, 129, 0.12);
-  --status-success-border: rgba(16, 185, 129, 0.3);
+  --status-success: #25D366;
+  --status-success-bg: rgba(37, 211, 102, 0.14);
+  --status-success-border: rgba(37, 211, 102, 0.35);
 
   --status-delayed: #f59e0b;
   --status-delayed-bg: rgba(245, 158, 11, 0.14);
@@ -57,24 +58,24 @@
   --status-returning-bg: rgba(139, 92, 246, 0.12);
   --status-returning-border: rgba(139, 92, 246, 0.3);
 
-  --status-neutral: #64748b;
-  --status-neutral-bg: rgba(100, 116, 139, 0.12);
-  --status-neutral-border: rgba(100, 116, 139, 0.25);
+  --status-neutral: #8696a0;
+  --status-neutral-bg: rgba(134, 150, 160, 0.12);
+  --status-neutral-border: rgba(134, 150, 160, 0.25);
 
-  /* Precise Radii (No cartoonish oversized rounded borders) */
+  /* Precise Radii */
   --radius-xs: 3px;
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-full: 9999px;
 
   /* Crisp, Non-Distracting Elevation Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 24px -3px rgba(0, 0, 0, 0.45);
-  --shadow-gold: 0 2px 10px rgba(217, 119, 6, 0.15);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 10px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 28px -4px rgba(0, 0, 0, 0.55);
+  --shadow-gold: 0 2px 12px rgba(229, 169, 60, 0.2);
 
   /* Typography */
   --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -83,41 +84,42 @@
 }
 
 [data-theme="light"] {
-  --bg-primary: #f8fafc;
+  --bg-primary: #f0f2f5;
   --bg-secondary: #ffffff;
   --bg-surface: #ffffff;
-  --bg-surface-elevated: #f1f5f9;
-  --bg-surface-hover: #e2e8f0;
-  --bg-sidebar: #0f172a;
-  --bg-header: rgba(255, 255, 255, 0.9);
+  --bg-surface-elevated: #f5f6f6;
+  --bg-surface-hover: #e9edef;
+  --bg-sidebar: #111b21;
+  --bg-header: rgba(255, 255, 255, 0.95);
 
-  --accent-primary: #1d4ed8;
-  --accent-primary-hover: #1e40af;
-  --accent-primary-subtle: rgba(29, 78, 216, 0.08);
-  --accent-primary-border: rgba(29, 78, 216, 0.25);
+  --accent-whatsapp: #25D366;
+  --accent-primary: #008069;
+  --accent-primary-hover: #00a884;
+  --accent-primary-subtle: rgba(0, 128, 105, 0.1);
+  --accent-primary-border: rgba(0, 128, 105, 0.3);
 
   --accent-gold: #b45309;
   --accent-gold-light: #d97706;
   --accent-gold-muted: rgba(180, 83, 9, 0.08);
   --accent-gold-border: rgba(180, 83, 9, 0.25);
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-primary: #111b21;
+  --text-secondary: #3b4a54;
+  --text-muted: #667781;
   --text-inverse: #ffffff;
 
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-medium: rgba(15, 23, 42, 0.14);
-  --border-strong: rgba(15, 23, 42, 0.22);
+  --border-subtle: #e9edef;
+  --border-medium: #d1d7db;
+  --border-strong: #8696a0;
   --border-focus: var(--accent-primary);
 
   --status-in-progress: #0284c7;
   --status-in-progress-bg: rgba(2, 132, 199, 0.08);
   --status-in-progress-border: rgba(2, 132, 199, 0.25);
 
-  --status-success: #059669;
-  --status-success-bg: rgba(5, 150, 105, 0.08);
-  --status-success-border: rgba(5, 150, 105, 0.25);
+  --status-success: #008069;
+  --status-success-bg: rgba(0, 128, 105, 0.1);
+  --status-success-border: rgba(0, 128, 105, 0.28);
 
   --status-delayed: #d97706;
   --status-delayed-bg: rgba(217, 119, 6, 0.09);
@@ -131,9 +133,9 @@
   --status-returning-bg: rgba(124, 58, 237, 0.08);
   --status-returning-border: rgba(124, 58, 237, 0.25);
 
-  --status-neutral: #64748b;
-  --status-neutral-bg: rgba(100, 116, 139, 0.08);
-  --status-neutral-border: rgba(100, 116, 139, 0.2);
+  --status-neutral: #667781;
+  --status-neutral-bg: rgba(102, 119, 129, 0.08);
+  --status-neutral-border: rgba(102, 119, 129, 0.2);
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -513,6 +515,34 @@ code, pre, .font-mono {
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
+  animation: modalFadeInSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalFadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* WhatsApp Sleek Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 150, 160, 0.55);
 }
 
 .modal-header {

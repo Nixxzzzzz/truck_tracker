@@ -313,6 +313,17 @@ export const api = {
         }
         throw err;
       }
+    },
+    addCustomStop: async (tripId: string, stopData: any) => {
+      try {
+        return await request(`/driver/trips/${tripId}/custom-stop`, {
+          method: 'POST',
+          body: JSON.stringify(stopData)
+        });
+      } catch {
+        const newStop = mockStore.addCustomStop(tripId, stopData);
+        return { message: 'Custom stop added', stop: newStop };
+      }
     }
   },
 
@@ -508,7 +519,14 @@ export const api = {
         return { vehicles: mockStore.getVehicles() };
       }
     },
-    createVehicle: (data: any) => request('/fleet/vehicles', { method: 'POST', body: JSON.stringify(data) }),
+    createVehicle: async (data: any) => {
+      try {
+        return await request('/fleet/vehicles', { method: 'POST', body: JSON.stringify(data) });
+      } catch {
+        const vehicle = mockStore.createVehicle(data);
+        return { vehicle };
+      }
+    },
     updateVehicle: (id: string, data: any) => request(`/fleet/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     getDrivers: async () => {
       try {
@@ -517,7 +535,14 @@ export const api = {
         return { drivers: mockStore.getDrivers() };
       }
     },
-    createDriver: (data: any) => request('/fleet/drivers', { method: 'POST', body: JSON.stringify(data) }),
+    createDriver: async (data: any) => {
+      try {
+        return await request('/fleet/drivers', { method: 'POST', body: JSON.stringify(data) });
+      } catch {
+        const driver = mockStore.createDriver(data);
+        return { driver };
+      }
+    },
     updateDriver: (id: string, data: any) => request(`/fleet/drivers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     getDestinations: async () => {
       try {

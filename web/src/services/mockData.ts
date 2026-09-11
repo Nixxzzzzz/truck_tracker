@@ -1,4 +1,4 @@
-import { User, Vehicle, Driver, Destination, Trip, Photo } from '../types';
+import { User, Vehicle, Driver, Destination, Trip, TripStop, Photo } from '../types';
 
 export const DEMO_USERS: Record<string, User> = {
   'director@company.com': {
@@ -1037,6 +1037,70 @@ class MockStore {
       trips.unshift(trip);
     }
     this.set('trips', trips);
+  }
+
+  createVehicle(data: Partial<Vehicle>): Vehicle {
+    const vehicles = this.getVehicles();
+    const newVehicle: Vehicle = {
+      id: `v-${Date.now()}`,
+      vehicle_number: (data.vehicle_number || `DL01 XX ${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase(),
+      vehicle_type: data.vehicle_type || 'Medium Freight',
+      model: data.model || 'Standard Cargo Hauler',
+      assigned_driver_id: data.assigned_driver_id,
+      assigned_driver_name: data.assigned_driver_name,
+      status: data.status || 'AVAILABLE',
+      notes: data.notes || 'Added to fleet operations registry',
+      total_trips: 0
+    };
+    vehicles.unshift(newVehicle);
+    this.set('vehicles', vehicles);
+    return newVehicle;
+  }
+
+  createDriver(data: Partial<Driver>): Driver {
+    const drivers = this.getDrivers();
+    const newDriver: Driver = {
+      id: `drv-${Date.now()}`,
+      user_id: `usr-drv-${Date.now()}`,
+      name: data.name || 'New Driver',
+      email: data.email || `driver.${Date.now()}@company.com`,
+      employee_id: (data.employee_id || `EMP-DRV-${Math.floor(100 + Math.random() * 900)}`).toUpperCase(),
+      phone: data.phone || '+91 98100 00000',
+      assigned_vehicle_id: data.assigned_vehicle_id,
+      assigned_vehicle_number: data.assigned_vehicle_number,
+      status: data.status || 'AVAILABLE',
+      total_trips: 0
+    };
+    drivers.unshift(newDriver);
+    this.set('drivers', drivers);
+    return newDriver;
+  }
+
+  addCustomStop(tripId: string, stopData: any): TripStop {
+    const trips = this.getTrips();
+    const trip = trips.find((t) => t.id === tripId);
+    if (!trip) {
+      throw new Error(`Trip ${tripId} not found`);
+    }
+    if (!trip.stops) trip.stops = [];
+
+    const newStop: TripStop = {
+      id: `stp-custom-${Date.now()}`,
+      trip_id: tripId,
+      stop_number: (trip.stops.length || 0) + 1,
+      destination_name: stopData.destination_name || 'Custom Route Stop',
+      address: stopData.address || '',
+      latitude: Number(stopData.latitude) || 28.5355,
+      longitude: Number(stopData.longitude) || 77.268,
+      geofence_radius_meters: Number(stopData.geofence_radius_meters) || 150,
+      planned_arrival_time: stopData.planned_arrival_time || '11:00',
+      status: 'PENDING',
+      notes: stopData.notes || '[Driver Custom Stop]'
+    };
+
+    trip.stops.push(newStop);
+    this.saveTrip(trip);
+    return newStop;
   }
 
   createDestination(data: Partial<Destination>): Destination {
