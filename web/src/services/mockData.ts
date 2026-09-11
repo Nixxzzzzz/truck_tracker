@@ -1,4 +1,4 @@
-import { User, Vehicle, Driver, Destination, Trip, TripStop, Photo } from '../types';
+import { User, Vehicle, Driver, Destination, Trip, TripStop, Photo, VehicleDocument, VehicleChallan } from '../types';
 
 export const DEMO_USERS: Record<string, User> = {
   'director@company.com': {
@@ -56,7 +56,88 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     assigned_driver_id: 'usr-drv-001',
     assigned_driver_name: 'Rahul Sharma',
     status: 'ON_TRIP',
-    notes: 'Fitted with telematics, GPS tracker, and thermal sensor'
+    notes: 'Fitted with telematics, GPS tracker, and thermal sensor',
+    current_latitude: 28.5820,
+    current_longitude: 77.2750,
+    current_speed_kmh: 42,
+    current_heading: 68,
+    battery_pct: 94,
+    ignition: true,
+    total_trips: 42,
+    documents: [
+      {
+        id: 'doc-001-rc',
+        type: 'RC',
+        title: 'Registration Certificate (RC)',
+        document_number: 'DL01-TA-4920-IND',
+        issue_date: '2023-01-15',
+        expiry_date: '2038-01-14',
+        status: 'VALID',
+        notes: 'Commercial Transport Vehicle Category (MGV)'
+      },
+      {
+        id: 'doc-001-ins',
+        type: 'INSURANCE',
+        title: 'Commercial Comprehensive Insurance',
+        document_number: 'POL-ICICI-9948201',
+        issue_date: '2025-04-10',
+        expiry_date: '2027-04-09',
+        status: 'VALID',
+        notes: 'ICICI Lombard Commercial Fleet Protection'
+      },
+      {
+        id: 'doc-001-fit',
+        type: 'FITNESS',
+        title: 'Vehicle Fitness Certificate (Form 38)',
+        document_number: 'FIT-DEL-2025-0042',
+        issue_date: '2025-02-18',
+        expiry_date: '2027-02-17',
+        status: 'VALID',
+        notes: 'Passed automated lane inspection at Burari Transport Center'
+      },
+      {
+        id: 'doc-001-puc',
+        type: 'PUC',
+        title: 'Pollution Under Control (PUC)',
+        document_number: 'PUC-DL-8829104',
+        issue_date: '2026-05-01',
+        expiry_date: '2026-11-01',
+        status: 'EXPIRING_SOON',
+        notes: 'Bharat Stage VI (BS-VI) Diesel Compliant'
+      },
+      {
+        id: 'doc-001-per',
+        type: 'PERMIT',
+        title: 'National Goods Carriage Permit',
+        document_number: 'NP-DEL-2024-8891',
+        issue_date: '2024-06-01',
+        expiry_date: '2029-05-31',
+        status: 'VALID',
+        notes: 'All India Transit Permit authorization'
+      }
+    ],
+    challans: [
+      {
+        id: 'chl-001',
+        challan_number: 'CH-DL-2026-9812',
+        date: `${today} 07:15 AM`,
+        violation_reason: 'Over-speeding (58 km/h in 50 km/h commercial freight zone)',
+        amount: 1500,
+        status: 'PENDING',
+        location: 'Ring Road Lajpat Nagar Overpass'
+      },
+      {
+        id: 'chl-002',
+        challan_number: 'CH-UP-2026-4410',
+        date: '2026-08-28 02:40 PM',
+        violation_reason: 'Obstruction in designated unloading bay',
+        amount: 500,
+        status: 'PAID',
+        location: 'Noida Sector 62 Hub',
+        payment_date: '2026-08-29',
+        receipt_number: 'PAY-DL-8849102'
+      }
+    ]
   },
   {
     id: 'v-002',
@@ -66,7 +147,44 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     assigned_driver_id: 'usr-drv-002',
     assigned_driver_name: 'Amit Verma',
     status: 'AVAILABLE',
-    notes: 'Noida-NCR intercity permit active, maintenance passed'
+    notes: 'Noida-NCR intercity permit active, maintenance passed',
+    current_latitude: 28.5355,
+    current_longitude: 77.2680,
+    current_speed_kmh: 0,
+    current_heading: 0,
+    battery_pct: 100,
+    ignition: false,
+    total_trips: 38,
+    documents: [
+      {
+        id: 'doc-002-rc',
+        type: 'RC',
+        title: 'Registration Certificate (RC)',
+        document_number: 'UP16-BT-9845-IND',
+        issue_date: '2022-11-20',
+        expiry_date: '2037-11-19',
+        status: 'VALID'
+      },
+      {
+        id: 'doc-002-ins',
+        type: 'INSURANCE',
+        title: 'Comprehensive Fleet Insurance',
+        document_number: 'POL-TATA-774812',
+        issue_date: '2025-08-01',
+        expiry_date: '2027-07-31',
+        status: 'VALID'
+      },
+      {
+        id: 'doc-002-puc',
+        type: 'PUC',
+        title: 'Pollution Under Control (PUC)',
+        document_number: 'PUC-UP-994812',
+        issue_date: '2026-06-10',
+        expiry_date: '2026-12-10',
+        status: 'VALID'
+      }
+    ],
+    challans: []
   },
   {
     id: 'v-003',
@@ -76,7 +194,54 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     assigned_driver_id: 'usr-drv-003',
     assigned_driver_name: 'Rajesh Kumar',
     status: 'ON_TRIP',
-    notes: 'Multi-axle heavy hauler for industrial machinery & FMCG'
+    notes: 'Multi-axle heavy hauler for industrial machinery & FMCG',
+    current_latitude: 28.6210,
+    current_longitude: 77.3450,
+    current_speed_kmh: 38,
+    current_heading: 125,
+    battery_pct: 88,
+    ignition: true,
+    total_trips: 29,
+    documents: [
+      {
+        id: 'doc-003-rc',
+        type: 'RC',
+        title: 'Registration Certificate (RC)',
+        document_number: 'DL1L-AA-3180-IND',
+        issue_date: '2023-05-14',
+        expiry_date: '2038-05-13',
+        status: 'VALID'
+      },
+      {
+        id: 'doc-003-ins',
+        type: 'INSURANCE',
+        title: 'Commercial Heavy Goods Insurance',
+        document_number: 'POL-HDFC-889124',
+        issue_date: '2025-05-10',
+        expiry_date: '2027-05-09',
+        status: 'VALID'
+      },
+      {
+        id: 'doc-003-puc',
+        type: 'PUC',
+        title: 'Pollution Certificate (PUC)',
+        document_number: 'PUC-DL-774819',
+        issue_date: '2026-04-12',
+        expiry_date: '2026-10-12',
+        status: 'EXPIRING_SOON'
+      }
+    ],
+    challans: [
+      {
+        id: 'chl-003',
+        challan_number: 'CH-DL-2026-1182',
+        date: '2026-09-02 11:15 AM',
+        violation_reason: 'Entry during peak hours restriction lane',
+        amount: 2000,
+        status: 'PENDING',
+        location: 'ITO Junction Commercial Entry Gate'
+      }
+    ]
   },
   {
     id: 'v-004',
@@ -84,7 +249,26 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     vehicle_type: 'City Box Hauler',
     model: 'Mahindra Furio 12',
     status: 'MAINTENANCE',
-    notes: 'Scheduled brake disc replacement at Okhla workshop'
+    notes: 'Scheduled brake disc replacement at Okhla workshop',
+    current_latitude: 28.5350,
+    current_longitude: 77.2675,
+    current_speed_kmh: 0,
+    current_heading: 0,
+    battery_pct: 65,
+    ignition: false,
+    total_trips: 15,
+    documents: [
+      {
+        id: 'doc-004-rc',
+        type: 'RC',
+        title: 'Registration Certificate (RC)',
+        document_number: 'UP14-EX-7621-IND',
+        issue_date: '2024-02-10',
+        expiry_date: '2039-02-09',
+        status: 'VALID'
+      }
+    ],
+    challans: []
   }
 ];
 
@@ -98,7 +282,58 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+91 98101 44556',
     assigned_vehicle_id: 'v-001',
     assigned_vehicle_number: 'DL01 TA 4920',
-    status: 'ON_TRIP'
+    status: 'ON_TRIP',
+    total_trips: 42,
+    license_number: 'DL-0420110098451',
+    license_category: 'Commercial HMV (Heavy Motor Vehicle)',
+    license_expiry: '2031-08-20',
+    emergency_contact: 'Sunita Sharma (Spouse)',
+    emergency_phone: '+91 98101 99887',
+    blood_group: 'B+',
+    experience_years: 9,
+    rating: 4.9,
+    documents: [
+      {
+        id: 'dd-001',
+        type: 'DRIVING_LICENSE',
+        title: 'Commercial Heavy Driver License',
+        document_number: 'DL-0420110098451',
+        issue_date: '2015-08-21',
+        expiry_date: '2031-08-20',
+        status: 'VERIFIED'
+      },
+      {
+        id: 'dd-002',
+        type: 'POLICE_VERIFICATION',
+        title: 'Police Background Verification',
+        document_number: 'POL-DEL-VER-8849',
+        issue_date: '2024-01-10',
+        status: 'VERIFIED'
+      },
+      {
+        id: 'dd-003',
+        type: 'MEDICAL_FITNESS',
+        title: 'Annual Vision & Medical Fitness',
+        document_number: 'MED-FIT-2026-014',
+        issue_date: '2026-03-15',
+        expiry_date: '2027-03-14',
+        status: 'VERIFIED'
+      },
+      {
+        id: 'dd-004',
+        type: 'AADHAR_CARD',
+        title: 'UIDAI Government Identity Card',
+        document_number: 'XXXX-XXXX-8492',
+        issue_date: '2012-05-10',
+        status: 'VERIFIED'
+      }
+    ],
+    performance: {
+      total_trips: 184,
+      on_time_rate: 98.2,
+      total_km: 14820,
+      safety_score: 97
+    }
   },
   {
     id: 'drv-002',
@@ -109,7 +344,41 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+91 98102 77889',
     assigned_vehicle_id: 'v-002',
     assigned_vehicle_number: 'UP16 BT 9845',
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    total_trips: 38,
+    license_number: 'UP-1620160049210',
+    license_category: 'Medium Goods Transport (MGV)',
+    license_expiry: '2033-04-15',
+    emergency_contact: 'Ramesh Verma (Brother)',
+    emergency_phone: '+91 98102 11223',
+    blood_group: 'O+',
+    experience_years: 6,
+    rating: 4.8,
+    documents: [
+      {
+        id: 'dd-005',
+        type: 'DRIVING_LICENSE',
+        title: 'Commercial Driving License',
+        document_number: 'UP-1620160049210',
+        issue_date: '2016-04-16',
+        expiry_date: '2033-04-15',
+        status: 'VERIFIED'
+      },
+      {
+        id: 'dd-006',
+        type: 'POLICE_VERIFICATION',
+        title: 'Police Verification Record',
+        document_number: 'POL-UP-VER-4412',
+        issue_date: '2024-05-12',
+        status: 'VERIFIED'
+      }
+    ],
+    performance: {
+      total_trips: 142,
+      on_time_rate: 99.1,
+      total_km: 11450,
+      safety_score: 99
+    }
   },
   {
     id: 'drv-003',
@@ -120,7 +389,33 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+91 98103 99001',
     assigned_vehicle_id: 'v-003',
     assigned_vehicle_number: 'DL1L AA 3180',
-    status: 'ON_TRIP'  // returning to base
+    status: 'ON_TRIP',
+    total_trips: 29,
+    license_number: 'DL-0120100088192',
+    license_category: 'Heavy Articulated Trailer & HMV',
+    license_expiry: '2030-11-30',
+    emergency_contact: 'Pooja Kumar (Spouse)',
+    emergency_phone: '+91 98103 44556',
+    blood_group: 'A+',
+    experience_years: 12,
+    rating: 4.9,
+    documents: [
+      {
+        id: 'dd-007',
+        type: 'DRIVING_LICENSE',
+        title: 'Heavy Articulated Commercial License',
+        document_number: 'DL-0120100088192',
+        issue_date: '2010-12-01',
+        expiry_date: '2030-11-30',
+        status: 'VERIFIED'
+      }
+    ],
+    performance: {
+      total_trips: 215,
+      on_time_rate: 97.8,
+      total_km: 26400,
+      safety_score: 95
+    }
   }
 ];
 
@@ -1003,11 +1298,48 @@ class MockStore {
   }
 
   getVehicles(): Vehicle[] {
-    return this.get('vehicles', INITIAL_VEHICLES);
+    const vehicles = this.get('vehicles', INITIAL_VEHICLES);
+    return vehicles.map((v) => {
+      const init = INITIAL_VEHICLES.find((iv) => iv.id === v.id);
+      return {
+        ...init,
+        ...v,
+        documents: v.documents?.length ? v.documents : (init?.documents || []),
+        challans: v.challans?.length ? v.challans : (init?.challans || []),
+        current_latitude: v.current_latitude ?? init?.current_latitude ?? 28.5355,
+        current_longitude: v.current_longitude ?? init?.current_longitude ?? 77.2680,
+        current_speed_kmh: v.current_speed_kmh ?? init?.current_speed_kmh ?? 0,
+        current_heading: v.current_heading ?? init?.current_heading ?? 0,
+        battery_pct: v.battery_pct ?? init?.battery_pct ?? 95,
+        ignition: v.ignition ?? init?.ignition ?? false
+      };
+    });
   }
 
   getDrivers(): Driver[] {
-    return this.get('drivers', INITIAL_DRIVERS);
+    const drivers = this.get('drivers', INITIAL_DRIVERS);
+    return drivers.map((d) => {
+      const init = INITIAL_DRIVERS.find((idr) => idr.id === d.id);
+      return {
+        ...init,
+        ...d,
+        license_number: d.license_number || init?.license_number || 'DL-COMM-2024-001',
+        license_category: d.license_category || init?.license_category || 'Commercial HMV',
+        license_expiry: d.license_expiry || init?.license_expiry || '2031-12-31',
+        emergency_contact: d.emergency_contact || init?.emergency_contact || 'Emergency Fleet Line',
+        emergency_phone: d.emergency_phone || init?.emergency_phone || '+91 98100 99887',
+        blood_group: d.blood_group || init?.blood_group || 'O+',
+        rating: d.rating || init?.rating || 4.8,
+        experience_years: d.experience_years || init?.experience_years || 7,
+        documents: d.documents?.length ? d.documents : (init?.documents || []),
+        performance: d.performance || init?.performance || {
+          total_trips: d.total_trips || 35,
+          on_time_rate: 98.4,
+          total_km: 9820,
+          safety_score: 97
+        }
+      };
+    });
   }
 
   getDestinations(): Destination[] {
@@ -1015,7 +1347,60 @@ class MockStore {
   }
 
   getTrips(): Trip[] {
-    return this.get('trips', INITIAL_TRIPS);
+    const raw = this.get('trips', INITIAL_TRIPS);
+    return raw.map((t) => ({
+      ...t,
+      total_stops: t.total_stops ?? t.stops?.length ?? 0,
+      completed_stops: t.completed_stops ?? t.stops?.filter((s) => s.status === 'COMPLETED').length ?? 0
+    }));
+  }
+
+  addVehicleChallan(vehicleId: string, challan: Omit<VehicleChallan, 'id'>): VehicleChallan {
+    const vehicles = this.getVehicles();
+    const v = vehicles.find((item) => item.id === vehicleId);
+    const newChallan: VehicleChallan = {
+      ...challan,
+      id: `chl-${Date.now()}`
+    };
+    if (v) {
+      if (!v.challans) v.challans = [];
+      v.challans.unshift(newChallan);
+      this.set('vehicles', vehicles);
+    }
+    return newChallan;
+  }
+
+  settleVehicleChallan(vehicleId: string, challanId: string): boolean {
+    const vehicles = this.getVehicles();
+    const v = vehicles.find((item) => item.id === vehicleId);
+    if (v && v.challans) {
+      const target = v.challans.find((c) => c.id === challanId);
+      if (target) {
+        target.status = 'PAID';
+        target.payment_date = new Date().toISOString().split('T')[0];
+        target.receipt_number = `PAY-REC-${Date.now().toString().slice(-6)}`;
+        this.set('vehicles', vehicles);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  updateVehicleDocument(vehicleId: string, doc: VehicleDocument): boolean {
+    const vehicles = this.getVehicles();
+    const v = vehicles.find((item) => item.id === vehicleId);
+    if (v) {
+      if (!v.documents) v.documents = [];
+      const idx = v.documents.findIndex((d) => d.id === doc.id || d.type === doc.type);
+      if (idx >= 0) {
+        v.documents[idx] = { ...v.documents[idx], ...doc };
+      } else {
+        v.documents.push(doc);
+      }
+      this.set('vehicles', vehicles);
+      return true;
+    }
+    return false;
   }
 
   getPhotos(tripId: string): Photo[] {

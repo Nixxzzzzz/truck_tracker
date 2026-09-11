@@ -83,13 +83,45 @@ router.get('/vehicles/:id/history', requireAuth, (req, res) => {
   const trips = db.prepare(`
     SELECT t.*, u.name as driver_name,
            (SELECT COUNT(*) FROM trip_stops WHERE trip_id = t.id) as total_stops
-    FROM trips t
-    JOIN users u ON t.driver_id = u.id
     WHERE t.vehicle_id = ?
     ORDER BY t.date DESC, t.planned_departure_time DESC
   `).all(id);
 
   return res.json({ trips });
+});
+
+router.delete('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const vehicle = db.prepare(`SELECT * FROM vehicles WHERE id = ?`).get(id) as any;
+  if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+
+  const activeTrip = db.prepare(`
+    SELECT COUNT(*) as count FROM trips
+    WHERE vehicle_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+  `).get(id) as { count: number };
+
+  if (activeTrip.count > 0) {
+    return res.status(409).json({
+      error: `Cannot delete vehicle: it is currently assigned to ${activeTrip.count} active or scheduled trip(s). Complete or reassign those trips first.`
+    });
+  }
+
+  const tripCount = db.prepare(`SELECT COUNT(*) as count FROM trips WHERE vehicle_id = ?`).get(id) as { count: number };
+
+  if (tripCount.count > 0) {
+    db.prepare(`UPDATE vehicles SET status = 'INACTIVE', assigned_driver_id = NULL WHERE id = ?`).run(id);
+  } else {
+    db.prepare(`DELETE FROM vehicles WHERE id = ?`).run(id);
+  }
+
+  logAudit({
+    action: 'VEHICLE_DECOMMISSIONED',
+    originalValue: vehicle.vehicle_number,
+    changedBy: req.user!.id,
+    reason: `Vehicle ${vehicle.vehicle_number} decommissioned by manager`
+  });
+
+  return res.json({ message: `Vehicle ${vehicle.vehicle_number} has been decommissioned.` });
 });
 
 // ==========================================
@@ -193,6 +225,42 @@ router.get('/drivers/:id/history', requireAuth, (req, res) => {
   `).all(driver.user_id);
 
   return res.json({ trips });
+});
+
+router.delete('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const driver = db.prepare(`SELECT d.*, u.name FROM drivers d JOIN users u ON d.user_id = u.id WHERE d.id = ?`).get(id) as any;
+  if (!driver) return res.status(404).json({ error: 'Driver not found' });
+
+  const activeTrip = db.prepare(`
+    SELECT COUNT(*) as count FROM trips
+    WHERE driver_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+  `).get(driver.user_id) as { count: number };
+
+  if (activeTrip.count > 0) {
+    return res.status(409).json({
+      error: `Cannot delete driver: ${driver.name} is currently assigned to ${activeTrip.count} active or scheduled trip(s). Reassign or complete those trips first.`
+    });
+  }
+
+  const tx = db.transaction(() => {
+    db.prepare(`UPDATE vehicles SET assigned_driver_id = NULL WHERE assigned_driver_id = ?`).run(driver.user_id);
+    db.prepare(`UPDATE drivers SET status = 'INACTIVE', assigned_vehicle_id = NULL WHERE id = ?`).run(id);
+    db.prepare(`UPDATE users SET is_active = 0 WHERE id = ?`).run(driver.user_id);
+  });
+
+  try {
+    tx();
+    logAudit({
+      action: 'DRIVER_DECOMMISSIONED',
+      originalValue: driver.name,
+      changedBy: req.user!.id,
+      reason: `Driver ${driver.name} (${driver.employee_id}) removed by manager`
+    });
+    return res.json({ message: `Driver ${driver.name} has been removed from active roster.` });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
 });
 
 // ==========================================

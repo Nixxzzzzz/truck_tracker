@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Calendar, Clock, Truck, UserCheck, Shield } from 'lucide-react';
 import { api } from '../services/api';
 import { Driver, Vehicle, Destination } from '../types';
+import { MapPicker } from './MapPicker';
 
 interface Props {
   onSuccess: (tripId: string) => void;
@@ -24,6 +25,9 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [activeMapPickerStopIdx, setActiveMapPickerStopIdx] = useState<number | null>(null);
+  const [tempPickerCoords, setTempPickerCoords] = useState<{ latitude: number; longitude: number; radiusMeters: number } | null>(null);
+  const [saveToFleetHubs, setSaveToFleetHubs] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -472,21 +476,52 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                       />
                     </div>
 
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Destination address"
-                      value={stop.address}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setStops((prev) => {
-                          const c = [...prev];
-                          c[idx].address = val;
-                          return c;
-                        });
-                      }}
-                      required
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        style={{ flex: 1, minWidth: '220px' }}
+                        placeholder="Destination address"
+                        value={stop.address}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setStops((prev) => {
+                            const c = [...prev];
+                            c[idx].address = val;
+                            return c;
+                          });
+                        }}
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setActiveMapPickerStopIdx(idx);
+                          setTempPickerCoords({
+                            latitude: stop.latitude || 28.5355,
+                            longitude: stop.longitude || 77.2680,
+                            radiusMeters: stop.geofence_radius_meters || 150
+                          });
+                        }}
+                        style={{
+                          fontSize: '0.76rem',
+                          padding: '6px 12px',
+                          color: 'var(--accent-whatsapp)',
+                          borderColor: 'rgba(37, 211, 102, 0.4)',
+                          whiteSpace: 'nowrap',
+                          gap: '5px'
+                        }}
+                      >
+                        <MapPin size={13} />
+                        <span>📍 Pick on Map</span>
+                      </button>
+                    </div>
+
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      GPS: <b>{stop.latitude.toFixed(4)}° N, {stop.longitude.toFixed(4)}° E</b> &bull; Geofence: <b>{stop.geofence_radius_meters}m</b>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -503,6 +538,128 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
           </div>
         </form>
       </div>
+
+      {/* Interactive Map Picker Sub-Modal */}
+      {activeMapPickerStopIdx !== null && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 1200, backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+          onClick={() => setActiveMapPickerStopIdx(null)}
+        >
+          <div
+            className="modal-content"
+            style={{ maxWidth: '620px', maxHeight: '92vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+                  📍 Choose Stop Location on Live Map
+                </h3>
+                <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                  Click anywhere on the map or search to drop a pinpoint location for Stop #{activeMapPickerStopIdx + 1}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-subtle"
+                onClick={() => setActiveMapPickerStopIdx(null)}
+                style={{ padding: '6px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <MapPicker
+                initialLat={stops[activeMapPickerStopIdx].latitude || 28.5355}
+                initialLng={stops[activeMapPickerStopIdx].longitude || 77.2680}
+                initialRadius={stops[activeMapPickerStopIdx].geofence_radius_meters || 150}
+                height="340px"
+                onChange={(coords) => setTempPickerCoords(coords)}
+              />
+
+              <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
+                <div>Selected Coordinates: <b>{tempPickerCoords ? `${tempPickerCoords.latitude.toFixed(4)}°, ${tempPickerCoords.longitude.toFixed(4)}°` : 'Default Depot'}</b></div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem', marginTop: '2px' }}>
+                  Geofence Arrival Detection: <b>&plusmn;{tempPickerCoords?.radiusMeters || 150} meters</b>
+                </div>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                <input
+                  type="checkbox"
+                  checked={saveToFleetHubs}
+                  onChange={(e) => setSaveToFleetHubs(e.target.checked)}
+                />
+                <span>Also save this custom location into Company Fleet Hubs for future trips</span>
+              </label>
+            </div>
+
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setActiveMapPickerStopIdx(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{
+                  backgroundColor: 'var(--accent-whatsapp)',
+                  borderColor: 'var(--accent-whatsapp)',
+                  color: '#0b141a',
+                  fontWeight: 700
+                }}
+                onClick={async () => {
+                  if (activeMapPickerStopIdx !== null && tempPickerCoords) {
+                    const idx = activeMapPickerStopIdx;
+                    const lat = tempPickerCoords.latitude;
+                    const lng = tempPickerCoords.longitude;
+                    const radius = tempPickerCoords.radiusMeters;
+
+                    setStops((prev) => {
+                      const copy = [...prev];
+                      copy[idx] = {
+                        ...copy[idx],
+                        latitude: lat,
+                        longitude: lng,
+                        geofence_radius_meters: radius,
+                        address: copy[idx].address || `Location @ ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                        destination_name: copy[idx].destination_name || `Custom Stop #${idx + 1}`
+                      };
+                      return copy;
+                    });
+
+                    if (saveToFleetHubs) {
+                      try {
+                        const newDest = await api.fleet.createDestination({
+                          name: stops[idx].destination_name || `Custom Stop Location`,
+                          address: stops[idx].address || `Delhi-NCR Route Stop`,
+                          latitude: lat,
+                          longitude: lng,
+                          geofence_radius_meters: radius
+                        });
+                        if (newDest?.destination) {
+                          setDestinations((prev) => [newDest.destination, ...prev]);
+                        }
+                      } catch (err) {
+                        console.error('Failed to save to hubs:', err);
+                      }
+                    }
+
+                    setActiveMapPickerStopIdx(null);
+                  }
+                }}
+              >
+                Apply Location to Stop #{activeMapPickerStopIdx + 1}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

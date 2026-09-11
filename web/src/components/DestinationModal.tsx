@@ -5,19 +5,21 @@ import { Destination } from '../types';
 import { MapPicker } from './MapPicker';
 
 interface Props {
+  initialDestination?: Destination | null;
   onSuccess: (destination: Destination) => void;
   onClose: () => void;
 }
 
-export const DestinationModal: React.FC<Props> = ({ onSuccess, onClose }) => {
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [latitude, setLatitude] = useState(28.5355);
-  const [longitude, setLongitude] = useState(77.2680);
-  const [geofenceRadius, setGeofenceRadius] = useState(150);
-  const [contactName, setContactName] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
-  const [notes, setNotes] = useState('');
+export const DestinationModal: React.FC<Props> = ({ initialDestination, onSuccess, onClose }) => {
+  const isEdit = Boolean(initialDestination);
+  const [name, setName] = useState(initialDestination?.name || '');
+  const [address, setAddress] = useState(initialDestination?.address || '');
+  const [latitude, setLatitude] = useState(initialDestination?.latitude || 28.5355);
+  const [longitude, setLongitude] = useState(initialDestination?.longitude || 77.2680);
+  const [geofenceRadius, setGeofenceRadius] = useState(initialDestination?.geofence_radius_meters || 150);
+  const [contactName, setContactName] = useState(initialDestination?.contact_name || '');
+  const [contactNumber, setContactNumber] = useState(initialDestination?.contact_number || '');
+  const [notes, setNotes] = useState(initialDestination?.notes || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,11 +46,16 @@ export const DestinationModal: React.FC<Props> = ({ onSuccess, onClose }) => {
     };
 
     try {
-      const res = await api.fleet.createDestination(payload);
-      onSuccess(res.destination);
+      if (isEdit && initialDestination) {
+        const res = await api.fleet.updateDestination(initialDestination.id, payload);
+        onSuccess(res.destination || { ...initialDestination, ...payload });
+      } else {
+        const res = await api.fleet.createDestination(payload);
+        onSuccess(res.destination);
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to register destination');
+      setError(err.message || (isEdit ? 'Failed to update destination' : 'Failed to register destination'));
     } finally {
       setSubmitting(false);
     }
@@ -74,9 +81,11 @@ export const DestinationModal: React.FC<Props> = ({ onSuccess, onClose }) => {
               <Building2 size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.08rem', fontWeight: 600, margin: 0 }}>Register New Destination</h3>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 600, margin: 0 }}>
+                {isEdit ? 'Edit Destination Site' : 'Register New Destination'}
+              </h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-                Define warehouse location, GPS coordinates, and geofence perimeter
+                {isEdit ? 'Update GPS coordinates, geofence radius, and contact details' : 'Define warehouse location, GPS coordinates, and geofence perimeter'}
               </p>
             </div>
           </div>
@@ -224,7 +233,7 @@ export const DestinationModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                 'Saving...'
               ) : (
                 <>
-                  <Check size={16} /> Save Destination
+                  <Check size={16} /> {isEdit ? 'Update Destination' : 'Save Destination'}
                 </>
               )}
             </button>

@@ -690,6 +690,30 @@ export const api = {
         mockStore.deleteDestination(id);
         return { message: 'Destination deleted' };
       }
+    },
+    addChallan: async (vehicleId: string, data: any) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/challans`, { method: 'POST', body: JSON.stringify(data) });
+      } catch {
+        const challan = mockStore.addVehicleChallan(vehicleId, data);
+        return { challan };
+      }
+    },
+    settleChallan: async (vehicleId: string, challanId: string) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/settle`, { method: 'POST' });
+      } catch {
+        const success = mockStore.settleVehicleChallan(vehicleId, challanId);
+        return { success };
+      }
+    },
+    updateDocument: async (vehicleId: string, doc: any) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/documents`, { method: 'POST', body: JSON.stringify(doc) });
+      } catch {
+        const success = mockStore.updateVehicleDocument(vehicleId, doc);
+        return { success };
+      }
     }
   },
 

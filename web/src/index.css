@@ -89,8 +89,8 @@
   --bg-surface: #ffffff;
   --bg-surface-elevated: #f5f6f6;
   --bg-surface-hover: #e9edef;
-  --bg-sidebar: #111b21;
-  --bg-header: rgba(255, 255, 255, 0.95);
+  --bg-sidebar: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.96);
 
   --accent-whatsapp: #25D366;
   --accent-primary: #008069;
@@ -786,4 +786,178 @@ code, pre, .font-mono {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Ola / Rapido Style Live Fleet Telematics & Vehicle Feed
+   ========================================================================== */
+.fleet-telematics-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  min-height: 680px;
+}
+
+@media (max-width: 1024px) {
+  .fleet-telematics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fleet-feed-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-height: 720px;
+}
+
+.fleet-feed-header {
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.fleet-feed-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fleet-vehicle-card {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.fleet-vehicle-card:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent-whatsapp);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.fleet-vehicle-card.active {
+  border-color: var(--accent-whatsapp);
+  background: rgba(37, 211, 102, 0.06);
+  box-shadow: 0 0 0 1px var(--accent-whatsapp);
+}
+
+.speed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.speed-badge.moving {
+  background: rgba(37, 211, 102, 0.16);
+  color: var(--accent-whatsapp);
+  border: 1px solid rgba(37, 211, 102, 0.3);
+}
+
+.speed-badge.idle {
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--status-delayed);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.radar-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-whatsapp);
+  box-shadow: 0 0 0 rgba(37, 211, 102, 0.7);
+  animation: radar-pulse 1.8s infinite;
+}
+
+@keyframes radar-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(37, 211, 102, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+  }
+}
+
+/* Vehicle Papers & Challan Badges */
+.paper-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.paper-status-badge.valid {
+  background: rgba(37, 211, 102, 0.14);
+  color: var(--accent-whatsapp);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+}
+
+.paper-status-badge.warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--status-delayed);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.paper-status-badge.expired {
+  background: rgba(239, 68, 68, 0.14);
+  color: var(--status-danger);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.challan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.challan-pill.pending {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.challan-pill.paid {
+  background: rgba(37, 211, 102, 0.15);
+  color: #25D366;
+  border: 1px solid rgba(37, 211, 102, 0.3);
+}
+
+/* Driver Dossier Badges */
+.verification-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
 

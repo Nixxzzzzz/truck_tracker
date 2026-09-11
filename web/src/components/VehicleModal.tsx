@@ -5,17 +5,19 @@ import { Vehicle, Driver } from '../types';
 
 interface Props {
   drivers: Driver[];
+  initialVehicle?: Vehicle | null;
   onSuccess: (vehicle: Vehicle) => void;
   onClose: () => void;
 }
 
-export const VehicleModal: React.FC<Props> = ({ drivers, onSuccess, onClose }) => {
-  const [vehicleNumber, setVehicleNumber] = useState('');
-  const [model, setModel] = useState('');
-  const [vehicleType, setVehicleType] = useState('Medium Freight');
-  const [assignedDriverId, setAssignedDriverId] = useState('');
-  const [status, setStatus] = useState<any>('AVAILABLE');
-  const [notes, setNotes] = useState('');
+export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSuccess, onClose }) => {
+  const isEdit = Boolean(initialVehicle);
+  const [vehicleNumber, setVehicleNumber] = useState(initialVehicle?.vehicle_number || '');
+  const [model, setModel] = useState(initialVehicle?.model || '');
+  const [vehicleType, setVehicleType] = useState(initialVehicle?.vehicle_type || 'Medium Freight');
+  const [assignedDriverId, setAssignedDriverId] = useState(initialVehicle?.assigned_driver_id || '');
+  const [status, setStatus] = useState<any>(initialVehicle?.status || 'AVAILABLE');
+  const [notes, setNotes] = useState(initialVehicle?.notes || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,11 +44,16 @@ export const VehicleModal: React.FC<Props> = ({ drivers, onSuccess, onClose }) =
     };
 
     try {
-      const res = await api.fleet.createVehicle(payload);
-      onSuccess(res.vehicle || { ...payload, id: `v-${Date.now()}` });
+      if (isEdit && initialVehicle) {
+        const res = await api.fleet.updateVehicle(initialVehicle.id, payload);
+        onSuccess(res.vehicle || { ...initialVehicle, ...payload });
+      } else {
+        const res = await api.fleet.createVehicle(payload);
+        onSuccess(res.vehicle || { ...payload, id: `v-${Date.now()}` });
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to add vehicle');
+      setError(err.message || (isEdit ? 'Failed to update vehicle' : 'Failed to add vehicle'));
     } finally {
       setSubmitting(false);
     }
@@ -72,9 +79,11 @@ export const VehicleModal: React.FC<Props> = ({ drivers, onSuccess, onClose }) =
               <Truck size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.08rem', fontWeight: 600, margin: 0 }}>Register Fleet Vehicle</h3>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 600, margin: 0 }}>
+                {isEdit ? 'Edit Fleet Vehicle' : 'Register Fleet Vehicle'}
+              </h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-                Add commercial truck or cargo hauler to logistics registry
+                {isEdit ? 'Update vehicle details and assigned driver' : 'Add commercial truck or cargo hauler to logistics registry'}
               </p>
             </div>
           </div>
@@ -223,7 +232,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, onSuccess, onClose }) =
                 'Saving...'
               ) : (
                 <>
-                  <Check size={16} /> Register Vehicle
+                  <Check size={16} /> {isEdit ? 'Update Vehicle' : 'Register Vehicle'}
                 </>
               )}
             </button>

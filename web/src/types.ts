@@ -29,17 +29,70 @@ export interface User {
   phone?: string;
 }
 
+export interface VehicleDocument {
+  id: string;
+  type: 'RC' | 'INSURANCE' | 'FITNESS' | 'PUC' | 'PERMIT' | 'OTHER';
+  title: string;
+  document_number: string;
+  issue_date: string;
+  expiry_date: string;
+  status: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
+  file_url?: string;
+  notes?: string;
+}
+
+export interface VehicleChallan {
+  id: string;
+  challan_number: string;
+  date: string;
+  violation_reason: string;
+  amount: number;
+  status: 'PENDING' | 'PAID';
+  location?: string;
+  payment_date?: string;
+  receipt_number?: string;
+}
+
 export interface Vehicle {
   id: string;
   vehicle_number: string;
   vehicle_type: string;
+  type?: string;
   model: string;
+  capacity_tons?: number;
   assigned_driver_id?: string;
   assigned_driver_name?: string;
   status: VehicleStatus;
   notes?: string;
   total_trips?: number;
   active_trip_id?: string;
+  current_location?: string;
+  last_ping?: string;
+  total_fine_amount?: number;
+  // Live Telematics Feed properties
+  latitude?: number;
+  longitude?: number;
+  speed_kmh?: number;
+  heading_deg?: number;
+  current_latitude?: number;
+  current_longitude?: number;
+  current_speed_kmh?: number;
+  current_heading?: number;
+  battery_pct?: number;
+  ignition?: boolean;
+  documents?: VehicleDocument[];
+  challans?: VehicleChallan[];
+}
+
+export interface DriverDocument {
+  id: string;
+  type: 'DRIVING_LICENSE' | 'AADHAR_CARD' | 'POLICE_VERIFICATION' | 'MEDICAL_FITNESS';
+  title: string;
+  document_number: string;
+  issue_date: string;
+  expiry_date?: string;
+  status: 'VERIFIED' | 'PENDING' | 'EXPIRED';
+  file_url?: string;
 }
 
 export interface Driver {
@@ -54,6 +107,22 @@ export interface Driver {
   status: DriverStatus;
   total_trips?: number;
   active_trip_id?: string;
+  license_number?: string;
+  license_category?: string;
+  license_expiry?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+  blood_group?: string;
+  experience_years?: number;
+  rating?: number;
+  avatar_url?: string;
+  documents?: DriverDocument[];
+  performance?: {
+    total_trips: number;
+    on_time_rate: number;
+    total_km: number;
+    safety_score: number;
+  };
 }
 
 export interface Destination {

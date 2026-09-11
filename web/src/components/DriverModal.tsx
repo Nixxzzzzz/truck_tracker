@@ -5,17 +5,22 @@ import { Driver, Vehicle } from '../types';
 
 interface Props {
   vehicles: Vehicle[];
+  initialDriver?: Driver | null;
   onSuccess: (driver: Driver) => void;
   onClose: () => void;
 }
 
-export const DriverModal: React.FC<Props> = ({ vehicles, onSuccess, onClose }) => {
-  const [name, setName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
-  const [phone, setPhone] = useState('+91 ');
-  const [email, setEmail] = useState('');
-  const [assignedVehicleId, setAssignedVehicleId] = useState('');
-  const [status, setStatus] = useState<any>('AVAILABLE');
+export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSuccess, onClose }) => {
+  const isEdit = Boolean(initialDriver);
+  const [name, setName] = useState(initialDriver?.name || '');
+  const [employeeId, setEmployeeId] = useState(initialDriver?.employee_id || '');
+  const [phone, setPhone] = useState(initialDriver?.phone || '+91 ');
+  const [email, setEmail] = useState(initialDriver?.email || '');
+  const [assignedVehicleId, setAssignedVehicleId] = useState(initialDriver?.assigned_vehicle_id || '');
+  const [status, setStatus] = useState<any>(initialDriver?.status || 'AVAILABLE');
+  const [licenseNumber, setLicenseNumber] = useState(initialDriver?.license_number || '');
+  const [licenseCategory, setLicenseCategory] = useState(initialDriver?.license_category || 'Commercial HMV');
+  const [emergencyPhone, setEmergencyPhone] = useState(initialDriver?.emergency_phone || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,22 +36,30 @@ export const DriverModal: React.FC<Props> = ({ vehicles, onSuccess, onClose }) =
 
     const selectedVehicle = vehicles.find((v) => v.id === assignedVehicleId);
 
-    const payload = {
+    const payload: any = {
       name: name.trim(),
       employee_id: (employeeId.trim() || `EMP-DRV-${Math.floor(100 + Math.random() * 900)}`).toUpperCase(),
       phone: phone.trim() || '+91 98100 00000',
       email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@company.com`,
       assigned_vehicle_id: assignedVehicleId || null,
       assigned_vehicle_number: selectedVehicle?.vehicle_number || undefined,
-      status: status
+      status: status,
+      license_number: licenseNumber.trim() || undefined,
+      license_category: licenseCategory || undefined,
+      emergency_phone: emergencyPhone.trim() || undefined
     };
 
     try {
-      const res = await api.fleet.createDriver(payload);
-      onSuccess(res.driver || { ...payload, id: `drv-${Date.now()}` });
+      if (isEdit && initialDriver) {
+        const res = await api.fleet.updateDriver(initialDriver.id, payload);
+        onSuccess(res.driver || { ...initialDriver, ...payload });
+      } else {
+        const res = await api.fleet.createDriver(payload);
+        onSuccess(res.driver || { ...payload, id: `drv-${Date.now()}` });
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to register driver');
+      setError(err.message || (isEdit ? 'Failed to update driver' : 'Failed to register driver'));
     } finally {
       setSubmitting(false);
     }
@@ -72,9 +85,11 @@ export const DriverModal: React.FC<Props> = ({ vehicles, onSuccess, onClose }) =
               <UserCheck size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.08rem', fontWeight: 600, margin: 0 }}>Register Fleet Driver / Captain</h3>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 600, margin: 0 }}>
+                {isEdit ? 'Edit Driver / Captain Details' : 'Register Fleet Driver / Captain'}
+              </h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-                Enlist a verified commercial driver to the operations roster
+                {isEdit ? 'Update commercial driving license and contact roster' : 'Enlist a verified commercial driver to the operations roster'}
               </p>
             </div>
           </div>
@@ -192,6 +207,49 @@ export const DriverModal: React.FC<Props> = ({ vehicles, onSuccess, onClose }) =
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                  Commercial Driver License (DL) #
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. DL-0420110098451"
+                  value={licenseNumber}
+                  onChange={(e) => setLicenseNumber(e.target.value)}
+                  style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                  License Category
+                </label>
+                <select
+                  className="form-select"
+                  value={licenseCategory}
+                  onChange={(e) => setLicenseCategory(e.target.value)}
+                >
+                  <option value="Commercial HMV">Commercial HMV (Heavy)</option>
+                  <option value="Commercial MGV">Commercial MGV (Medium)</option>
+                  <option value="Commercial LMV">Commercial LMV (Light)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                Emergency Contact Phone
+              </label>
+              <input
+                type="tel"
+                className="form-input"
+                placeholder="+91 98101 99887 (Spouse/Family)"
+                value={emergencyPhone}
+                onChange={(e) => setEmergencyPhone(e.target.value)}
+              />
+            </div>
+
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                 Assign Primary Vehicle (Truck)
@@ -230,7 +288,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, onSuccess, onClose }) =
                 'Saving...'
               ) : (
                 <>
-                  <Check size={16} /> Register Driver
+                  <Check size={16} /> {isEdit ? 'Update Driver' : 'Register Driver'}
                 </>
               )}
             </button>

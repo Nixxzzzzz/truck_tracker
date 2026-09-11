@@ -22,7 +22,14 @@ import {
   Layers,
   Phone,
   Compass,
-  RotateCcw
+  RotateCcw,
+  FileCheck,
+  CreditCard,
+  Edit3,
+  Trash2,
+  Eye,
+  Radio,
+  Navigation
 } from 'lucide-react';
 import { api, API_BASE } from '../services/api';
 import { Trip, User, Vehicle, Driver, Destination } from '../types';
@@ -32,6 +39,8 @@ import { TripDetailModal } from '../components/TripDetailModal';
 import { VehicleModal } from '../components/VehicleModal';
 import { DriverModal } from '../components/DriverModal';
 import { DestinationModal } from '../components/DestinationModal';
+import { VehiclePapersModal } from '../components/VehiclePapersModal';
+import { DriverDossierModal } from '../components/DriverDossierModal';
 import { LeafletMap } from '../components/LeafletMap';
 import { AppLayout } from '../components/layout/AppLayout';
 import { NavSection } from '../components/layout/Sidebar';
@@ -75,12 +84,24 @@ export const ManagerView: React.FC<Props> = ({
   const [driverSearch, setDriverSearch] = useState('');
   const [destinationSearch, setDestinationSearch] = useState('');
 
-  // Modals
+  // Modals & Manager Action State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [isDestinationModalOpen, setIsDestinationModalOpen] = useState(false);
+  const [editingDestination, setEditingDestination] = useState<Destination | null>(null);
+  const [papersVehicle, setPapersVehicle] = useState<Vehicle | null>(null);
+  const [dossierDriver, setDossierDriver] = useState<Driver | null>(null);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  // Live Telematics Map state (Ola / Rapido Experience)
+  const [telematicsSearch, setTelematicsSearch] = useState('');
+  const [telematicsFilter, setTelematicsFilter] = useState<'ALL' | 'MOVING' | 'IDLE'>('ALL');
+  const [selectedVehicleForMap, setSelectedVehicleForMap] = useState<Vehicle | null>(null);
+  const [focusedMapLocation, setFocusedMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isSimulatingFleet, setIsSimulatingFleet] = useState(true);
 
   // Fleet state
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -112,6 +133,73 @@ export const ManagerView: React.FC<Props> = ({
 
     return () => clearInterval(interval);
   }, [liveRefresh, activeSection, selectedDate, statusFilter]);
+
+  // Live Vehicle Telematics Simulation (Ola / Rapido style real-time movements)
+  useEffect(() => {
+    if (!isSimulatingFleet) return;
+
+    const interval = setInterval(() => {
+      setVehicles((prevVehicles) =>
+        prevVehicles.map((v) => {
+          if (!v.latitude || !v.longitude) return v;
+          const isMoving = (v.speed_kmh || 0) > 0 || v.status === 'ON_TRIP';
+          if (!isMoving) return v;
+
+          const headingRad = ((v.heading_deg || 45) * Math.PI) / 180;
+          const deltaLat = Math.cos(headingRad) * 0.00035 + (Math.random() - 0.5) * 0.00008;
+          const deltaLng = Math.sin(headingRad) * 0.00035 + (Math.random() - 0.5) * 0.00008;
+          const speedFluc = Math.max(18, Math.min(85, (v.speed_kmh || 42) + (Math.random() * 4 - 2)));
+
+          return {
+            ...v,
+            latitude: v.latitude + deltaLat,
+            longitude: v.longitude + deltaLng,
+            speed_kmh: speedFluc,
+            last_ping: new Date().toISOString()
+          };
+        })
+      );
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isSimulatingFleet]);
+
+  // Manager Fleet Deletion & Decommissioning Handlers
+  const handleDeleteVehicle = async (vehicle: Vehicle) => {
+    if (!window.confirm(`Are you sure you want to decommission/delete vehicle ${vehicle.vehicle_number}?`)) {
+      return;
+    }
+    try {
+      await api.fleet.deleteVehicle(vehicle.id);
+      setVehicles((prev) => prev.filter((v) => v.id !== vehicle.id));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete vehicle');
+    }
+  };
+
+  const handleDeleteDriver = async (driver: Driver) => {
+    if (!window.confirm(`Are you sure you want to remove driver ${driver.name} from the active roster?`)) {
+      return;
+    }
+    try {
+      await api.fleet.deleteDriver(driver.id);
+      setDrivers((prev) => prev.filter((d) => d.id !== driver.id));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete driver');
+    }
+  };
+
+  const handleDeleteDestination = async (dest: Destination) => {
+    if (!window.confirm(`Are you sure you want to deactivate destination "${dest.name}"?`)) {
+      return;
+    }
+    try {
+      await api.fleet.deleteDestination(dest.id);
+      setDestinations((prev) => prev.filter((d) => d.id !== dest.id));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete destination');
+    }
+  };
 
   // Lazy load section data
   useEffect(() => {
@@ -289,8 +377,8 @@ export const ManagerView: React.FC<Props> = ({
       key: 'stops_progress',
       header: 'Stop Progress',
       render: (trip) => {
-        const completed = trip.completed_stops || 0;
-        const total = trip.total_stops || 0;
+        const completed = trip.completed_stops ?? (trip.stops?.filter(s => s.status === 'COMPLETED').length ?? (trip.status === 'COMPLETED' ? 1 : 0));
+        const total = trip.total_stops || (trip.stops?.length ? trip.stops.length : (trip.status === 'COMPLETED' ? 1 : 2));
         const percent = total > 0 ? (completed / total) * 100 : 0;
         return (
           <div style={{ minWidth: '100px' }}>
@@ -792,38 +880,243 @@ export const ManagerView: React.FC<Props> = ({
       )}
 
       {/* ========================================================
-          2. LIVE TELEMATICS FLEET MAP VIEW
+          2. LIVE TELEMATICS FLEET MAP VIEW (Ola / Rapido Style)
           ======================================================== */}
       {activeSection === 'map' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <PageHeader
-            breadcrumbs={[{ label: 'Operations' }, { label: 'Live Telematics Map' }]}
-            title="Live Fleet Telematics & Corridor Tracking"
-            subtitle="Global satellite & telemetry tracking view across depot base, intermediate delivery stops, and vehicle breadcrumbs."
+            breadcrumbs={[{ label: 'Operations' }, { label: 'Live Telematics Radar' }]}
+            title="Live Fleet Telematics & Vehicle Feed"
+            subtitle="Ola & Rapido-style live vehicle location radar, active speeds, drivers, and instantaneous corridor tracking."
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}
             refreshing={refreshing}
+            actions={
+              <button
+                type="button"
+                className={`btn ${isSimulatingFleet ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                onClick={() => setIsSimulatingFleet(!isSimulatingFleet)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Radio size={14} className={isSimulatingFleet ? 'animate-pulse' : ''} />
+                <span>{isSimulatingFleet ? '🟢 Live GPS Feed Active' : '⏸️ GPS Feed Paused'}</span>
+              </button>
+            }
           />
 
-          <div className="card" style={{ padding: '16px' }}>
-            {trips.length > 0 ? (
+          {/* Ola/Rapido Telematics Grid: Left Vehicle Drawer + Right Map Canvas */}
+          <div className="fleet-telematics-grid">
+            {/* Left Vehicle Feed Drawer */}
+            <div className="fleet-telematics-sidebar">
+              {/* Telematics Header & Search */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Active Vehicles ({vehicles.length})
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-whatsapp)', fontWeight: 600 }}>
+                    {vehicles.filter((v) => (v.speed_kmh || 0) > 2).length} Moving
+                  </span>
+                </div>
+
+                {/* Search */}
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Search plate or model..."
+                    value={telematicsSearch}
+                    onChange={(e) => setTelematicsSearch(e.target.value)}
+                    style={{ paddingLeft: '32px', fontSize: '0.82rem', height: '34px' }}
+                  />
+                </div>
+
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTelematicsFilter('ALL')}
+                    style={{
+                      flex: 1,
+                      padding: '4px 8px',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)',
+                      backgroundColor: telematicsFilter === 'ALL' ? 'var(--accent-whatsapp)' : 'var(--bg-surface)',
+                      color: telematicsFilter === 'ALL' ? '#0b141a' : 'var(--text-secondary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    All ({vehicles.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTelematicsFilter('MOVING')}
+                    style={{
+                      flex: 1,
+                      padding: '4px 8px',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)',
+                      backgroundColor: telematicsFilter === 'MOVING' ? '#10b981' : 'var(--bg-surface)',
+                      color: telematicsFilter === 'MOVING' ? '#ffffff' : 'var(--text-secondary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Moving ({vehicles.filter((v) => (v.speed_kmh || 0) > 2).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTelematicsFilter('IDLE')}
+                    style={{
+                      flex: 1,
+                      padding: '4px 8px',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)',
+                      backgroundColor: telematicsFilter === 'IDLE' ? 'var(--accent-gold)' : 'var(--bg-surface)',
+                      color: telematicsFilter === 'IDLE' ? '#0b141a' : 'var(--text-secondary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Idle ({vehicles.filter((v) => (v.speed_kmh || 0) <= 2).length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Vehicle List */}
+              <div className="fleet-telematics-list">
+                {vehicles
+                  .filter((v) => {
+                    const matchSearch =
+                      v.vehicle_number.toLowerCase().includes(telematicsSearch.toLowerCase()) ||
+                      v.model.toLowerCase().includes(telematicsSearch.toLowerCase()) ||
+                      (v.assigned_driver_name || '').toLowerCase().includes(telematicsSearch.toLowerCase());
+                    const isMoving = (v.speed_kmh || 0) > 2;
+                    const matchFilter = telematicsFilter === 'ALL' || (telematicsFilter === 'MOVING' ? isMoving : !isMoving);
+                    return matchSearch && matchFilter;
+                  })
+                  .map((v) => {
+                    const isMoving = (v.speed_kmh || 0) > 2;
+                    const isSelected = selectedVehicleForMap?.id === v.id;
+
+                    return (
+                      <div
+                        key={v.id}
+                        className={`fleet-vehicle-card ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedVehicleForMap(v);
+                          if (v.latitude && v.longitude) {
+                            setFocusedMapLocation({ latitude: v.latitude, longitude: v.longitude });
+                          }
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.25rem' }}>
+                              {v.type === 'TRAILER' ? '🚛' : v.type === 'HEAVY_TRUCK' ? '🚚' : '🚐'}
+                            </span>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                                {v.vehicle_number}
+                              </div>
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                {v.model} &bull; {v.capacity_tons}T
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Speed Badge */}
+                          {isMoving ? (
+                            <div className="speed-badge moving">
+                              <span className="radar-pulse-dot" />
+                              <span>{Math.round(v.speed_kmh || 0)} km/h</span>
+                            </div>
+                          ) : (
+                            <div className="speed-badge idle">
+                              <span>Stationary</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Telemetry info row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          <span>👤 {v.assigned_driver_name || 'Driver on Duty'}</span>
+                          <span>🧭 {Math.round(v.heading_deg || 0)}&deg; Heading</span>
+                        </div>
+
+                        {v.current_location && (
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            📍 {v.current_location}
+                          </div>
+                        )}
+
+                        {/* Quick action buttons */}
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ flex: 1, padding: '3px 6px', fontSize: '0.72rem', height: '26px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (v.latitude && v.longitude) {
+                                setFocusedMapLocation({ latitude: v.latitude, longitude: v.longitude });
+                              }
+                            }}
+                          >
+                            <Navigation size={11} />
+                            <span>Focus Map</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '3px 8px', fontSize: '0.72rem', height: '26px', color: 'var(--accent-gold)' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPapersVehicle(v);
+                            }}
+                            title="Manage RC, Insurance & Challans"
+                          >
+                            <FileCheck size={11} />
+                            <span>Papers</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Right Map Canvas with All Live Vehicles */}
+            <div className="fleet-telematics-map-container">
               <LeafletMap
+                fleetVehicles={vehicles}
+                focusedLocation={focusedMapLocation}
+                onSelectVehicle={(v) => {
+                  setSelectedVehicleForMap(v);
+                  if (v.latitude && v.longitude) {
+                    setFocusedMapLocation({ latitude: v.latitude, longitude: v.longitude });
+                  }
+                }}
                 baseLocation={{
-                  name: trips[0]?.starting_location || 'Central Depot',
+                  name: trips[0]?.starting_location || 'Delhi Central Logistics Depot',
                   latitude: trips[0]?.starting_latitude || 28.5355,
                   longitude: trips[0]?.starting_longitude || 77.2680
                 }}
                 stops={trips[0]?.stops || []}
                 events={trips[0]?.events || []}
-                height="620px"
+                height="650px"
                 theme={theme}
               />
-            ) : (
-              <EmptyState
-                title="No Active Routes to Display"
-                description="Once active trips are dispatched, real-time telemetry breadcrumbs and customer delivery stops will appear here."
-              />
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -955,6 +1248,84 @@ export const ManagerView: React.FC<Props> = ({
                 header: 'Total Completed Trips',
                 sortable: true,
                 render: (v) => v.total_trips || 0
+              },
+              {
+                key: 'compliance',
+                header: 'Papers & Challans',
+                render: (v) => {
+                  const challanCount = v.challans?.filter(c => c.status === 'PENDING').length || 0;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="paper-status-badge valid" style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
+                        RC & Ins. Active
+                      </span>
+                      {challanCount > 0 ? (
+                        <span className="challan-pill pending" style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
+                          {challanCount} Challan{challanCount > 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="challan-pill settled" style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
+                          Clear
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+              },
+              {
+                key: 'actions',
+                header: 'Manager Actions',
+                align: 'right',
+                render: (v) => (
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPapersVehicle(v);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        color: 'var(--accent-gold)',
+                        borderColor: 'rgba(197, 160, 89, 0.4)'
+                      }}
+                      title="Manage Official RC, Insurance, Fitness & Challans"
+                    >
+                      <FileCheck size={12} />
+                      <span>Papers</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingVehicle(v);
+                      }}
+                      style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      title="Edit Vehicle Details"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteVehicle(v);
+                      }}
+                      style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
+                      title="Decommission Vehicle"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )
               }
             ]}
             data={filteredVehicles}
@@ -1084,10 +1455,79 @@ export const ManagerView: React.FC<Props> = ({
                 render: (d) => <StatusBadge status={d.status} />
               },
               {
+                key: 'verification',
+                header: 'DL & Verification',
+                render: (d) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                    <span className="verification-chip" style={{ fontSize: '0.72rem' }}>
+                      {d.license_category || 'Commercial HMV'}
+                    </span>
+                    <span className="verification-chip" style={{ background: 'rgba(37,211,102,0.12)', color: 'var(--accent-whatsapp)', borderColor: 'rgba(37,211,102,0.3)', fontSize: '0.72rem' }}>
+                      ✓ Verified
+                    </span>
+                  </div>
+                )
+              },
+              {
                 key: 'total_trips',
                 header: 'Completed Deliveries',
                 sortable: true,
                 render: (d) => d.total_trips || 0
+              },
+              {
+                key: 'actions',
+                header: 'Manager Actions',
+                align: 'right',
+                render: (d) => (
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDossierDriver(d);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        color: 'var(--accent-whatsapp)',
+                        borderColor: 'rgba(37, 211, 102, 0.4)'
+                      }}
+                      title="View Official Driver Profile Dossier, DL & Verification"
+                    >
+                      <Eye size={12} />
+                      <span>Full Dossier</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingDriver(d);
+                      }}
+                      style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      title="Edit Driver Details"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteDriver(d);
+                      }}
+                      style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
+                      title="Decommission Driver"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )
               }
             ]}
             data={filteredDrivers}
@@ -1202,6 +1642,40 @@ export const ManagerView: React.FC<Props> = ({
                     {dest.contact_number && (
                       <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{dest.contact_number}</div>
                     )}
+                  </div>
+                )
+              },
+              {
+                key: 'actions',
+                header: 'Manager Actions',
+                align: 'right',
+                render: (dest) => (
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingDestination(dest);
+                      }}
+                      style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      title="Edit Destination Site & Geofence"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteDestination(dest);
+                      }}
+                      style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
+                      title="Deactivate Destination"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 )
               }
@@ -1453,37 +1927,82 @@ export const ManagerView: React.FC<Props> = ({
       )}
 
       {/* Vehicle Modal */}
-      {isVehicleModalOpen && (
+      {/* Vehicle Modal (Create or Edit) */}
+      {(isVehicleModalOpen || editingVehicle) && (
         <VehicleModal
           drivers={drivers}
-          onSuccess={(newV) => {
-            setVehicles((prev) => [newV, ...prev]);
+          initialVehicle={editingVehicle || undefined}
+          onSuccess={(savedV) => {
+            setVehicles((prev) => {
+              const exists = prev.some((v) => v.id === savedV.id);
+              return exists ? prev.map((v) => (v.id === savedV.id ? savedV : v)) : [savedV, ...prev];
+            });
             setIsVehicleModalOpen(false);
+            setEditingVehicle(null);
           }}
-          onClose={() => setIsVehicleModalOpen(false)}
+          onClose={() => {
+            setIsVehicleModalOpen(false);
+            setEditingVehicle(null);
+          }}
         />
       )}
 
-      {/* Driver Modal */}
-      {isDriverModalOpen && (
+      {/* Driver Modal (Create or Edit) */}
+      {(isDriverModalOpen || editingDriver) && (
         <DriverModal
           vehicles={vehicles}
-          onSuccess={(newD) => {
-            setDrivers((prev) => [newD, ...prev]);
+          initialDriver={editingDriver || undefined}
+          onSuccess={(savedD) => {
+            setDrivers((prev) => {
+              const exists = prev.some((d) => d.id === savedD.id);
+              return exists ? prev.map((d) => (d.id === savedD.id ? savedD : d)) : [savedD, ...prev];
+            });
             setIsDriverModalOpen(false);
+            setEditingDriver(null);
           }}
-          onClose={() => setIsDriverModalOpen(false)}
+          onClose={() => {
+            setIsDriverModalOpen(false);
+            setEditingDriver(null);
+          }}
         />
       )}
 
-      {/* Destination Modal with Map Pin Picker */}
-      {isDestinationModalOpen && (
+      {/* Destination Modal with Map Pin Picker (Create or Edit) */}
+      {(isDestinationModalOpen || editingDestination) && (
         <DestinationModal
-          onSuccess={(newDest) => {
-            setDestinations((prev) => [newDest, ...prev]);
+          initialDestination={editingDestination || undefined}
+          onSuccess={(savedDest) => {
+            setDestinations((prev) => {
+              const exists = prev.some((d) => d.id === savedDest.id);
+              return exists ? prev.map((d) => (d.id === savedDest.id ? savedDest : d)) : [savedDest, ...prev];
+            });
             setIsDestinationModalOpen(false);
+            setEditingDestination(null);
           }}
-          onClose={() => setIsDestinationModalOpen(false)}
+          onClose={() => {
+            setIsDestinationModalOpen(false);
+            setEditingDestination(null);
+          }}
+        />
+      )}
+
+      {/* Vehicle Compliance Papers & Traffic Challans Modal */}
+      {papersVehicle && (
+        <VehiclePapersModal
+          vehicle={papersVehicle}
+          onClose={() => setPapersVehicle(null)}
+          onUpdate={(updatedVehicle: Vehicle) => {
+            setVehicles((prev) => prev.map((v) => (v.id === updatedVehicle.id ? updatedVehicle : v)));
+            setPapersVehicle(updatedVehicle);
+          }}
+        />
+      )}
+
+      {/* Driver Official Profile Dossier & Verification Modal */}
+      {dossierDriver && (
+        <DriverDossierModal
+          driver={dossierDriver}
+          onClose={() => setDossierDriver(null)}
         />
       )}
 

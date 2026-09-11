@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { ExternalLink, Layers, Navigation, MapPin } from 'lucide-react';
-import { TripStop, TripEvent } from '../types';
+import { TripStop, TripEvent, Vehicle } from '../types';
 
 interface Props {
   baseLocation?: { name: string; latitude?: number; longitude?: number };
   stops?: TripStop[];
   events?: TripEvent[];
   driverLocation?: { latitude: number; longitude: number; heading?: number; accuracy?: number };
+  fleetVehicles?: Vehicle[];
+  onSelectVehicle?: (vehicle: Vehicle) => void;
+  focusedLocation?: { latitude: number; longitude: number } | null;
   height?: string;
   theme?: 'dark' | 'light';
   showGoogleMapsButton?: boolean;
@@ -20,6 +23,9 @@ export const LeafletMap: React.FC<Props> = ({
   stops = [],
   events = [],
   driverLocation,
+  fleetVehicles = [],
+  onSelectVehicle,
+  focusedLocation,
   height = '420px',
   theme = 'dark',
   showGoogleMapsButton = true
@@ -287,6 +293,70 @@ export const LeafletMap: React.FC<Props> = ({
         `);
     }
 
+    // 6. Fleet Telematics Vehicles Markers (Ola / Rapido Live Feed Style)
+    if (fleetVehicles && fleetVehicles.length > 0) {
+      fleetVehicles.forEach((vehicle) => {
+        if (typeof vehicle.latitude === 'number' && typeof vehicle.longitude === 'number') {
+          const isMoving = (vehicle.speed_kmh || 0) > 2;
+          const statusColor = isMoving ? '#10b981' : vehicle.status === 'AVAILABLE' ? '#38bdf8' : '#eab308';
+          const heading = vehicle.heading_deg || 0;
+
+          const vehicleIcon = L.divIcon({
+            className: 'custom-fleet-vehicle-marker',
+            html: `
+              <div style="position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                ${isMoving ? `<div style="position:absolute;width:100%;height:100%;border-radius:50%;background:${statusColor};opacity:0.25;animation:pulse 1.8s infinite;"></div>` : ''}
+                <div style="position:relative;background:${isMoving ? '#0f172a' : '#1e293b'};border:2px solid ${statusColor};border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+                  <span style="font-size:16px;">${vehicle.type === 'TRAILER' ? '🚛' : vehicle.type === 'HEAVY_TRUCK' ? '🚚' : '🚐'}</span>
+                  ${heading ? `
+                    <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%) rotate(${heading}deg);transform-origin:bottom center;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid ${statusColor};"></div>
+                  ` : ''}
+                </div>
+                ${isMoving ? `
+                  <div style="position:absolute;bottom:-6px;background:${statusColor};color:#ffffff;font-size:9px;font-weight:800;padding:1px 4px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.4);white-space:nowrap;">
+                    ${Math.round(vehicle.speed_kmh || 0)} km/h
+                  </div>
+                ` : ''}
+              </div>
+            `,
+            iconSize: [42, 42],
+            iconAnchor: [21, 21]
+          });
+
+          const pos: [number, number] = [vehicle.latitude, vehicle.longitude];
+          latLngs.push(pos);
+
+          const marker = L.marker(pos, { icon: vehicleIcon, zIndexOffset: isMoving ? 500 : 200 })
+            .addTo(map);
+
+          marker.on('click', () => {
+            if (onSelectVehicle) onSelectVehicle(vehicle);
+          });
+
+          marker.bindPopup(`
+            <div style="font-family:Inter,sans-serif;padding:6px;min-width:210px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                <span style="font-size:12px;font-weight:800;color:#0f172a;">${vehicle.vehicle_number}</span>
+                <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;background:${isMoving ? '#d1fae5' : '#f1f5f9'};color:${isMoving ? '#065f46' : '#475569'};">${isMoving ? '🟢 In Transit' : '🟡 ' + vehicle.status}</span>
+              </div>
+              <div style="font-size:11px;color:#64748b;">${vehicle.model} &bull; ${vehicle.type}</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:4px 6px;background:#f8fafc;border-radius:6px;font-size:11px;color:#334155;">
+                <span>⚡ <b>${Math.round(vehicle.speed_kmh || 0)} km/h</b></span>
+                <span>🧭 <b>${Math.round(vehicle.heading_deg || 0)}&deg; Heading</b></span>
+              </div>
+              ${vehicle.current_location ? `<div style="font-size:11px;color:#64748b;margin-top:4px;">📍 ${vehicle.current_location}</div>` : ''}
+              <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;">
+                <a href="https://www.google.com/maps/search/?api=1&query=${vehicle.latitude},${vehicle.longitude}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2563eb;font-weight:600;text-decoration:none;">
+                  Google Maps ↗
+                </a>
+                <span style="font-size:10px;color:#94a3b8;">${vehicle.capacity_tons} Tons Capacity</span>
+              </div>
+            </div>
+          `);
+        }
+      });
+    }
+
     // Auto-fit bounds in requestAnimationFrame to prevent main-thread INP blocking
     const rafId = requestAnimationFrame(() => {
       if (mapInstanceRef.current && latLngs.length > 0) {
@@ -302,7 +372,17 @@ export const LeafletMap: React.FC<Props> = ({
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [baseLocation, stops, events, driverLocation, mapLayer]);
+  }, [baseLocation, stops, events, driverLocation, fleetVehicles, mapLayer]);
+
+  // Smooth pan/fly when a specific location is focused
+  useEffect(() => {
+    if (mapInstanceRef.current && focusedLocation?.latitude && focusedLocation?.longitude) {
+      mapInstanceRef.current.flyTo([focusedLocation.latitude, focusedLocation.longitude], 16, {
+        animate: true,
+        duration: 1.2
+      });
+    }
+  }, [focusedLocation]);
 
   // Clean teardown on component unmount
   useEffect(() => {
