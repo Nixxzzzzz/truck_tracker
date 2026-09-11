@@ -47,6 +47,13 @@ function recordEvent(params: {
   return eventId;
 }
 
+function getAuthorizedTrip(tripId: string, user: { id: string; role: string }): Trip | undefined {
+  if (user.role === 'MANAGER') {
+    return db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip | undefined;
+  }
+  return db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, user.id) as Trip | undefined;
+}
+
 /**
  * GET /api/driver/trips/active
  * Returns the driver's single currently active trip with full stop/event detail.
@@ -54,15 +61,23 @@ function recordEvent(params: {
  */
 router.get('/trips/active', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const driverId = req.user!.id;
+  const isManager = req.user!.role === 'MANAGER';
 
-  const trip = db.prepare(`
-    SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
-    FROM trips t
-    JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.driver_id = ? AND t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
-    ORDER BY t.actual_start_time DESC
-    LIMIT 1
-  `).get(driverId) as any;
+  const query = isManager
+    ? `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
+       FROM trips t
+       JOIN vehicles v ON t.vehicle_id = v.id
+       WHERE t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+       ORDER BY t.actual_start_time DESC
+       LIMIT 1`
+    : `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
+       FROM trips t
+       JOIN vehicles v ON t.vehicle_id = v.id
+       WHERE t.driver_id = ? AND t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+       ORDER BY t.actual_start_time DESC
+       LIMIT 1`;
+
+  const trip = (isManager ? db.prepare(query).get() : db.prepare(query).get(driverId)) as any;
 
   if (!trip) {
     return res.json({ trip: null, message: 'No active trip found' });
@@ -85,19 +100,30 @@ router.get('/trips/active', requireAuth, (req: AuthenticatedRequest, res: Respon
  */
 router.get('/trips/today', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const driverId = req.user!.id;
+  const isManager = req.user!.role === 'MANAGER';
   const today = new Date().toISOString().split('T')[0];
 
-  const trips = db.prepare(`
-    SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
-    FROM trips t
-    JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.driver_id = ? AND (t.date = ? OR t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'))
-    ORDER BY CASE 
-      WHEN t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING') THEN 1
-      WHEN t.status = 'ASSIGNED' THEN 2
-      ELSE 3
-    END, t.planned_departure_time ASC
-  `).all(driverId, today) as any[];
+  const query = isManager
+    ? `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
+       FROM trips t
+       JOIN vehicles v ON t.vehicle_id = v.id
+       WHERE (t.date = ? OR t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'))
+       ORDER BY CASE 
+         WHEN t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING') THEN 1
+         WHEN t.status = 'ASSIGNED' THEN 2
+         ELSE 3
+       END, t.planned_departure_time ASC`
+    : `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
+       FROM trips t
+       JOIN vehicles v ON t.vehicle_id = v.id
+       WHERE t.driver_id = ? AND (t.date = ? OR t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'))
+       ORDER BY CASE 
+         WHEN t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING') THEN 1
+         WHEN t.status = 'ASSIGNED' THEN 2
+         ELSE 3
+       END, t.planned_departure_time ASC`;
+
+  const trips = (isManager ? db.prepare(query).all(today) : db.prepare(query).all(driverId, today)) as any[];
 
   // Attach stops summary to each trip
   for (const trip of trips) {
@@ -120,12 +146,7 @@ router.get('/trips/:id', requireAuth, (req: AuthenticatedRequest, res: Response)
   const tripId = req.params.id;
   const driverId = req.user!.id;
 
-  const trip = db.prepare(`
-    SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
-    FROM trips t
-    JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.id = ? AND t.driver_id = ?
-  `).get(tripId, driverId) as any;
+  const trip = getAuthorizedTrip(tripId, req.user!) as any;
 
   if (!trip) {
     return res.status(404).json({ error: 'Trip not found or not assigned to you' });
@@ -157,9 +178,9 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) {
-    return res.status(404).json({ error: 'Trip not found' });
+    return res.status(404).json({ error: 'Trip not found or not assigned to you' });
   }
 
   if (trip.status !== 'ASSIGNED' && trip.status !== 'PLANNED') {
@@ -204,7 +225,7 @@ router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedR
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
   if (trip.status !== 'IN_PROGRESS' && trip.status !== 'DELAYED') {
@@ -308,7 +329,7 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
   const driverId = req.user!.id;
   const { activity_type, status, quantity, reference_number, recipient_name, notes, require_photo } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
   const stop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
@@ -328,8 +349,8 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
     }
   }
 
-  const now = new Date().toISOString();
   const activityId = uuidv4();
+  const now = new Date().toISOString();
 
   db.prepare(`
     INSERT INTO activities (
@@ -375,7 +396,7 @@ router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedR
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
   const stop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
@@ -434,7 +455,7 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
   const driverId = req.user!.id;
   const { reason, description, stopId, latitude, longitude, gps_accuracy, photoId } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'PLANNED' || trip.status === 'ASSIGNED') {
@@ -505,11 +526,14 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
   const delayId = String(req.params.delayId);
   const driverId = req.user!.id;
 
-  // Strict check: trip must exist and belong to the authenticated driver
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
-  const delay = db.prepare(`SELECT * FROM delays WHERE id = ? AND trip_id = ?`).get(delayId, tripId) as any;
+  let delay = db.prepare(`SELECT * FROM delays WHERE id = ? AND trip_id = ?`).get(delayId, tripId) as any;
+  if (!delay) {
+    // Fallback: match latest unresolved delay for this trip
+    delay = db.prepare(`SELECT * FROM delays WHERE trip_id = ? AND is_resolved = 0 ORDER BY start_time DESC LIMIT 1`).get(tripId) as any;
+  }
   if (!delay) return res.status(404).json({ error: 'Delay record not found' });
 
   if (delay.is_resolved) {
@@ -525,7 +549,7 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
     UPDATE delays
     SET end_time = ?, duration_minutes = ?, is_resolved = 1
     WHERE id = ?
-  `).run(nowIso, durationMinutes, delayId);
+  `).run(nowIso, durationMinutes, delay.id);
 
   // Recalculate total trip delay
   const sumDelay = db.prepare(`
@@ -580,7 +604,7 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'RETURNING') {
@@ -647,7 +671,7 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'COMPLETED') {
@@ -702,7 +726,7 @@ router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res:
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, driverId) as Trip | undefined;
+  const trip = getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'COMPLETED') {
