@@ -130,12 +130,16 @@ router.get('/:id/file', requireAuth, (req: AuthenticatedRequest, res: Response) 
     }
   }
 
-  const filePath = path.join(UPLOADS_DIR, photo.file_path);
+  let filePath = path.join(UPLOADS_DIR, photo.file_path);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(UPLOADS_DIR, path.basename(photo.file_path));
+  }
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'Photo file missing from storage' });
   }
 
-  res.setHeader('Content-Type', photo.mime_type || 'image/jpeg');
+  const mimeType = photo.file_path.endsWith('.svg') ? 'image/svg+xml' : (photo.mime_type || 'image/jpeg');
+  res.setHeader('Content-Type', mimeType);
   res.setHeader('Cache-Control', 'private, max-age=3600');
   return res.sendFile(filePath);
 });

@@ -13,12 +13,15 @@ server/data/*.sqlite-wal
 server/data/backups/
 server/uploads/photos/*
 !server/uploads/photos/.gitkeep
+!server/uploads/photos/*.svg
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
 data/backups/
 uploads/photos/*
 !uploads/photos/.gitkeep
+!uploads/photos/*.svg
+
 
 # Environment and secrets
 .env

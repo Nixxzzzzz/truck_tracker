@@ -1,5 +1,5 @@
 import { offlineQueue } from './offlineQueue';
-import { DEMO_USERS, mockStore } from './mockData';
+import { DEMO_USERS, mockStore, DEMO_PHOTOS_MAP } from './mockData';
 import { Trip, Destination } from '../types';
 
 export const getApiBase = (): string => {
@@ -176,8 +176,22 @@ export const api = {
       if (!response.ok) throw new Error(data.error || 'Photo upload failed');
       return data;
     },
-    getTripPhotos: (tripId: string) => request(`/photos/trip/${tripId}`),
-    getPhotoUrl: (photoId: string) => `${getApiBase()}/photos/${photoId}/file`
+    getTripPhotos: async (tripId: string) => {
+      try {
+        return await request(`/photos/trip/${tripId}`);
+      } catch {
+        return { photos: mockStore.getPhotos(tripId) };
+      }
+    },
+    getPhotoUrl: (photoId: string) => {
+      if (DEMO_PHOTOS_MAP[photoId]) {
+        return DEMO_PHOTOS_MAP[photoId];
+      }
+      if (photoId.startsWith('data:') || photoId.startsWith('http')) {
+        return photoId;
+      }
+      return `${getApiBase()}/photos/${photoId}/file`;
+    }
   },
 
   manager: {
