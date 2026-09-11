@@ -35,3 +35,6 @@ server/google_sheets_credentials.json
 *output.txt
 .DS_Store
 Thumbs.db
+
+.vercel
+.env*
