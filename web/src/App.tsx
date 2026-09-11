@@ -4,7 +4,6 @@ import { User } from './types';
 import { LoginView } from './views/LoginView';
 import { DriverView } from './views/DriverView';
 import { ManagerView } from './views/ManagerView';
-import { Smartphone, Monitor, Sun, Moon } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -63,12 +62,33 @@ export const App: React.FC = () => {
           minHeight: '100vh',
           backgroundColor: 'var(--bg-primary)',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--accent-gold)'
+          gap: '12px'
         }}
       >
-        Initializing TruckTracker Operations...
+        <div
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--accent-primary)',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: '1rem',
+            fontFamily: 'var(--font-display)',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+        >
+          TT
+        </div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 500 }}>
+          Initializing TruckTracker Operations...
+        </div>
       </div>
     );
   }
@@ -88,94 +108,6 @@ export const App: React.FC = () => {
 
   return (
     <div>
-      {/* Floating Executive Demo Mode Switcher Bar */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 9999,
-          backgroundColor: 'var(--bg-surface)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid var(--accent-gold)',
-          borderRadius: 'var(--radius-full)',
-          padding: '6px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-          fontSize: '0.8rem',
-          maxWidth: 'calc(100vw - 24px)',
-          overflowX: 'auto',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        <span style={{ color: 'var(--accent-gold)', fontWeight: 700, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span>🌟</span> Demo <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(212, 168, 83, 0.2)', border: '1px solid rgba(212, 168, 83, 0.4)' }}>v1.0.0</span>:
-        </span>
-        <button
-          onClick={() => setSimulatedRole('MANAGER')}
-          style={{
-            background: activeRole === 'MANAGER' ? 'var(--accent-gold)' : 'transparent',
-            color: activeRole === 'MANAGER' ? '#0e1013' : 'var(--text-secondary)',
-            border: 'none',
-            borderRadius: 'var(--radius-full)',
-            padding: '5px 12px',
-            cursor: 'pointer',
-            fontWeight: activeRole === 'MANAGER' ? 700 : 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Monitor size={14} /> Operations Command
-        </button>
-
-        <button
-          onClick={() => setSimulatedRole('DRIVER')}
-          style={{
-            background: activeRole === 'DRIVER' ? 'var(--accent-gold)' : 'transparent',
-            color: activeRole === 'DRIVER' ? '#0e1013' : 'var(--text-secondary)',
-            border: 'none',
-            borderRadius: 'var(--radius-full)',
-            padding: '5px 12px',
-            cursor: 'pointer',
-            fontWeight: activeRole === 'DRIVER' ? 700 : 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Smartphone size={14} /> Driver Mobile App
-        </button>
-
-        <div style={{ height: '16px', width: '1px', backgroundColor: 'var(--border-subtle)' }} />
-
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          style={{
-            background: 'transparent',
-            color: 'var(--accent-gold)',
-            border: 'none',
-            borderRadius: 'var(--radius-full)',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px'
-          }}
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-        >
-          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-          <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-        </button>
-      </div>
-
       {activeRole === 'DRIVER' ? (
         <DriverView
           currentUser={currentUser}

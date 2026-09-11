@@ -54,7 +54,7 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
     return (
       <div className="modal-overlay">
         <div className="modal-content" style={{ padding: '40px', textAlign: 'center' }}>
-          <div style={{ color: 'var(--accent-gold)' }}>Loading trip operational timeline...</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Loading trip operational timeline...</div>
         </div>
       </div>
     );

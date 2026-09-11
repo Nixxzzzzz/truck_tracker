@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   RotateCcw,
   WifiOff,
-  Wifi
+  Wifi,
+  Smartphone
 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
 import { Trip, TripStop, User } from '../types';
@@ -262,14 +263,43 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
       {/* Mobile Frame Container */}
       <div
         style={{
+          maxWidth: '520px',
           width: '100%',
-          maxWidth: '480px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '14px'
+          gap: '16px'
         }}
       >
-        {/* Top Driver Header */}
+        {/* Role Simulator Return Banner (if manager simulating driver) */}
+        {onSwitchRole && currentUser.role === 'MANAGER' && (
+          <div
+            style={{
+              backgroundColor: 'var(--accent-primary-subtle)',
+              border: '1px solid var(--accent-primary-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.8rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+              <Smartphone size={14} />
+              <span>Simulating Driver Mobile Terminal</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => onSwitchRole('MANAGER')}
+              style={{ padding: '3px 9px', fontSize: '0.74rem' }}
+            >
+              Return to Manager
+            </button>
+          </div>
+        )}
+
+        {/* Driver Top Header */}
         <header
           style={{
             display: 'flex',
@@ -278,44 +308,33 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             padding: '12px 16px',
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.25)'
+            borderRadius: 'var(--radius-lg)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-gold-muted)',
-                border: '1px solid var(--accent-gold-border)',
+                width: '34px',
+                height: '34px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--accent-primary)',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--accent-gold)'
+                fontWeight: 700,
+                fontSize: '0.9rem'
               }}
             >
-              <Truck size={20} />
+              <Truck size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>{currentUser.name}</span>
-                <span
-                  style={{
-                    fontSize: '0.65rem',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    background: 'rgba(212, 168, 83, 0.2)',
-                    color: 'var(--accent-gold)',
-                    fontWeight: 700,
-                    border: '1px solid rgba(212, 168, 83, 0.3)'
-                  }}
-                >
-                  v1.0.0
-                </span>
+              <div style={{ fontSize: '0.92rem', fontWeight: 600 }}>
+                {currentUser.name}
               </div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Corporate Logistics Driver</div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                Field Logistics Driver
+              </div>
             </div>
           </div>
 
@@ -329,6 +348,7 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                 fontSize: '0.72rem',
                 color: gpsAccuracy !== null ? 'var(--status-success)' : 'var(--text-muted)',
                 backgroundColor: gpsAccuracy !== null ? 'var(--status-success-bg)' : 'rgba(255, 255, 255, 0.05)',
+                border: `1px solid ${gpsAccuracy !== null ? 'var(--status-success-border)' : 'var(--border-subtle)'}`,
                 padding: '3px 8px',
                 borderRadius: 'var(--radius-full)'
               }}
@@ -347,25 +367,26 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                 fontSize: '0.72rem',
                 color: isOnline ? 'var(--status-success)' : 'var(--status-delayed)',
                 backgroundColor: isOnline ? 'var(--status-success-bg)' : 'var(--status-delayed-bg)',
+                border: `1px solid ${isOnline ? 'var(--status-success-border)' : 'var(--status-delayed-border)'}`,
                 padding: '3px 8px',
                 borderRadius: 'var(--radius-full)'
               }}
             >
-              {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
+              {isOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
               {isOnline ? 'Online' : 'Offline'}
             </div>
 
             {onToggleTheme && (
-              <ThemeToggle theme={theme} onToggle={onToggleTheme} size={14} />
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} size={13} />
             )}
 
             <button
               onClick={onLogout}
-              className="btn btn-secondary"
-              style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '5px 8px' }}
               title="Logout"
             >
-              <LogOut size={14} />
+              <LogOut size={13} />
             </button>
           </div>
         </header>
@@ -376,37 +397,37 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'rgba(212, 168, 83, 0.06)',
-            border: '1px solid rgba(212, 168, 83, 0.25)',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
             padding: '8px 12px',
             fontSize: '0.78rem'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1rem' }}>🤖</span>
+            <span style={{ fontSize: '1.1rem' }}>🤖</span>
             <div>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Native Android App</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v1.0.0 APK • Geofencing & Offline Telemetry</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v1.0.0 APK • Geofencing & Offline Telematics</div>
             </div>
           </div>
           <a
             href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-secondary"
+            className="btn btn-secondary btn-sm"
             style={{
-              padding: '4px 10px',
-              fontSize: '0.75rem',
-              color: 'var(--accent-gold)',
-              borderColor: 'rgba(212, 168, 83, 0.4)',
+              padding: '3px 9px',
+              fontSize: '0.74rem',
+              color: 'var(--accent-primary)',
+              borderColor: 'var(--border-medium)',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'
             }}
           >
-            <span>📥 Download APK</span>
+            <span>Download APK</span>
           </a>
         </div>
 
