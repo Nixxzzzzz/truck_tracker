@@ -466,6 +466,47 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
                         Started: {new Date(delay.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {delay.end_time && ` • Resolved: ${new Date(delay.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                       </div>
+
+                      {delay.photo_id && (
+                        <div style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => {
+                              const foundPhoto = trip.photos?.find((p) => p.id === delay.photo_id);
+                              if (foundPhoto) {
+                                setPreviewPhoto(foundPhoto);
+                              } else {
+                                setPreviewPhoto({
+                                  id: delay.photo_id!,
+                                  trip_id: trip.id,
+                                  photo_type: `Delay Evidence: ${delay.reason}`,
+                                  file_path: '',
+                                  file_size: 0,
+                                  mime_type: 'image/jpeg',
+                                  timestamp: delay.start_time,
+                                  latitude: delay.latitude,
+                                  longitude: delay.longitude,
+                                  gps_accuracy: delay.gps_accuracy
+                                } as Photo);
+                              }
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '5px 12px',
+                              fontSize: '0.78rem',
+                              color: 'var(--accent-gold)',
+                              borderColor: 'rgba(245, 158, 11, 0.4)',
+                              background: 'rgba(245, 158, 11, 0.1)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Camera size={14} /> View Attached Evidence Photo
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

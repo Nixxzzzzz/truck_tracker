@@ -412,6 +412,11 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             {activeDelay.description && (
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{activeDelay.description}</p>
             )}
+            {activeDelay.photo_id && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--accent-gold)' }}>
+                <Camera size={14} /> Photo evidence attached to delay report
+              </div>
+            )}
             <button
               className="btn btn-huge"
               style={{

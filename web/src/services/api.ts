@@ -239,7 +239,8 @@ export const api = {
             reason: data?.reason || 'Traffic',
             description: data?.description || '',
             start_time: new Date().toISOString(),
-            is_resolved: 0
+            is_resolved: 0,
+            photo_id: data?.photoId || null
           };
           trip.delays.unshift(newDelay as any);
           trip.status = 'DELAYED';
@@ -317,17 +318,50 @@ export const api = {
 
   photos: {
     upload: async (formData: FormData) => {
-      const token = localStorage.getItem('truck_tracker_token');
-      const response = await fetch(`${getApiBase()}/photos/upload`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: formData
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Photo upload failed');
-      return data;
+      try {
+        const token = localStorage.getItem('truck_tracker_token');
+        const response = await fetch(`${getApiBase()}/photos/upload`, {
+          method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: formData
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Photo upload failed');
+        return data;
+      } catch (err: any) {
+        // Fallback for offline or local preview
+        const photoFile = formData.get('photo') as File | null;
+        const mockPhotoId = `photo-${Date.now()}`;
+        let photoUrl = '';
+        if (photoFile && typeof window !== 'undefined' && window.URL) {
+          try {
+            photoUrl = URL.createObjectURL(photoFile);
+            DEMO_PHOTOS_MAP[mockPhotoId] = photoUrl;
+          } catch {}
+        }
+        const fallbackPhoto = {
+          id: mockPhotoId,
+          trip_id: String(formData.get('trip_id') || ''),
+          stop_id: formData.get('stop_id') ? String(formData.get('stop_id')) : undefined,
+          photo_type: String(formData.get('photo_type') || 'Delay Proof'),
+          timestamp: new Date().toISOString(),
+          file_path: photoUrl,
+          file_size: photoFile?.size || 0,
+          mime_type: photoFile?.type || 'image/jpeg'
+        };
+        const tripId = String(formData.get('trip_id') || '');
+        if (tripId) {
+          const trip = mockStore.getTrips().find((t) => t.id === tripId);
+          if (trip) {
+            if (!trip.photos) trip.photos = [];
+            trip.photos.unshift(fallbackPhoto as any);
+            mockStore.saveTrip(trip);
+          }
+        }
+        return { message: 'Photo uploaded (fallback)', photo: fallbackPhoto };
+      }
     },
     getTripPhotos: async (tripId: string) => {
       try {
