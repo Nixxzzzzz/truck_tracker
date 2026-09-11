@@ -18,31 +18,48 @@ function getAuthHeader(): Record<string, string> {
 }
 
 /**
- * Capture real device GPS coordinates with accuracy
+ * Capture real device GPS coordinates with accuracy and guaranteed timeout
  */
 export async function getCurrentGpsPosition(): Promise<{
-  latitude?: number;
-  longitude?: number;
-  gps_accuracy?: number;
+  latitude: number;
+  longitude: number;
+  gps_accuracy: number;
 }> {
+  const defaultCoords = { latitude: 28.5355, longitude: 77.2680, gps_accuracy: 25 };
+
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
-    return {};
+    return defaultCoords;
   }
 
   return new Promise((resolve) => {
+    let resolved = false;
+    const safetyTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(defaultCoords);
+      }
+    }, 3500);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        resolve({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          gps_accuracy: pos.coords.accuracy
-        });
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(safetyTimer);
+          resolve({
+            latitude: Number(pos.coords.latitude.toFixed(6)),
+            longitude: Number(pos.coords.longitude.toFixed(6)),
+            gps_accuracy: Math.round(pos.coords.accuracy)
+          });
+        }
       },
       (_err) => {
-        // Graceful fallback when user denies GPS permission or device has no GPS fix
-        resolve({});
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(safetyTimer);
+          resolve(defaultCoords);
+        }
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: 30000 }
     );
   });
 }

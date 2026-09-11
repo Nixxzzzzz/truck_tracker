@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Truck,
   MapPin,
@@ -18,10 +18,14 @@ import {
   Plus,
   ExternalLink,
   Compass,
+  Radio,
+  Building2,
+  ChevronDown,
+  ChevronUp,
   Map as MapIcon
 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
-import { Trip, TripStop, User } from '../types';
+import { Trip, TripStop, User, Destination } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { CameraModal } from '../components/CameraModal';
 import { DelayModal } from '../components/DelayModal';
@@ -69,10 +73,31 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   const [offlineCount, setOfflineCount] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [fleetDestinations, setFleetDestinations] = useState<Destination[]>([]);
+  const [selectedNearestHub, setSelectedNearestHub] = useState<(Destination & { distanceKm: number; etaMinutes: number }) | null>(null);
+  const [showAllNearby, setShowAllNearby] = useState(false);
   const [driverCoords, setDriverCoords] = useState<{ latitude: number; longitude: number }>({
     latitude: 28.5355,
     longitude: 77.2680
   });
+
+  // Calculate real-time nearest fleet facilities dynamically from live GPS
+  const nearestLocations = useMemo(() => {
+    if (!driverCoords || !fleetDestinations.length) return [];
+    return fleetDestinations
+      .filter((d) => d.latitude && d.longitude)
+      .map((d) => {
+        const dist = calculateHaversineDistanceKm(driverCoords.latitude, driverCoords.longitude, d.latitude, d.longitude);
+        return {
+          ...d,
+          distanceKm: dist,
+          etaMinutes: estimateReachingTimeMinutes(dist)
+        };
+      })
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+  }, [driverCoords, fleetDestinations]);
+
+  const closestHub = nearestLocations[0] || null;
 
   useEffect(() => {
     let watchId: number | null = null;
@@ -100,6 +125,13 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
 
   useEffect(() => {
     loadTodayTrips();
+
+    // Fetch registered fleet destinations for real-time nearest facility tracking
+    api.fleet.getDestinations().then((res) => {
+      if (res?.destinations) {
+        setFleetDestinations(res.destinations);
+      }
+    }).catch(() => {});
 
     const unsubscribeQueue = offlineQueue.subscribe((count) => {
       setOfflineCount(count);
@@ -719,6 +751,193 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
               )}
             </div>
 
+            {/* LIVE GPS NEAREST FLEET FACILITY RADAR */}
+            {closestHub && (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: 'var(--radius-full)',
+                        backgroundColor: 'rgba(37, 211, 102, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--accent-whatsapp)'
+                      }}
+                    >
+                      <Radio size={14} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-whatsapp)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                        Nearest Fleet Hub Radar
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                        Tracked via GPS ({driverCoords.latitude.toFixed(4)}, {driverCoords.longitude.toFixed(4)})
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        backgroundColor: 'rgba(37, 211, 102, 0.15)',
+                        color: 'var(--accent-whatsapp)',
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-full)'
+                      }}
+                    >
+                      {closestHub.distanceKm} km away
+                    </span>
+                    {nearestLocations.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setShowAllNearby(!showAllNearby)}
+                        style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                      >
+                        {showAllNearby ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    backgroundColor: 'var(--bg-surface)',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                      {closestHub.name}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      ~{closestHub.etaMinutes} mins drive
+                    </span>
+                  </div>
+                  {closestHub.address && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {closestHub.address}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setSelectedNearestHub(closestHub);
+                        setIsCustomStopOpen(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        color: 'var(--accent-whatsapp)',
+                        borderColor: 'rgba(37, 211, 102, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={13} />
+                      <span>Add as Stop</span>
+                    </button>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${closestHub.latitude},${closestHub.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      <Navigation size={13} />
+                      <span>Navigate</span>
+                      <ExternalLink size={10} />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Expanded Drawer for Other Nearby Facilities */}
+                {showAllNearby && nearestLocations.length > 1 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '4px' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      Other Nearby Hubs in Proximity:
+                    </div>
+                    {nearestLocations.slice(1, 4).map((hub) => (
+                      <div
+                        key={hub.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          backgroundColor: 'var(--bg-surface)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.76rem'
+                        }}
+                      >
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                          <span style={{ fontWeight: 600 }}>{hub.name}</span>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{hub.distanceKm} km • ~{hub.etaMinutes}m</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setSelectedNearestHub(hub);
+                              setIsCustomStopOpen(true);
+                            }}
+                            style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                          >
+                            + Stop
+                          </button>
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${hub.latitude},${hub.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '2px 6px', fontSize: '0.68rem', textDecoration: 'none' }}
+                          >
+                            <Navigation size={10} />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* STAGE CONTROLLER ACTIONS */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
               {/* STAGE 1: Trip Not Started Yet */}
@@ -1295,10 +1514,15 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
         <AddCustomStopModal
           tripId={activeTrip.id}
           currentStopCount={activeTrip.stops?.length || 0}
+          initialDestination={selectedNearestHub}
           onSuccess={(_newStop) => {
             loadTripDetails(activeTrip.id);
+            setSelectedNearestHub(null);
           }}
-          onClose={() => setIsCustomStopOpen(false)}
+          onClose={() => {
+            setIsCustomStopOpen(false);
+            setSelectedNearestHub(null);
+          }}
         />
       )}
     </div>
