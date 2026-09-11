@@ -60,6 +60,12 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
     );
   }
 
+  const handleTabChange = (tab: 'timeline' | 'map' | 'stops' | 'photos' | 'delays' | 'audit') => {
+    React.startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '92vh' }}>
@@ -77,7 +83,7 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
             </div>
           </div>
 
-          <button className="btn btn-secondary" onClick={onClose} style={{ padding: '6px' }}>
+          <button className="btn btn-secondary" onClick={onClose} style={{ padding: '6px' }} type="button">
             <X size={18} />
           </button>
         </div>
@@ -148,49 +154,55 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
           }}
         >
           <button
+            type="button"
             className={`btn ${activeTab === 'timeline' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-            onClick={() => setActiveTab('timeline')}
+            onClick={() => handleTabChange('timeline')}
           >
             <Clock size={14} /> Chronological Timeline ({trip.events?.length || 0})
           </button>
 
           <button
+            type="button"
             className={`btn ${activeTab === 'map' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-            onClick={() => setActiveTab('map')}
+            onClick={() => handleTabChange('map')}
           >
             <Navigation size={14} /> Interactive Route Map
           </button>
 
           <button
+            type="button"
             className={`btn ${activeTab === 'stops' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-            onClick={() => setActiveTab('stops')}
+            onClick={() => handleTabChange('stops')}
           >
             <MapPin size={14} /> Stops ({trip.stops?.length || 0})
           </button>
 
           <button
+            type="button"
             className={`btn ${activeTab === 'photos' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-            onClick={() => setActiveTab('photos')}
+            onClick={() => handleTabChange('photos')}
           >
             <Camera size={14} /> Photos ({trip.photos?.length || 0})
           </button>
 
           <button
+            type="button"
             className={`btn ${activeTab === 'delays' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-            onClick={() => setActiveTab('delays')}
+            onClick={() => handleTabChange('delays')}
           >
             <AlertTriangle size={14} /> Delays ({trip.delays?.length || 0})
           </button>
 
           <button
+            type="button"
             className={`btn ${activeTab === 'audit' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-            onClick={() => setActiveTab('audit')}
+            onClick={() => handleTabChange('audit')}
           >
             <History size={14} /> Audit Trail ({trip.auditLogs?.length || 0})
           </button>

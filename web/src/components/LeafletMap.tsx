@@ -244,11 +244,36 @@ export const LeafletMap: React.FC<Props> = ({
         `);
     }
 
-    // Auto-fit bounds
-    if (latLngs.length > 0) {
-      map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 15 });
-    }
+    // Auto-fit bounds in requestAnimationFrame to prevent main-thread INP blocking
+    const rafId = requestAnimationFrame(() => {
+      if (mapInstanceRef.current && latLngs.length > 0) {
+        try {
+          mapInstanceRef.current.invalidateSize();
+          mapInstanceRef.current.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 15 });
+        } catch {
+          // Silent fallback if container was detached
+        }
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
   }, [baseLocation, stops, events, mapLayer]);
+
+  // Clean teardown on component unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {
+          // ignore
+        }
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>

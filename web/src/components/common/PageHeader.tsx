@@ -33,49 +33,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         alignItems: 'flex-start',
         flexWrap: 'wrap',
         gap: '14px',
-        marginBottom: '20px'
+        marginBottom: '16px'
       }}
     >
       <div>
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav
-            aria-label="Breadcrumb"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.78rem',
-              color: 'var(--text-muted)',
-              marginBottom: '6px'
-            }}
-          >
-            {breadcrumbs.map((bc, idx) => (
-              <React.Fragment key={idx}>
-                {idx > 0 && <ChevronRight size={12} />}
-                {bc.onClick ? (
-                  <button
-                    onClick={bc.onClick}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: idx === breadcrumbs.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)',
-                      cursor: 'pointer',
-                      fontSize: 'inherit',
-                      padding: 0,
-                      fontWeight: idx === breadcrumbs.length - 1 ? 600 : 400
-                    }}
-                  >
-                    {bc.label}
-                  </button>
-                ) : (
-                  <span style={{ color: idx === breadcrumbs.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: idx === breadcrumbs.length - 1 ? 600 : 400 }}>
-                    {bc.label}
-                  </span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
-        )}
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
           <h1 style={{ fontSize: '1.45rem', letterSpacing: '-0.02em', fontWeight: 700 }}>
