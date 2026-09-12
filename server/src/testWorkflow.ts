@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
 
 async function runTests() {
   console.log('🧪 Starting End-to-End Operational Workflow Test...');

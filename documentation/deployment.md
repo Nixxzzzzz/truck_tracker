@@ -147,32 +147,29 @@ npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestam
 
 ---
 
-## 8. 100% Free Forever Deployment Guide ($0 Cost)
+## 8. Free Cloud & Self-Hosted Production Deployment ($0 Cost)
 
 TruckTracker can be run and hosted **completely free of charge** ($0/month) with zero credit card requirements:
 
-### Tier 1: 100% Free Web Dashboard (Vercel & GitHub Pages)
-* **Vercel Hobby Tier ($0 Forever)**:
-  * Connect `Nixxzzzzz/truck_tracker` on Vercel.
-  * Root Directory: `web` (handled automatically by `vercel.json`).
-  * Free unlimited builds, global CDN, automated HTTPS. No credit card required.
-* **GitHub Pages ($0 Forever)**:
-  * Automatically built and deployed on every push to `main` via `.github/workflows/deploy.yml`.
-  * In GitHub Settings → Pages, set Source to **Deploy from branch: `gh-pages`**.
+### 🌟 Recommended: Render All-in-One Cloud Deployment (Single Origin)
+* **Kyun Yeh Best Hai? (Why this is optimal)**:
+  * Express backend (`/api/*`), driver captured photo proof viewer (`/uploads/*`), aur modern React 19 Dispatch Web Portal (`/`) sab ek hi unified service me pack ho kar run hote hain.
+  * Pehle Vercel aur Render ke split deployment se token sync aur CORS restrictions ki dikkat aati thi. Ab Vercel ko **completely retire aur remove** kar diya gaya hai, jisse setup 10x simple aur fast ho gaya hai.
+  * **Free SSL/TLS HTTPS**: Automatic certificate management included.
+  * **Zero Cost**: Render Free Tier par $0/month me live chalta hai.
 
-### Tier 2: 100% Free Backend ($0 Forever)
-* **Option A: Self-Hosted / Office PC + Free Cloudflare Tunnel (Recommended)**:
-  * Runs on any computer, home PC, or office laptop:
-    ```bash
-    npm run start
-    ```
-  * The Express server serves both the **REST API** and the compiled **Web Dashboard** at `http://localhost:5000`.
-  * To give drivers on 4G/5G mobile phones secure public HTTPS access for $0:
-    ```bash
-    # Run free Cloudflare Tunnel (no port forwarding, no static IP, 100% free)
-    cloudflared tunnel --url http://localhost:5000
-    ```
-  * Gives you a free `https://xxxx.trycloudflare.com` URL that works worldwide for both web managers and Android drivers!
+### 🏠 Alternative Option: Self-Hosted / Office PC + Free Cloudflare Tunnel
+* **Office Laptop / Local Server par Run Karein**:
+  ```bash
+  npm run start
+  ```
+* The Express server serves both the **REST API** and the compiled **Web Dashboard** at `http://localhost:5000`.
+* **Mobile Drivers Ko Access Dene Ka Tareeqa ($0 Free)**:
+  ```bash
+  # Run free Cloudflare Tunnel (no port forwarding, no static IP, 100% free)
+  cloudflared tunnel --url http://localhost:5000
+  ```
+* Gives you a free `https://xxxx.trycloudflare.com` secure HTTPS URL that works worldwide for both dispatchers and Android drivers on 4G/5G!
 
 * **Option B: Render All-in-One Project Deployment (Recommended Cloud Production)**:
   * Deploy the unified Node.js API + Web service via Render Blueprint or Web Service organized inside a dedicated **Render Project**:

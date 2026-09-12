@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from './db';
 import { googleSheetsService } from './services/googleSheets';
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
 
 async function runProductionHardeningTests() {
   console.log('================================================================');

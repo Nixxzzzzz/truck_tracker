@@ -5,13 +5,39 @@
 [![Live Full-Stack App (Render)](https://img.shields.io/badge/Live%20Deployment-truck--tracker--api--9yhq.onrender.com-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
 [![Render Project](https://img.shields.io/badge/Render%20Project-TruckTracker%20%7C%20Production-000000.svg?logo=render)](https://dashboard.render.com/)
 [![Live Backend API](https://img.shields.io/badge/Live%20API-Health%20200%20OK-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
-[![Decoupled Web (Vercel)](https://img.shields.io/badge/Edge%20Frontend%20Mirror-web--beta--five--26.vercel.app-000000.svg?logo=vercel)](https://web-beta-five-26.vercel.app)
 [![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0%20(APK%20Available)-34d399.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
 [![Download APK](https://img.shields.io/badge/Download-TruckTracker--v1.0.0.apk%20(20%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk)
 [![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
 [![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Auto--Seeded)-3b82f6.svg)](#)
 [![Tests: 46 Passed](https://img.shields.io/badge/Automated%20Tests-46%20Passed%20%7C%200%20Failed-34d399.svg)](#)
 [![Aesthetics: Luxury Corporate Dark](https://img.shields.io/badge/UI%2FUX-Luxury%20Corporate%20Dark-c5a059.svg)](#)
+
+---
+
+## 💡 Quick Overview & Asan Guide (Hinglish + English)
+
+> [!TIP]
+> **Yeh Project Kya Hai?**
+> TruckTracker ek enterprise-grade **internal company logistics aur fleet operational system** hai. Iska main kaam company ke trucks, drivers, routes, trip status, delays aur proof photos ko real-time me track karna hai.
+
+### 🌟 4 Key Points Jo Samajhna Zaroori Hai:
+
+1. **Sab Kuch Ek Hi Jagah (All-in-One on Render)**:
+   * Frontend (React 19) aur Backend (Express API + SQLite) dono ab **Render pe ek hi single URL** par live hain: **[`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)**.
+   * Pehle Vercel aur Render alag-alag the jisse CORS aur token sync me dikkat aati thi. Ab Vercel ko **poori tarah remove** kar diya gaya hai, aur sab kuch Render ke **`TruckTracker` (Production)** project ke andar smoothly chal raha hai.
+
+2. **Turant Login & Demo Kaise Check Karein?**:
+   * Direct link kholein: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
+   * Login screen par **1-Click Quick Demo Buttons** diye gaye hain:
+     * 🏢 **Dispatch Manager**: `manager@company.com` (Full map command center, trip dispatch, delays, fleet CRUD)
+     * 🚚 **Route Driver**: `rahul@company.com` (Mobile trip driver view, stops checklist, photo upload, delay reporting)
+
+3. **Database & Zero-Setup Auto-Seeding**:
+   * Isme **SQLite WAL mode** database use hota hai.
+   * Jaise hi server deploy hota hai, agar database khali hai toh system **automatically seed data daal deta hai** (vehicles, drivers, demo trips, stops) bina kisi manual SQL run kiye.
+
+4. **Android App**:
+   * Field drivers ke liye native Android app bani hui hai jo offline bhi kaam karti hai. APK download direct available hai: [TruckTracker-v1.0.0.apk](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk).
 
 ---
 
@@ -385,27 +411,29 @@ npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestam
 
 TruckTracker is configured for automated continuous deployment on **Render** organized within a dedicated **Render Project**:
 
-### 1. Render All-in-One Deployment (`TruckTracker` Project)
+### 🎯 Render All-in-One Deployment (`TruckTracker` Project)
 * **Live Web App & REST API**: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
 * **Live API Health Check**: [`https://truck-tracker-api-9yhq.onrender.com/api/health`](https://truck-tracker-api-9yhq.onrender.com/api/health)
 * **Render Project Name**: `TruckTracker`
 * **Environment**: `Production`
 * **Service Name**: `truck-tracker-api`
-* **Architecture**: **Single Origin All-in-One** (Express serves REST API `/api/*`, photo uploads `/uploads/*`, and pre-compiled React 19 SPA `/`).
-  * Eliminates CORS complications and cross-domain credential issues
-  * Zero-delay synchronization between frontend releases and backend schema updates
-  * Photo proofs captured by drivers render seamlessly from the same origin
+* **Architecture**: **Single Origin All-in-One**
+  * Express server REST API (`/api/*`), driver proof photos (`/uploads/*`), aur compiled React 19 web app (`/`) sab ek saath serve karta hai.
+  * Kisi Vercel ya external frontend proxy ki zaroorat nahi hai.
+  * Cross-origin CORS errors bilkul khatam ho jaate hain aur driver ki photos bina kisi latency ke load hoti hain.
 * **Runtime**: Node.js v22.12.0 with `--experimental-sqlite`
-* **Database**: Local SQLite WAL with automated seed initialization on fresh containers (`seed.ts`)
+* **Database**: Embedded SQLite WAL with automated seed initialization on fresh containers (`seed.ts`)
 * **Build Command**: `npm ci --include=dev && npm run build:all`
 * **Start Command**: `npm run start` (executes `node --experimental-sqlite dist/index.js`)
 * **Health Check Path**: `/api/health`
 * **Auto-Deploy**: Enabled on git push to `main`
 
-### 2. Edge Frontend Mirror (Vercel Standalone)
-* **Live Web App**: [`https://web-beta-five-26.vercel.app`](https://web-beta-five-26.vercel.app)
-* **Framework**: Vite + React 19 SPA
-* **Role**: Standalone edge replica for decoupled web testing or static CDN demonstration
+### 🛠️ Step-by-Step: Render Par Deploy Kaise Karein (Blueprint Deployment)
+1. **Repository Connect Karein**: Render dashboard me apna GitHub repo `Nixxzzzzz/truck_tracker` connect karein.
+2. **Blueprint Select Karein**: Click **New +** → **Blueprint** → Select `truck_tracker`.
+3. **Automatic Configuration**: Render `render.yaml` file ko padh kar saare build commands aur environment variables automatically set kar dega.
+4. **Project Organization**: Service ko `TruckTracker` Project aur `Production` Environment ke andar group karein.
+5. **Instant Live**: 50 seconds ke andar aapka service green status ke saath live ho jayega!
 
 ---
 

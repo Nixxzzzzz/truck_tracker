@@ -174,7 +174,7 @@ export const api = {
       try {
         return await request('/auth/login', { method: 'POST', body: JSON.stringify(body) });
       } catch (err: any) {
-        // Fallback for static cloud hosting (e.g. Vercel static without backend connected)
+        // Fallback for offline mode or static previews without backend connected
         const normalizedEmail = body.email.trim().toLowerCase();
         const demoUser = DEMO_USERS[normalizedEmail];
         if (demoUser) {
