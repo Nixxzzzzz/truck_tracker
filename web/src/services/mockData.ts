@@ -1560,6 +1560,113 @@ class MockStore {
     this.set('destinations', filtered);
     return true;
   }
+
+  getDailyReport(date?: string): any {
+    const trips = this.getTrips();
+    const queryDate = date || new Date().toISOString().split('T')[0];
+
+    const dateTrips = trips.filter((t) => t.date === queryDate);
+    const reportTrips = dateTrips.length > 0 ? dateTrips : trips;
+
+    const totalTrips = reportTrips.length;
+    const completedTrips = reportTrips.filter((t) => t.status === 'COMPLETED').length;
+    const activeTrips = reportTrips.filter((t) =>
+      ['IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'].includes(t.status)
+    ).length;
+    const delayedTrips = reportTrips.filter((t) => (t.total_delay_minutes || 0) > 0).length;
+    const cancelledTrips = reportTrips.filter((t) => t.status === 'CANCELLED').length;
+    const totalDelayMinutes = reportTrips.reduce((acc, t) => acc + (t.total_delay_minutes || 0), 0);
+
+    const allStops = reportTrips.flatMap((t) => t.stops || []);
+    const totalDestinations = allStops.length || 8;
+    const completedStops = allStops.filter((s) => s.status === 'COMPLETED');
+    const onTimeStops = completedStops.filter(
+      (s) => s.arrival_status === 'ON_TIME' || s.arrival_status === 'EARLY' || !s.arrival_status
+    ).length;
+    const onTimePercentage = completedStops.length > 0 ? Math.round((onTimeStops / completedStops.length) * 100) : 92;
+
+    const delayReasons = [
+      { reason: 'Traffic Congestion (Ring Road / NCR Border)', count: 2, total_minutes: 25 },
+      { reason: 'Customer Loading Dock Waiting Queue', count: 1, total_minutes: 15 },
+      { reason: 'Gate Pass & Manifest Verification', count: 1, total_minutes: 8 }
+    ];
+
+    const driverSummary = [
+      { driver_name: 'Rahul Sharma', trip_count: 2, completed_count: 1, total_delay: 22 },
+      { driver_name: 'Amit Verma', trip_count: 1, completed_count: 1, total_delay: 0 },
+      { driver_name: 'Vikram Singh', trip_count: 1, completed_count: 0, total_delay: 15 }
+    ];
+
+    const vehicleSummary = [
+      { vehicle_number: 'DL01 TA 4920', model: 'Tata Ultra T.7', trip_count: 2, total_distance_km: 78.4 },
+      { vehicle_number: 'UP16 BT 9845', model: 'Ashok Leyland Ecomet', trip_count: 1, total_distance_km: 52.0 },
+      { vehicle_number: 'HR55 AM 7712', model: 'Mahindra Bolero Maxi', trip_count: 1, total_distance_km: 34.6 }
+    ];
+
+    return {
+      date: queryDate,
+      overview: {
+        totalTrips,
+        completedTrips,
+        activeTrips,
+        delayedTrips,
+        cancelledTrips,
+        totalDestinations,
+        totalDelayMinutes,
+        totalDelayFormatted: `${Math.floor(totalDelayMinutes / 60)}h ${totalDelayMinutes % 60}m`,
+        onTimePercentage
+      },
+      trips: reportTrips,
+      delayReasons,
+      driverSummary,
+      vehicleSummary
+    };
+  }
+
+  downloadReportCSV(date?: string): void {
+    const report = this.getDailyReport(date);
+    const queryDate = date || new Date().toISOString().split('T')[0];
+    const headers = [
+      'Trip ID',
+      'Date',
+      'Driver',
+      'Vehicle',
+      'Starting Location',
+      'Total Destinations',
+      'Completed Destinations',
+      'Planned Departure',
+      'Actual Start',
+      'Status',
+      'Delay (Mins)',
+      'Approx Distance (KM)'
+    ];
+
+    const rows = (report.trips || []).map((t: any) => [
+      t.id,
+      t.date,
+      `"${(t.driver_name || '').replace(/"/g, '""')}"`,
+      t.vehicle_number || '',
+      `"${(t.starting_location || '').replace(/"/g, '""')}"`,
+      t.stops?.length || t.total_stops || 0,
+      t.stops?.filter((s: any) => s.status === 'COMPLETED').length || t.completed_stops || 0,
+      t.planned_departure_time || '',
+      t.actual_start_time || 'N/A',
+      t.status || 'SCHEDULED',
+      t.total_delay_minutes || 0,
+      t.calculated_distance_km || 'N/A'
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r: any[]) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `logistics_report_${queryDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 }
 
 export const mockStore = new MockStore();

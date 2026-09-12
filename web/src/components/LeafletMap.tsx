@@ -16,7 +16,7 @@ interface Props {
   showGoogleMapsButton?: boolean;
 }
 
-type MapLayerType = 'dark' | 'google-streets' | 'google-satellite';
+type MapLayerType = 'dark' | 'streets' | 'satellite';
 
 export const LeafletMap: React.FC<Props> = ({
   baseLocation,
@@ -33,7 +33,7 @@ export const LeafletMap: React.FC<Props> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const [mapLayer, setMapLayer] = useState<MapLayerType>(theme === 'light' ? 'google-streets' : 'dark');
+  const [mapLayer, setMapLayer] = useState<MapLayerType>(theme === 'light' ? 'streets' : 'dark');
 
   // Build Google Maps Multi-Stop Direction URL
   const getGoogleMapsUrl = (): string => {
@@ -58,26 +58,34 @@ export const LeafletMap: React.FC<Props> = ({
     return url;
   };
 
-  const getTileUrl = (type: MapLayerType): { url: string; attribution: string; maxZoom: number } => {
+  const getTileUrl = (type: MapLayerType): { url: string; options: L.TileLayerOptions } => {
     switch (type) {
-      case 'google-satellite':
+      case 'satellite':
         return {
-          url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-          attribution: '&copy; Google Maps Satellite',
-          maxZoom: 20
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          options: {
+            attribution: 'Tiles &copy; Esri &mdash; Telematics Satellite Imagery',
+            maxZoom: 19
+          }
         };
-      case 'google-streets':
+      case 'streets':
         return {
-          url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-          attribution: '&copy; Google Maps',
-          maxZoom: 20
+          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          options: {
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; OpenStreetMap',
+            subdomains: 'abcd',
+            maxZoom: 20
+          }
         };
       case 'dark':
       default:
         return {
           url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; TruckTracker Telematics',
-          maxZoom: 19
+          options: {
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; TruckTracker Telematics',
+            subdomains: 'abcd',
+            maxZoom: 20
+          }
         };
     }
   };
@@ -97,15 +105,15 @@ export const LeafletMap: React.FC<Props> = ({
         scrollWheelZoom: true
       });
 
-      const { url, attribution, maxZoom } = getTileUrl(mapLayer);
-      const tiles = L.tileLayer(url, { attribution, maxZoom }).addTo(map);
+      const { url, options } = getTileUrl(mapLayer);
+      const tiles = L.tileLayer(url, options).addTo(map);
 
       tileLayerRef.current = tiles;
       mapInstanceRef.current = map;
     } else if (tileLayerRef.current) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
-      const { url, attribution, maxZoom } = getTileUrl(mapLayer);
-      const tiles = L.tileLayer(url, { attribution, maxZoom }).addTo(mapInstanceRef.current);
+      const { url, options } = getTileUrl(mapLayer);
+      const tiles = L.tileLayer(url, options).addTo(mapInstanceRef.current);
       tileLayerRef.current = tiles;
     }
 
@@ -423,19 +431,19 @@ export const LeafletMap: React.FC<Props> = ({
           </button>
           <button
             type="button"
-            className={`btn ${mapLayer === 'google-streets' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn ${mapLayer === 'streets' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
-            onClick={() => setMapLayer('google-streets')}
+            onClick={() => setMapLayer('streets')}
           >
-            🗺️ Google Streets
+            🗺️ Streets (HD)
           </button>
           <button
             type="button"
-            className={`btn ${mapLayer === 'google-satellite' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn ${mapLayer === 'satellite' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
-            onClick={() => setMapLayer('google-satellite')}
+            onClick={() => setMapLayer('satellite')}
           >
-            🛰️ Google Satellite
+            🛰️ Satellite (Esri)
           </button>
         </div>
 

@@ -11,7 +11,7 @@ interface Props {
   onChange: (data: { latitude: number; longitude: number; radiusMeters: number }) => void;
 }
 
-type LayerType = 'dark' | 'google-streets' | 'google-satellite';
+type LayerType = 'dark' | 'streets' | 'satellite';
 
 export const MapPicker: React.FC<Props> = ({
   initialLat = 28.5355,
@@ -29,28 +29,31 @@ export const MapPicker: React.FC<Props> = ({
   const [lat, setLat] = useState<number>(initialLat);
   const [lng, setLng] = useState<number>(initialLng);
   const [radius, setRadius] = useState<number>(initialRadius);
-  const [activeLayer, setActiveLayer] = useState<LayerType>('google-streets');
+  const [activeLayer, setActiveLayer] = useState<LayerType>('streets');
   const [locating, setLocating] = useState(false);
 
   const getTileConfig = (type: LayerType) => {
     switch (type) {
-      case 'google-satellite':
+      case 'satellite':
         return {
-          url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-          attribution: '&copy; Google Maps Satellite',
-          maxZoom: 20
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: 'Tiles &copy; Esri',
+          subdomains: undefined,
+          maxZoom: 19
         };
       case 'dark':
         return {
           url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; CARTO Telematics',
-          maxZoom: 19
+          attribution: '&copy; CARTO &bull; OpenStreetMap',
+          subdomains: 'abcd',
+          maxZoom: 20
         };
-      case 'google-streets':
+      case 'streets':
       default:
         return {
-          url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-          attribution: '&copy; Google Maps',
+          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; CARTO &bull; OpenStreetMap',
+          subdomains: 'abcd',
           maxZoom: 20
         };
     }
@@ -69,6 +72,7 @@ export const MapPicker: React.FC<Props> = ({
       const tileConfig = getTileConfig(activeLayer);
       const tiles = L.tileLayer(tileConfig.url, {
         attribution: tileConfig.attribution,
+        subdomains: tileConfig.subdomains as any,
         maxZoom: tileConfig.maxZoom
       }).addTo(map);
 
@@ -138,6 +142,7 @@ export const MapPicker: React.FC<Props> = ({
     const tileConfig = getTileConfig(activeLayer);
     const tiles = L.tileLayer(tileConfig.url, {
       attribution: tileConfig.attribution,
+      subdomains: tileConfig.subdomains as any,
       maxZoom: tileConfig.maxZoom
     }).addTo(mapRef.current);
     tileLayerRef.current = tiles;
@@ -195,28 +200,28 @@ export const MapPicker: React.FC<Props> = ({
           <div style={{ display: 'flex', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '2px', border: '1px solid var(--border-subtle)' }}>
             <button
               type="button"
-              onClick={() => setActiveLayer('google-streets')}
+              onClick={() => setActiveLayer('streets')}
               style={{
                 border: 'none',
-                backgroundColor: activeLayer === 'google-streets' ? 'var(--accent-whatsapp)' : 'transparent',
-                color: activeLayer === 'google-streets' ? '#0b141a' : 'var(--text-muted)',
-                fontWeight: activeLayer === 'google-streets' ? 700 : 500,
+                backgroundColor: activeLayer === 'streets' ? 'var(--accent-whatsapp)' : 'transparent',
+                color: activeLayer === 'streets' ? '#0b141a' : 'var(--text-muted)',
+                fontWeight: activeLayer === 'streets' ? 700 : 500,
                 fontSize: '0.72rem',
                 padding: '2px 8px',
                 borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer'
               }}
             >
-              Google Map
+              Streets
             </button>
             <button
               type="button"
-              onClick={() => setActiveLayer('google-satellite')}
+              onClick={() => setActiveLayer('satellite')}
               style={{
                 border: 'none',
-                backgroundColor: activeLayer === 'google-satellite' ? 'var(--accent-whatsapp)' : 'transparent',
-                color: activeLayer === 'google-satellite' ? '#0b141a' : 'var(--text-muted)',
-                fontWeight: activeLayer === 'google-satellite' ? 700 : 500,
+                backgroundColor: activeLayer === 'satellite' ? 'var(--accent-whatsapp)' : 'transparent',
+                color: activeLayer === 'satellite' ? '#0b141a' : 'var(--text-muted)',
+                fontWeight: activeLayer === 'satellite' ? 700 : 500,
                 fontSize: '0.72rem',
                 padding: '2px 8px',
                 borderRadius: 'var(--radius-sm)',

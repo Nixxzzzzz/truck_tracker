@@ -720,23 +720,36 @@ export const api = {
   reports: {
     getDaily: async (date?: string) => {
       try {
-        return await request(`/reports/daily${date ? `?date=${date}` : ''}`);
+        const res = await request(`/reports/daily${date ? `?date=${date}` : ''}`);
+        if (res && res.overview) return res;
+        return mockStore.getDailyReport(date);
       } catch {
-        const trips = mockStore.getTrips();
-        return {
-          report: {
-            date: date || new Date().toISOString().split('T')[0],
-            total_trips: trips.length,
-            completed_trips: trips.filter((t) => t.status === 'COMPLETED').length,
-            delayed_trips: trips.filter((t) => t.status === 'DELAYED').length,
-            cancelled_trips: trips.filter((t) => t.status === 'CANCELLED').length,
-            total_delays_minutes: trips.reduce((acc, t) => acc + (t.total_delay_minutes || 0), 0),
-            total_distance_km: trips.reduce((acc, t) => acc + (t.calculated_distance_km || 0), 0),
-            total_stops_serviced: 6,
-            punctuality_rate_percent: 85.0
-          }
-        };
+        return mockStore.getDailyReport(date);
       }
+    },
+    exportCSV: async (date?: string) => {
+      try {
+        const token = localStorage.getItem('truck_tracker_token');
+        const res = await fetch(`${API_BASE}/reports/export${date ? `?date=${date}` : ''}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `logistics_report_${date || new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          return { success: true };
+        }
+      } catch (e) {
+        console.warn('Remote CSV export failed, generating from client data:', e);
+      }
+      mockStore.downloadReportCSV(date);
+      return { success: true };
     },
     getPeriodic: (period: 'weekly' | 'monthly') => request(`/reports/periodic?period=${period}`)
   },

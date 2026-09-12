@@ -92,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         style={{
-          width: '244px',
+          width: '256px',
           backgroundColor: 'var(--bg-sidebar)',
           borderRight: '1px solid var(--border-subtle)',
           display: 'flex',
@@ -274,11 +274,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              gap: '10px',
               padding: '6px 0'
             }}
           >
-            <div style={{ overflow: 'hidden' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--accent-primary)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '0.74rem',
+                flexShrink: 0
+              }}
+              title={currentUser.name}
+            >
+              {(currentUser.name || 'User')
+                .split(' ')
+                .map((n: string) => n[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase()}
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
                   fontWeight: 600,
@@ -287,6 +311,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
                 }}
+                title={currentUser.name}
               >
                 {currentUser.name}
               </div>
@@ -303,7 +328,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
               <ThemeToggle theme={theme} onToggle={onToggleTheme} size={13} />
               <button
                 onClick={onLogout}

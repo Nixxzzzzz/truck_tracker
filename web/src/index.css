@@ -628,6 +628,10 @@ code, pre, .font-mono {
   background: #090d16 !important;
 }
 
+[data-theme="light"] .leaflet-container {
+  background: #e9edef !important;
+}
+
 .leaflet-popup-content-wrapper {
   background: #ffffff !important;
   border-radius: 6px !important;

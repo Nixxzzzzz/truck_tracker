@@ -112,6 +112,7 @@ export const ManagerView: React.FC<Props> = ({
   // Reports state
   const [dailyReport, setDailyReport] = useState<any>(null);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   // Google Sheets state
   const [sheetsStatus, setSheetsStatus] = useState<any>(null);
@@ -297,6 +298,17 @@ export const ManagerView: React.FC<Props> = ({
       console.error('Reports error:', err);
     } finally {
       setReportsLoading(false);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setExportingCsv(true);
+    try {
+      await api.reports.exportCSV(selectedDate);
+    } catch (err) {
+      console.error('Reports CSV export error:', err);
+    } finally {
+      setExportingCsv(false);
     }
   };
 
@@ -1702,14 +1714,15 @@ export const ManagerView: React.FC<Props> = ({
             onRefresh={handleManualRefresh}
             refreshing={refreshing}
             actions={
-              <a
-                href={`${API_BASE}/reports/export?date=${selectedDate}`}
+              <button
+                type="button"
                 className="btn btn-primary btn-sm"
-                download
+                onClick={handleExportCsv}
+                disabled={exportingCsv}
               >
-                <Download size={14} />
-                <span>Export Operational CSV</span>
-              </a>
+                <Download size={14} className={exportingCsv ? 'animate-spin' : ''} />
+                <span>{exportingCsv ? 'Exporting...' : 'Export Operational CSV'}</span>
+              </button>
             }
           />
 
@@ -1739,59 +1752,169 @@ export const ManagerView: React.FC<Props> = ({
 
           {reportsLoading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-              <KpiCard label="On-Time Arrival Rate" value="—" loading />
+              <KpiCard label="On-Time SLA Rate" value="—" loading />
+              <KpiCard label="Total Trips Dispatched" value="—" loading />
               <KpiCard label="Total Destinations Visited" value="—" loading />
               <KpiCard label="Total Delay Duration" value="—" loading />
             </div>
           ) : dailyReport && dailyReport.overview ? (
             <>
               {/* Summary KPIs */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
                 <KpiCard
-                  label="On-Time Arrival Rate"
+                  label="On-Time SLA Rate"
                   value={`${dailyReport.overview.onTimePercentage ?? 0}%`}
-                  subValue="SLA Geofence Verification"
+                  subValue="Verified Geofence Delivery Drops"
                   variant="success"
                 />
                 <KpiCard
-                  label="Total Destinations Visited"
+                  label="Dispatches & Trips"
+                  value={`${dailyReport.overview.completedTrips ?? 0} / ${dailyReport.overview.totalTrips ?? 0}`}
+                  subValue={`${dailyReport.overview.activeTrips ?? 0} active in transit`}
+                />
+                <KpiCard
+                  label="Customer Stops Visited"
                   value={dailyReport.overview.totalDestinations ?? 0}
-                  subValue="Customer stops executed"
+                  subValue="Delivery & Restock Nodes"
                 />
                 <KpiCard
                   label="Total Delay Duration"
                   value={dailyReport.overview.totalDelayFormatted ?? '0m'}
-                  subValue="Road bottlenecks & loading delays"
+                  subValue="Congestion & queue bottlenecks"
                   variant="warning"
                 />
               </div>
 
-              {/* Delay Root Causes */}
+              {/* Delay Root Causes Breakdown */}
               {dailyReport.delayReasons?.length > 0 && (
-                <div className="card">
-                  <h4 style={{ fontSize: '0.96rem', marginBottom: '14px', fontWeight: 600 }}>
-                    Operational Delay Root Causes
+                <div className="card" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '0.96rem', fontWeight: 600 }}>
+                        Operational Delay Root Causes
+                      </h4>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        Distribution of transit delays and unloading bottlenecks across Delhi-NCR corridors
+                      </p>
+                    </div>
+                    <span className="badge badge-warning" style={{ fontSize: '0.72rem' }}>
+                      {dailyReport.delayReasons.reduce((a: number, b: any) => a + (b.count || 0), 0)} Total Incidents
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                    {dailyReport.delayReasons.map((dr: any) => {
+                      const totalMins = dailyReport.overview.totalDelayMinutes || 1;
+                      const percent = Math.min(100, Math.round(((dr.total_minutes || 0) / totalMins) * 100));
+                      return (
+                        <div
+                          key={dr.reason}
+                          style={{
+                            padding: '14px 16px',
+                            backgroundColor: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-subtle)',
+                            borderRadius: 'var(--radius-md)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--text-primary)' }}>{dr.reason}</div>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--status-delayed)' }}>
+                              {dr.total_minutes}m
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-surface-elevated)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${percent}%`, height: '100%', backgroundColor: 'var(--status-delayed)', borderRadius: '3px' }} />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                            <span>{dr.count} reported incident(s)</span>
+                            <span>{percent}% of daily delay</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Driver & Vehicle Performance Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+                {/* Driver Roster Summary */}
+                <div className="card" style={{ padding: '18px' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={16} color="var(--accent-primary)" />
+                    <span>Driver Performance Roster</span>
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                    {dailyReport.delayReasons.map((dr: any) => (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(dailyReport.driverSummary || []).map((d: any) => (
                       <div
-                        key={dr.reason}
+                        key={d.driver_name}
                         style={{
-                          padding: '12px 14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
                           backgroundColor: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-md)'
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-subtle)'
                         }}
                       >
-                        <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{dr.reason}</div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          {dr.count} incident(s) &bull; {dr.total_minutes} mins total duration
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.84rem' }}>{d.driver_name}</div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {d.completed_count || 0} of {d.trip_count || 1} routes completed
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span
+                            className={`badge ${d.total_delay > 0 ? 'badge-warning' : 'badge-success'}`}
+                            style={{ fontSize: '0.72rem' }}
+                          >
+                            {d.total_delay > 0 ? `+${d.total_delay}m delay` : '100% On-Time'}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
+
+                {/* Fleet Utilization Summary */}
+                <div className="card" style={{ padding: '18px' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Truck size={16} color="var(--accent-primary)" />
+                    <span>Fleet Utilization & Distance</span>
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(dailyReport.vehicleSummary || []).map((v: any) => (
+                      <div
+                        key={v.vehicle_number}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          backgroundColor: 'var(--bg-secondary)',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-subtle)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.84rem' }}>{v.vehicle_number}</div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {v.model || 'Commercial Freight'} &bull; {v.trip_count || 1} assigned dispatch
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-gold)' }}>
+                            {v.total_distance_km ? `${v.total_distance_km} km` : 'Active'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
             <EmptyState
