@@ -379,6 +379,25 @@ npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestam
 
 ---
 
+## 🌐 Cloud & Production Deployment (Render + Vercel)
+
+TruckTracker is configured for automated, zero-cost continuous deployment across cloud platforms:
+
+### 1. Render API Web Service (`render.yaml`)
+* **Live Service**: [`truck-tracker-api-9yhq.onrender.com`](https://truck-tracker-api-9yhq.onrender.com/api/health)
+* **Runtime**: Node.js v22.12.0 with `--experimental-sqlite`
+* **Build Command**: `npm ci --include=dev && npm run build:all`
+* **Start Command**: `npm run start` (executes `node --experimental-sqlite dist/index.js`)
+* **Health Check**: `/api/health`
+* **Auto-Deploy**: Enabled on git push to `main`
+
+### 2. Vercel Web Dashboard (`vercel.json`)
+* **Live Web App**: [`web-beta-five-26.vercel.app`](https://web-beta-five-26.vercel.app) & [`trucktracker-rho.vercel.app`](https://trucktracker-rho.vercel.app)
+* **Framework**: Vite + React 19 SPA
+* **Auto-Deploy**: Automated CI/CD pipeline from GitHub repository
+
+---
+
 ## 📖 Complete Documentation Index
 
 | Manual | Description |

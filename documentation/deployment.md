@@ -175,6 +175,23 @@ TruckTracker can be run and hosted **completely free of charge** ($0/month) with
   * Gives you a free `https://xxxx.trycloudflare.com` URL that works worldwide for both web managers and Android drivers!
 
 * **Option B: Free Cloud Web Service (Render Free Tier)**:
-  * Use the included `render.yaml` with `plan: free`.
-  * 100% free hosting for testing and lightweight operational monitoring.
+  * Deploy the unified Node.js API + Web service via Render Blueprint or standard Web Service:
+    * **Runtime**: Node
+    * **Node Version**: `22.12.0` (or Node 24+)
+    * **Build Command**: `npm ci --include=dev && npm run build:all`
+    * **Start Command**: `npm run start`
+    * **Health Check Path**: `/api/health`
+    * **Environment Variables**:
+      | Variable | Value | Description |
+      | :--- | :--- | :--- |
+      | `NODE_VERSION` | `22.12.0` | Enforces LTS Node version |
+      | `NODE_OPTIONS` | `--experimental-sqlite` | Enables native `node:sqlite` DatabaseSync module |
+      | `NODE_ENV` | `production` | Optimizes Express & React bundle caching |
+      | `PORT` | `10000` | Render default web port |
+      | `JWT_SECRET` | Auto-generated | Authenticates driver and manager sessions |
+  * **Blueprint Deployment (render.yaml)**:
+    1. Connect GitHub repository `Nixxzzzzz/truck_tracker` to Render.
+    2. Click **New +** → **Blueprint** → Select `truck_tracker`.
+    3. Render automatically provisions the `truck-tracker-api` service configured via `render.yaml`.
+    4. Free instance spins up with automatic SSL/TLS (`https://truck-tracker-api-9yhq.onrender.com`).
 

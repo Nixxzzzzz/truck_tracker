@@ -31,6 +31,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=5000
+ENV NODE_OPTIONS="--experimental-sqlite"
 
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
@@ -54,4 +55,4 @@ EXPOSE 5000
 VOLUME ["/app/data", "/app/uploads/photos"]
 
 WORKDIR /app/server
-CMD ["node", "dist/index.js"]
+CMD ["node", "--experimental-sqlite", "dist/index.js"]
