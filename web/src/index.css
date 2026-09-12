@@ -964,4 +964,22 @@ code, pre, .font-mono {
   border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
+/* Camera Live Viewfinder & Browser Control Suppressions */
+video.camera-viewfinder::-webkit-media-controls,
+video.camera-viewfinder::-webkit-media-controls-enclosure,
+video.camera-viewfinder::-webkit-media-controls-panel,
+video.camera-viewfinder::-webkit-media-controls-start-playback-button,
+video.camera-viewfinder::-webkit-media-controls-play-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+video.camera-viewfinder {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+
 

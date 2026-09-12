@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Camera, X, Check, RefreshCw, Upload, SwitchCamera, AlertCircle } from 'lucide-react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Camera, X, Check, RefreshCw, Upload, SwitchCamera, AlertCircle, Sparkles } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
 
 interface Props {
@@ -20,6 +20,8 @@ export const CameraModal: React.FC<Props> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [photoType, setPhotoType] = useState(defaultPhotoType);
@@ -28,118 +30,228 @@ export const CameraModal: React.FC<Props> = ({
   const [uploading, setUploading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
 
-  useEffect(() => {
-    startCamera(facingMode);
-    return () => {
-      stopCamera();
-    };
-  }, [facingMode]);
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => {
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
         try {
           track.stop();
         } catch {}
       });
-      setStream(null);
+      streamRef.current = null;
     }
-  };
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setStream(null);
+    setIsVideoPlaying(false);
+  }, []);
 
-  const startCamera = async (currentFacing: 'environment' | 'user') => {
-    stopCamera();
-    setIsInitializing(true);
-    setCameraError(null);
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError('Direct browser camera is not supported in this browser. Please use the button below to take or pick a photo.');
-      setIsInitializing(false);
-      return;
+  const getMediaStream = async (targetFacing: 'environment' | 'user', specificDeviceId?: string): Promise<MediaStream> => {
+    // Cascade Tier 1: Specific Device ID (if user picked from device list)
+    if (specificDeviceId) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: specificDeviceId } },
+          audio: false
+        });
+      } catch (err) {
+        console.warn('Exact deviceId selection failed, falling back:', err);
+      }
     }
 
-    let mediaStream: MediaStream | null = null;
-
-    // Cascade 1: Requested facing mode with ideal resolution
+    // Cascade Tier 2: Ideal facing mode with high resolution
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
+      return await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: currentFacing },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: { ideal: targetFacing },
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 }
         },
         audio: false
       });
     } catch (err1) {
-      // Cascade 2: Fallback to basic facingMode without resolution constraints
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: currentFacing },
-          audio: false
-        });
-      } catch (err2) {
-        // Cascade 3: Fallback to ANY video device (desktop webcam, USB camera)
-        try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false
-          });
-        } catch (err3: any) {
-          console.warn('Camera initialization error:', err3);
-          if (err3.name === 'NotAllowedError' || err3.name === 'PermissionDeniedError') {
-            setCameraError('Camera access was denied in browser permissions. You can still take or select a photo using the button below.');
-          } else {
-            setCameraError('Hardware camera unavailable. Please use the device photo selector below.');
-          }
-          setIsInitializing(false);
-          return;
-        }
-      }
+      console.warn('High-res facing mode request failed, cascading to basic facingMode:', err1);
     }
 
-    if (mediaStream) {
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(() => {});
-        };
-      }
+    // Cascade Tier 3: Ideal facing mode without resolution constraints
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: targetFacing } },
+        audio: false
+      });
+    } catch (err2) {
+      console.warn('Ideal facing mode failed, cascading to any video hardware:', err2);
     }
-    setIsInitializing(false);
+
+    // Cascade Tier 4: Any available video device (USB camera, integrated laptop cam, etc.)
+    return await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
+    });
   };
 
+  const startCamera = useCallback(async (currentFacing: 'environment' | 'user', deviceId?: string) => {
+    stopCamera();
+    setIsInitializing(true);
+    setCameraError(null);
+    setIsVideoPlaying(false);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Direct in-browser camera stream is not supported in this browser. Please use the button below to take or pick a photo.');
+      setIsInitializing(false);
+      return;
+    }
+
+    try {
+      const mediaStream = await getMediaStream(currentFacing, deviceId);
+      streamRef.current = mediaStream;
+      setStream(mediaStream);
+
+      // Enumerate cameras after permissions are granted
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+        setAvailableCameras(videoInputs);
+      } catch {}
+
+    } catch (err: any) {
+      console.error('Camera initialization error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Camera access was denied in browser permissions. Please allow camera access in your browser bar, or use the Native Phone Camera button below.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setCameraError('Camera hardware is currently in use by another app or system background task. Please close other camera apps or select a photo below.');
+      } else {
+        setCameraError('Unable to start live camera: ' + (err.message || 'Device error') + '. Please use the device photo selector below.');
+      }
+    } finally {
+      setIsInitializing(false);
+    }
+  }, [stopCamera]);
+
+  useEffect(() => {
+    startCamera(facingMode, selectedDeviceId);
+    return () => {
+      stopCamera();
+    };
+  }, [facingMode, selectedDeviceId, startCamera, stopCamera]);
+
+  // Ensure stream is properly bound to the <video> DOM element and play() is triggered
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (stream) {
+      video.srcObject = stream;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+
+      const handleReady = () => {
+        setIsVideoPlaying(true);
+      };
+
+      video.addEventListener('playing', handleReady);
+      video.addEventListener('loadeddata', handleReady);
+      video.addEventListener('loadedmetadata', handleReady);
+
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setIsVideoPlaying(true))
+          .catch((err) => {
+            console.warn('Video autoPlay was prevented by browser policy (awaiting user gesture):', err);
+          });
+      }
+
+      return () => {
+        video.removeEventListener('playing', handleReady);
+        video.removeEventListener('loadeddata', handleReady);
+        video.removeEventListener('loadedmetadata', handleReady);
+      };
+    } else {
+      video.srcObject = null;
+      setIsVideoPlaying(false);
+    }
+  }, [stream]);
+
   const toggleCameraFacing = () => {
-    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+    const nextFacing = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextFacing);
+    setSelectedDeviceId('');
+  };
+
+  const cycleAvailableCamera = () => {
+    if (availableCameras.length <= 1) {
+      toggleCameraFacing();
+      return;
+    }
+    const currentIndex = availableCameras.findIndex((c) => c.deviceId === selectedDeviceId);
+    const nextIndex = (currentIndex + 1) % availableCameras.length;
+    const nextCamera = availableCameras[nextIndex];
+    setSelectedDeviceId(nextCamera.deviceId);
   };
 
   const takeSnapshot = () => {
-    if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
-    // Use actual stream dimensions or sensible default
-    const width = video.videoWidth || 640;
-    const height = video.videoHeight || 480;
+    if (!video || !canvas) return;
+
+    // Use high resolution dimensions or fallback
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
     canvas.width = width;
     canvas.height = height;
 
     const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // If front camera, unmirror if needed
+    if (!ctx) return;
+
+    if (facingMode === 'user') {
+      ctx.save();
+      ctx.translate(width, 0);
+      ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            setCapturedBlob(blob);
-            setPreviewUrl(URL.createObjectURL(blob));
-            stopCamera();
-          }
-        },
-        'image/jpeg',
-        0.88
-      );
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, width, height);
     }
+
+    // Embed tamper-proof logistics timestamp watermark
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const bannerHeight = Math.max(32, Math.round(height * 0.055));
+
+    ctx.fillStyle = 'rgba(11, 20, 26, 0.78)';
+    ctx.fillRect(0, height - bannerHeight, width, bannerHeight);
+
+    ctx.fillStyle = '#25D366';
+    const dotRadius = Math.max(3, Math.round(bannerHeight * 0.12));
+    ctx.beginPath();
+    ctx.arc(16, height - bannerHeight / 2, dotRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `600 ${Math.max(12, Math.round(bannerHeight * 0.38))}px system-ui, -apple-system, sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`TRUCKTRACKER PROOF  |  ${photoType.toUpperCase()}  |  ${dateStr} ${timeStr}`, 28, height - bannerHeight / 2);
+
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          setCapturedBlob(blob);
+          setPreviewUrl(URL.createObjectURL(blob));
+          stopCamera();
+        }
+      },
+      'image/jpeg',
+      0.92
+    );
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +267,7 @@ export const CameraModal: React.FC<Props> = ({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setCapturedBlob(null);
     setPreviewUrl(null);
-    startCamera(facingMode);
+    startCamera(facingMode, selectedDeviceId);
   };
 
   const uploadPhoto = async () => {
@@ -244,8 +356,8 @@ export const CameraModal: React.FC<Props> = ({
             style={{
               position: 'relative',
               width: '100%',
-              height: '300px',
-              backgroundColor: '#000',
+              height: '320px',
+              backgroundColor: '#050a0e',
               borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
               display: 'flex',
@@ -254,27 +366,87 @@ export const CameraModal: React.FC<Props> = ({
               border: '1px solid var(--border-medium)'
             }}
           >
-            {previewUrl ? (
+            {/* 1. Captured Photo Preview */}
+            {previewUrl && (
               <img
                 src={previewUrl}
                 alt="Captured Proof"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
-            ) : stream ? (
+            )}
+
+            {/* 2. Permanent Video Viewfinder (Stream attached via Ref & Effect) */}
+            <video
+              ref={videoRef}
+              className="camera-viewfinder"
+              autoPlay
+              playsInline
+              muted
+              controls={false}
+              disablePictureInPicture
+              onClick={() => {
+                if (videoRef.current && videoRef.current.paused) {
+                  videoRef.current.play().catch(() => {});
+                }
+              }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: stream && !previewUrl ? 'block' : 'none',
+                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+              }}
+            />
+
+            {/* Tap to Activate Overlay (if browser paused video waiting for interaction) */}
+            {stream && !isVideoPlaying && !previewUrl && !isInitializing && (
+              <button
+                type="button"
+                onClick={() => videoRef.current?.play()}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                  border: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  zIndex: 4
+                }}
+              >
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-whatsapp)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0b141a',
+                    boxShadow: '0 0 16px rgba(37, 211, 102, 0.5)'
+                  }}
+                >
+                  <Camera size={24} />
+                </div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Tap to Enable Camera Stream</div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Browser requires tap to play live feed</div>
+              </button>
+            )}
+
+            {/* Live Camera Viewfinder Overlay Guides */}
+            {stream && !previewUrl && (
               <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
                 {/* Viewfinder Target Framing Guidelines */}
                 <div
                   style={{
                     position: 'absolute',
-                    inset: '24px',
-                    border: '1.5px dashed rgba(255, 255, 255, 0.45)',
+                    inset: '20px',
+                    border: '1.5px dashed rgba(255, 255, 255, 0.4)',
                     borderRadius: 'var(--radius-md)',
                     pointerEvents: 'none',
                     display: 'flex',
@@ -286,60 +458,115 @@ export const CameraModal: React.FC<Props> = ({
                     style={{
                       width: '8px',
                       height: '8px',
-                      backgroundColor: 'var(--accent-whatsapp)',
+                      backgroundColor: isVideoPlaying ? 'var(--accent-whatsapp)' : 'var(--status-delayed)',
                       borderRadius: '50%',
-                      boxShadow: '0 0 8px var(--accent-whatsapp)'
+                      boxShadow: isVideoPlaying
+                        ? '0 0 10px var(--accent-whatsapp)'
+                        : '0 0 10px var(--status-delayed)'
                     }}
                   />
                 </div>
 
-                {/* Flip Camera Toggle Button */}
+                {/* Camera Mode Indicator Badge */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    backgroundColor: 'rgba(11, 20, 26, 0.75)',
+                    color: '#e9edef',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backdropFilter: 'blur(6px)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: isVideoPlaying ? 'var(--accent-whatsapp)' : 'var(--status-delayed)'
+                    }}
+                  />
+                  <span>{facingMode === 'environment' ? 'Rear Camera' : 'Front Camera'}</span>
+                </div>
+
+                {/* Flip Camera Switch Button */}
                 <button
                   type="button"
-                  onClick={toggleCameraFacing}
+                  onClick={availableCameras.length > 1 ? cycleAvailableCamera : toggleCameraFacing}
                   style={{
                     position: 'absolute',
                     top: '12px',
                     right: '12px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                    color: '#fff',
+                    backgroundColor: 'rgba(11, 20, 26, 0.85)',
+                    color: '#ffffff',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
                     borderRadius: 'var(--radius-full)',
-                    padding: '8px',
+                    padding: '6px 12px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    gap: '6px',
                     fontSize: '0.75rem',
-                    backdropFilter: 'blur(4px)'
+                    fontWeight: 600,
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                    zIndex: 5
                   }}
-                  title="Switch Front/Rear Camera"
+                  title="Switch Front / Rear Camera"
                 >
-                  <SwitchCamera size={16} />
+                  <SwitchCamera size={15} />
                   <span>Flip</span>
                 </button>
               </>
-            ) : (
+            )}
+
+            {/* Initializing / Error Fallback Screen */}
+            {!previewUrl && !stream && (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 {isInitializing ? (
                   <>
-                    <RefreshCw size={36} className="spin-icon" style={{ opacity: 0.6, margin: '0 auto 10px' }} />
-                    <p style={{ fontSize: '0.85rem' }}>Initializing camera hardware...</p>
+                    <RefreshCw size={36} className="spin-icon" style={{ opacity: 0.7, margin: '0 auto 12px', color: 'var(--accent-whatsapp)' }} />
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                      Connecting to Camera...
+                    </p>
+                    <p style={{ fontSize: '0.75rem', margin: 0 }}>Starting high-definition video capture</p>
                   </>
                 ) : (
                   <>
                     <AlertCircle size={36} color="var(--status-delayed)" style={{ margin: '0 auto 10px' }} />
-                    <p style={{ fontSize: '0.82rem', maxWidth: '300px', margin: '0 auto' }}>
-                      {cameraError || 'Camera unavailable'}
+                    <p style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                      Camera Stream Unavailable
                     </p>
+                    <p style={{ fontSize: '0.76rem', maxWidth: '320px', margin: '0 auto 14px', color: 'var(--text-muted)' }}>
+                      {cameraError || 'Camera could not be accessed directly.'}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => startCamera(facingMode, selectedDeviceId)}
+                      style={{ fontSize: '0.78rem' }}
+                    >
+                      <RefreshCw size={13} /> Retry Camera
+                    </button>
                   </>
                 )}
               </div>
             )}
+
+            {/* Hidden Canvas for High-Res Processing */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
           </div>
 
-          {/* Native Camera / Device File Trigger */}
+          {/* Native Phone Camera / File Gallery Direct Trigger */}
           {!previewUrl && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <input
@@ -360,7 +587,8 @@ export const CameraModal: React.FC<Props> = ({
                   justifyContent: 'center',
                   gap: '8px',
                   padding: '10px 14px',
-                  fontSize: '0.84rem'
+                  fontSize: '0.84rem',
+                  fontWeight: 500
                 }}
               >
                 <Upload size={16} />
@@ -411,7 +639,8 @@ export const CameraModal: React.FC<Props> = ({
                 backgroundColor: stream ? 'var(--accent-whatsapp)' : undefined,
                 borderColor: stream ? 'var(--accent-whatsapp)' : undefined,
                 color: stream ? '#0b141a' : undefined,
-                fontWeight: 600
+                fontWeight: 600,
+                boxShadow: stream ? '0 2px 10px rgba(37, 211, 102, 0.3)' : undefined
               }}
               onClick={takeSnapshot}
               disabled={!stream}
