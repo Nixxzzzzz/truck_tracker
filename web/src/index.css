@@ -981,5 +981,135 @@ video.camera-viewfinder {
   user-select: none;
 }
 
+/* ==========================================================================
+   Comprehensive Multi-Device & Responsive Adaptation System
+   Optimized for: Mobile Smartphones (360-480px), Tablets (768-1024px), Desktop (1280px+)
+   ========================================================================== */
+
+/* Universal Safe Viewport & Touch Ergonomics */
+@supports (min-height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
+}
+
+/* Table Wrappers & Smooth Touch Scrolling */
+.table-container,
+.table-responsive,
+.enterprise-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive Breakpoint: Tablets & Small Laptops (<= 1024px) */
+@media (max-width: 1024px) {
+  .grid-stats-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Responsive Breakpoint: Mobile Devices & Tablets Portrait (<= 768px) */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* Prevent auto-zoom on iOS Safari when focusing form inputs */
+  .form-input,
+  .form-select,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+  }
+
+  .btn {
+    min-height: 40px;
+  }
+
+  .btn-large {
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+
+  /* Modal Ergonomics for Mobile */
+  .modal-overlay {
+    padding: 10px !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-content {
+    max-height: 90dvh !important;
+    width: 100% !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+
+  /* Responsive Grid Adjustments */
+  .grid-stats-4,
+  .grid-stats-3,
+  .grid-stats-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Map Container Mobile Height */
+  .leaflet-map-container {
+    height: 380px !important;
+    min-height: 320px !important;
+  }
+}
+
+/* Responsive Breakpoint: Compact Smartphones (<= 480px) */
+@media (max-width: 480px) {
+  .app-main-content {
+    padding: 12px 10px !important;
+  }
+
+  .card {
+    padding: 16px 14px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .modal-header {
+    padding: 14px 16px !important;
+  }
+
+  .modal-body {
+    padding: 14px 16px !important;
+  }
+
+  .modal-footer {
+    padding: 12px 16px !important;
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+  }
+
+  .modal-footer button {
+    width: 100% !important;
+  }
+
+  /* Mobile Driver View Cards */
+  .driver-terminal-container {
+    padding: 10px 8px !important;
+  }
+
+  /* Form actions stacking */
+  .form-actions-responsive {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .form-actions-responsive button {
+    width: 100% !important;
+  }
+}
+
+
 
 

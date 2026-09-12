@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, ArrowRight, Lock, Mail, Smartphone, ShieldCheck } from 'lucide-react';
+import { Truck, ArrowRight, Lock, Mail, Smartphone, ShieldCheck, Eye, EyeOff, Sparkles, CheckCircle2, UserCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -10,59 +10,98 @@ interface Props {
   onToggleTheme?: () => void;
 }
 
+interface ProfilePreset {
+  id: 'manager' | 'driver' | 'director';
+  title: string;
+  roleBadge: string;
+  email: string;
+  password: string;
+  description: string;
+  icon: React.ElementType;
+}
+
+const PRESETS: ProfilePreset[] = [
+  {
+    id: 'manager',
+    title: 'Dispatch Manager',
+    roleBadge: 'Fleet Command',
+    email: 'manager@company.com',
+    password: 'manager123',
+    description: 'Fleet dispatch, real-time map, vehicles & Google Sheets sync',
+    icon: ShieldCheck
+  },
+  {
+    id: 'driver',
+    title: 'Route Driver',
+    roleBadge: 'Mobile Terminal',
+    email: 'rahul@company.com',
+    password: 'driver123',
+    description: 'Driver mobile view, multi-stop trips, GPS beacon & photo proof',
+    icon: Truck
+  },
+  {
+    id: 'director',
+    title: 'Executive Director',
+    roleBadge: 'Analytics',
+    email: 'director@company.com',
+    password: 'director123',
+    description: 'Executive logistics intelligence, SLA punctuality & reports',
+    icon: Sparkles
+  }
+];
+
 export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onToggleTheme }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [selectedPresetId, setSelectedPresetId] = useState<'manager' | 'driver' | 'director'>('manager');
+  const [email, setEmail] = useState('manager@company.com');
+  const [password, setPassword] = useState('manager123');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const selectPreset = (preset: ProfilePreset) => {
+    setSelectedPresetId(preset.id);
+    setEmail(preset.email);
+    setPassword(preset.password);
+    setError(null);
+  };
+
+  const handleLogin = async (loginEmail: string, loginPass: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await api.auth.login({ email: loginEmail.trim(), password: loginPass });
+      localStorage.setItem('truck_tracker_token', data.token);
+      onLoginSuccess(data.user, data.token);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await api.auth.login({ email, password });
-      localStorage.setItem('truck_tracker_token', data.token);
-      onLoginSuccess(data.user, data.token);
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Check your credentials.');
-    } finally {
-      setLoading(false);
-    }
+    handleLogin(email, password);
   };
 
-  const handleQuickLogin = async (demoEmail: string, demoPassword: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await api.auth.login({ email: demoEmail, password: demoPassword });
-      localStorage.setItem('truck_tracker_token', data.token);
-      onLoginSuccess(data.user, data.token);
-    } catch (err: any) {
-      setError(err.message || 'Login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const activePreset = PRESETS.find((p) => p.id === selectedPresetId) || PRESETS[0];
 
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         backgroundColor: 'var(--bg-primary)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
+        padding: '16px',
         position: 'relative'
       }}
+      className="login-container-responsive"
     >
       {onToggleTheme && (
-        <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} showLabel />
         </div>
       )}
@@ -70,20 +109,22 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
       <div
         className="card"
         style={{
-          maxWidth: '440px',
+          maxWidth: '460px',
           width: '100%',
-          padding: '32px 28px',
+          padding: '28px 24px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '22px'
+          gap: '20px',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)'
         }}
       >
         {/* Brand Header */}
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '42px',
-              height: '42px',
+              width: '46px',
+              height: '46px',
               borderRadius: 'var(--radius-md)',
               backgroundColor: 'var(--accent-primary)',
               color: '#ffffff',
@@ -92,20 +133,90 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
               justifyContent: 'center',
               margin: '0 auto 12px',
               fontWeight: 800,
-              fontSize: '1.2rem',
+              fontSize: '1.25rem',
               fontFamily: 'var(--font-display)',
-              boxShadow: 'var(--shadow-sm)'
+              boxShadow: '0 4px 14px rgba(0, 168, 132, 0.35)'
             }}
           >
             TT
           </div>
 
-          <h1 style={{ fontSize: '1.45rem', letterSpacing: '-0.02em', fontWeight: 700 }}>
+          <h1 style={{ fontSize: '1.4rem', letterSpacing: '-0.02em', fontWeight: 700, margin: '0 0 4px' }}>
             TruckTracker Operations
           </h1>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
             Enterprise Fleet & Logistics Intelligence Platform
           </p>
+        </div>
+
+        {/* Quick Role Selector Tabs */}
+        <div>
+          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
+            Select Access Profile:
+          </label>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '6px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              padding: '4px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-subtle)'
+            }}
+          >
+            {PRESETS.map((preset) => {
+              const Icon = preset.icon;
+              const isSelected = selectedPresetId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => selectPreset(preset)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '8px 4px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
+                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontWeight: isSelected ? 700 : 500,
+                    fontSize: '0.74rem'
+                  }}
+                >
+                  <Icon size={16} />
+                  <span>{preset.title.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Profile Context Banner */}
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '8px 10px',
+              backgroundColor: 'var(--accent-primary-subtle)',
+              border: '1px solid var(--accent-primary-border)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.74rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <UserCheck size={14} color="var(--accent-primary)" />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{activePreset.title}</span>
+            </div>
+            <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{activePreset.roleBadge}</span>
+          </div>
         </div>
 
         {error && (
@@ -116,18 +227,21 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
               border: '1px solid var(--status-danger-border)',
               color: 'var(--status-danger)',
               borderRadius: 'var(--radius-md)',
-              fontSize: '0.84rem'
+              fontSize: '0.82rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            {error}
+            <span>{error}</span>
           </div>
         )}
 
         {/* Credentials Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">
-              <Mail size={12} style={{ display: 'inline', marginRight: '4px' }} />
+            <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>
+              <Mail size={12} style={{ display: 'inline', marginRight: '6px' }} />
               Corporate Email
             </label>
             <input
@@ -137,97 +251,117 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              style={{ fontSize: '0.92rem' }}
             />
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">
-              <Lock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+            <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>
+              <Lock size={12} style={{ display: 'inline', marginRight: '6px' }} />
               Password
             </label>
-            <input
-              type="password"
-              className="form-input"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                style={{ fontSize: '0.92rem', paddingRight: '40px', width: '100%' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', marginTop: '6px', padding: '10px' }}
+            className="btn btn-primary btn-large"
+            style={{ width: '100%', marginTop: '6px', fontSize: '0.92rem', fontWeight: 600 }}
             disabled={loading}
           >
-            {loading ? 'Authenticating...' : 'Sign In to Operations'}
-            <ArrowRight size={15} />
+            {loading ? 'Authenticating...' : `Sign In as ${activePreset.title}`}
+            <ArrowRight size={16} />
           </button>
         </form>
 
-        {/* Corporate Role Access Profiles */}
-        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '18px' }}>
+        {/* 1-Click Launch Presets Section */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-              Authorized Access Profiles
+              Quick 1-Click Direct Launch
             </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-              1-Click Sign-In
+            <span style={{ fontSize: '0.7rem', color: 'var(--accent-whatsapp)', fontWeight: 600 }}>
+              Instant Demo Access
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {/* Operations Manager */}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ justifyContent: 'space-between', padding: '9px 12px', fontSize: '0.82rem' }}
-              onClick={() => handleQuickLogin('manager@company.com', 'manager123')}
-              disabled={loading}
-            >
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>Operations Dispatch Manager</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fleet Command, Trips & Google Sheets Sync</div>
-              </div>
-              <span style={{ color: 'var(--accent-primary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                Launch &rarr;
-              </span>
-            </button>
-
-            {/* Field Senior Driver */}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ justifyContent: 'space-between', padding: '9px 12px', fontSize: '0.82rem' }}
-              onClick={() => handleQuickLogin('rahul@company.com', 'driver123')}
-              disabled={loading}
-            >
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>Senior Route Driver (Delhi-Noida)</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Driver Mobile App, GPS & Proofs</div>
-              </div>
-              <span style={{ color: 'var(--accent-primary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                Launch &rarr;
-              </span>
-            </button>
-
-            {/* Executive Director */}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ justifyContent: 'space-between', padding: '9px 12px', fontSize: '0.82rem' }}
-              onClick={() => handleQuickLogin('director@company.com', 'director123')}
-              disabled={loading}
-            >
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>Executive Director</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Operations Performance & SLA Analytics</div>
-              </div>
-              <span style={{ color: 'var(--accent-primary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                Launch &rarr;
-              </span>
-            </button>
+            {PRESETS.map((preset) => {
+              const Icon = preset.icon;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    justifyContent: 'space-between',
+                    padding: '10px 12px',
+                    fontSize: '0.82rem',
+                    textAlign: 'left'
+                  }}
+                  onClick={() => {
+                    selectPreset(preset);
+                    handleLogin(preset.email, preset.password);
+                  }}
+                  disabled={loading}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--bg-surface-elevated)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--accent-primary)'
+                      }}
+                    >
+                      <Icon size={15} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{preset.title}</div>
+                      <div style={{ fontSize: '0.71rem', color: 'var(--text-muted)' }}>{preset.email}</div>
+                    </div>
+                  </div>
+                  <span style={{ color: 'var(--accent-primary)', fontSize: '0.74rem', fontWeight: 600 }}>
+                    Launch &rarr;
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Android Mobile App Direct APK Link */}
@@ -241,7 +375,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 color: 'var(--text-secondary)',
                 width: '100%',
                 justifyContent: 'center',
@@ -254,6 +388,17 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .login-container-responsive {
+            padding: 10px !important;
+          }
+          .card {
+            padding: 20px 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
