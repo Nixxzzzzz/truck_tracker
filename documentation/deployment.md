@@ -174,12 +174,15 @@ TruckTracker can be run and hosted **completely free of charge** ($0/month) with
     ```
   * Gives you a free `https://xxxx.trycloudflare.com` URL that works worldwide for both web managers and Android drivers!
 
-* **Option B: Free Cloud Web Service (Render Free Tier)**:
-  * Deploy the unified Node.js API + Web service via Render Blueprint or standard Web Service:
+* **Option B: Render All-in-One Project Deployment (Recommended Cloud Production)**:
+  * Deploy the unified Node.js API + Web service via Render Blueprint or Web Service organized inside a dedicated **Render Project**:
+    * **Project Name**: `TruckTracker`
+    * **Environment**: `Production`
+    * **Service Name**: `truck-tracker-api`
     * **Runtime**: Node
     * **Node Version**: `22.12.0` (or Node 24+)
     * **Build Command**: `npm ci --include=dev && npm run build:all`
-    * **Start Command**: `npm run start`
+    * **Start Command**: `npm run start` (executes `node --experimental-sqlite dist/index.js`)
     * **Health Check Path**: `/api/health`
     * **Environment Variables**:
       | Variable | Value | Description |
@@ -189,9 +192,13 @@ TruckTracker can be run and hosted **completely free of charge** ($0/month) with
       | `NODE_ENV` | `production` | Optimizes Express & React bundle caching |
       | `PORT` | `10000` | Render default web port |
       | `JWT_SECRET` | Auto-generated | Authenticates driver and manager sessions |
+  * **Database & Persistence Architecture**:
+    * Utilizes SQLite in WAL mode with automated schema creation (`initDatabase()`).
+    * On fresh container spins, `server/src/index.ts` auto-detects empty tables and executes `seed.ts` to immediately populate company vehicles, demo driver profiles, destinations, and scheduled trips.
+    * Photo proofs are stored in `/server/uploads/photos` and served directly through `/uploads/photos`.
   * **Blueprint Deployment (render.yaml)**:
     1. Connect GitHub repository `Nixxzzzzz/truck_tracker` to Render.
     2. Click **New +** → **Blueprint** → Select `truck_tracker`.
     3. Render automatically provisions the `truck-tracker-api` service configured via `render.yaml`.
-    4. Free instance spins up with automatic SSL/TLS (`https://truck-tracker-api-9yhq.onrender.com`).
-
+    4. Group the service under Project: **`TruckTracker`** > Environment: **`Production`**.
+    5. The unified service is **Live** with automatic SSL/TLS at [`https://truck-tracker-api-9yhq.onrender.com`](https://truck-tracker-api-9yhq.onrender.com).

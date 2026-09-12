@@ -2,12 +2,14 @@
 
 > **A mission-critical internal company logistics and fleet-tracking platform connecting field drivers and operations managers through a single authoritative backend.**
 
-[![Live Web App](https://img.shields.io/badge/Live%20Web%20App-web--beta--five--26.vercel.app-000000.svg?logo=vercel)](https://web-beta-five-26.vercel.app)
-[![Live Backend API](https://img.shields.io/badge/Live%20Backend-Render%20(Online)-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
+[![Live Full-Stack App (Render)](https://img.shields.io/badge/Live%20Deployment-truck--tracker--api--9yhq.onrender.com-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
+[![Render Project](https://img.shields.io/badge/Render%20Project-TruckTracker%20%7C%20Production-000000.svg?logo=render)](https://dashboard.render.com/)
+[![Live Backend API](https://img.shields.io/badge/Live%20API-Health%20200%20OK-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
+[![Decoupled Web (Vercel)](https://img.shields.io/badge/Edge%20Frontend%20Mirror-web--beta--five--26.vercel.app-000000.svg?logo=vercel)](https://web-beta-five-26.vercel.app)
 [![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0%20(APK%20Available)-34d399.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
 [![Download APK](https://img.shields.io/badge/Download-TruckTracker--v1.0.0.apk%20(20%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk)
 [![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
-[![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Authoritative)-3b82f6.svg)](#)
+[![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Auto--Seeded)-3b82f6.svg)](#)
 [![Tests: 46 Passed](https://img.shields.io/badge/Automated%20Tests-46%20Passed%20%7C%200%20Failed-34d399.svg)](#)
 [![Aesthetics: Luxury Corporate Dark](https://img.shields.io/badge/UI%2FUX-Luxury%20Corporate%20Dark-c5a059.svg)](#)
 
@@ -379,22 +381,31 @@ npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestam
 
 ---
 
-## 🌐 Cloud & Production Deployment (Render + Vercel)
+## 🌐 Cloud & Production Deployment (Render Unified Project)
 
-TruckTracker is configured for automated, zero-cost continuous deployment across cloud platforms:
+TruckTracker is configured for automated continuous deployment on **Render** organized within a dedicated **Render Project**:
 
-### 1. Render API Web Service (`render.yaml`)
-* **Live Service**: [`truck-tracker-api-9yhq.onrender.com`](https://truck-tracker-api-9yhq.onrender.com/api/health)
+### 1. Render All-in-One Deployment (`TruckTracker` Project)
+* **Live Web App & REST API**: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
+* **Live API Health Check**: [`https://truck-tracker-api-9yhq.onrender.com/api/health`](https://truck-tracker-api-9yhq.onrender.com/api/health)
+* **Render Project Name**: `TruckTracker`
+* **Environment**: `Production`
+* **Service Name**: `truck-tracker-api`
+* **Architecture**: **Single Origin All-in-One** (Express serves REST API `/api/*`, photo uploads `/uploads/*`, and pre-compiled React 19 SPA `/`).
+  * Eliminates CORS complications and cross-domain credential issues
+  * Zero-delay synchronization between frontend releases and backend schema updates
+  * Photo proofs captured by drivers render seamlessly from the same origin
 * **Runtime**: Node.js v22.12.0 with `--experimental-sqlite`
+* **Database**: Local SQLite WAL with automated seed initialization on fresh containers (`seed.ts`)
 * **Build Command**: `npm ci --include=dev && npm run build:all`
 * **Start Command**: `npm run start` (executes `node --experimental-sqlite dist/index.js`)
-* **Health Check**: `/api/health`
+* **Health Check Path**: `/api/health`
 * **Auto-Deploy**: Enabled on git push to `main`
 
-### 2. Vercel Web Dashboard (`vercel.json`)
-* **Live Web App**: [`web-beta-five-26.vercel.app`](https://web-beta-five-26.vercel.app) & [`trucktracker-rho.vercel.app`](https://trucktracker-rho.vercel.app)
+### 2. Edge Frontend Mirror (Vercel Standalone)
+* **Live Web App**: [`https://web-beta-five-26.vercel.app`](https://web-beta-five-26.vercel.app)
 * **Framework**: Vite + React 19 SPA
-* **Auto-Deploy**: Automated CI/CD pipeline from GitHub repository
+* **Role**: Standalone edge replica for decoupled web testing or static CDN demonstration
 
 ---
 
