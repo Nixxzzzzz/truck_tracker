@@ -105,8 +105,14 @@ router.get('/', requireAuth, requireRole('MANAGER'), (req, res) => {
     params.push(vehicleId);
   }
   if (status) {
-    query += ` AND t.status = ?`;
-    params.push(status);
+    const statuses = String(status).split(',').filter(Boolean);
+    if (statuses.length === 1) {
+      query += ` AND t.status = ?`;
+      params.push(statuses[0]);
+    } else if (statuses.length > 1) {
+      query += ` AND t.status IN (${statuses.map(() => '?').join(', ')})`;
+      params.push(...statuses);
+    }
   }
   if (search) {
     query += ` AND (t.id LIKE ? OR v.vehicle_number LIKE ? OR u.name LIKE ? OR t.reference_number LIKE ?)`;

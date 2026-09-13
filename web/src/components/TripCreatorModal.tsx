@@ -3,6 +3,7 @@ import { X, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Calendar, Clock, Truck, Us
 import { api } from '../services/api';
 import { Driver, Vehicle, Destination } from '../types';
 import { MapPicker } from './MapPicker';
+import { SearchableDropdown } from './common/SearchableDropdown';
 
 interface Props {
   onSuccess: (tripId: string) => void;
@@ -268,19 +269,13 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                   <UserCheck size={13} style={{ display: 'inline', marginRight: '4px' }} />
                   Assign Driver
                 </label>
-                <select
-                  className="form-select"
+                <SearchableDropdown
                   value={driverId}
-                  onChange={(e) => setDriverId(e.target.value)}
+                  onChange={(value) => setDriverId(value as string)}
                   required
-                >
-                  <option value="">Select Company Driver...</option>
-                  {drivers.map((d) => (
-                    <option key={d.user_id} value={d.user_id}>
-                      {d.name} ({d.employee_id}) — {d.status}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select Company Driver"
+                  options={drivers.map((d) => ({ value: d.user_id, label: `${d.name} (${d.employee_id}) — ${d.status}` }))}
+                />
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -288,19 +283,13 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                   <Truck size={13} style={{ display: 'inline', marginRight: '4px' }} />
                   Assign Vehicle
                 </label>
-                <select
-                  className="form-select"
+                <SearchableDropdown
                   value={vehicleId}
-                  onChange={(e) => setVehicleId(e.target.value)}
+                  onChange={(value) => setVehicleId(value as string)}
                   required
-                >
-                  <option value="">Select Company Vehicle...</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.vehicle_number} ({v.model}) — {v.status}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select Company Vehicle"
+                  options={vehicles.map((v) => ({ value: v.id, label: `${v.vehicle_number} (${v.model}) — ${v.status}` }))}
+                />
               </div>
             </div>
 
@@ -426,19 +415,12 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                     {/* Pick from saved destination */}
                     {destinations.length > 0 && (
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <select
-                          className="form-select"
-                          style={{ fontSize: '0.85rem', padding: '6px 10px' }}
+                        <SearchableDropdown
                           value={stop.destination_id || ''}
-                          onChange={(e) => handleSavedDestinationSelect(idx, e.target.value)}
-                        >
-                          <option value="">-- Choose from saved company destinations --</option>
-                          {destinations.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name} ({d.address})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(value) => handleSavedDestinationSelect(idx, value as string)}
+                          placeholder="Choose from saved company destinations"
+                          options={destinations.map((d) => ({ value: d.id, label: `${d.name} (${d.address})` }))}
+                        />
                       </div>
                     )}
 

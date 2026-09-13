@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Truck, Check, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 import { Vehicle, Driver } from '../types';
+import { SearchableDropdown } from './common/SearchableDropdown';
 
 interface Props {
   drivers: Driver[];
@@ -149,35 +150,32 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                  Vehicle Class / Type
-                </label>
-                <select
-                  className="form-select"
-                  value={vehicleType}
-                  onChange={(e) => setVehicleType(e.target.value)}
-                >
-                  <option value="Heavy Freight">Heavy Freight (24ft Container)</option>
-                  <option value="Refrigerated Express">Refrigerated Express (Thermal)</option>
-                  <option value="Medium Freight">Medium Freight (14ft Deck)</option>
-                  <option value="City Box Hauler">City Box Hauler</option>
-                  <option value="Light Commercial">Light Commercial Vehicle</option>
-                </select>
+                  <SearchableDropdown
+                    value={vehicleType}
+                    onChange={(value) => setVehicleType(value as string)}
+                    options={[
+                      { value: 'City Box Hauler', label: 'City Box Hauler' },
+                      { value: 'Heavy Freight', label: 'Heavy Freight (24ft Container)' },
+                      { value: 'Light Commercial', label: 'Light Commercial Vehicle' },
+                      { value: 'Medium Freight', label: 'Medium Freight (14ft Deck)' },
+                      { value: 'Refrigerated Express', label: 'Refrigerated Express (Thermal)' }
+                    ]}
+                  />
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Operational Status
                 </label>
-                <select
-                  className="form-select"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  <option value="AVAILABLE">Available for Dispatch</option>
-                  <option value="MAINTENANCE">In Maintenance / Workshop</option>
-                  <option value="INACTIVE">Inactive / Reserve</option>
-                </select>
+                  <SearchableDropdown
+                    value={status}
+                    onChange={(value) => setStatus(value as any)}
+                    options={[
+                      { value: 'AVAILABLE', label: 'Available for Dispatch' },
+                      { value: 'INACTIVE', label: 'Inactive / Reserve' },
+                      { value: 'MAINTENANCE', label: 'In Maintenance / Workshop' }
+                    ]}
+                  />
               </div>
             </div>
 
@@ -185,18 +183,15 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
               <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                 Assigned Primary Driver / Captain
               </label>
-              <select
-                className="form-select"
-                value={assignedDriverId}
-                onChange={(e) => setAssignedDriverId(e.target.value)}
-              >
-                <option value="">— Unassigned (Floating Fleet) —</option>
-                {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.employee_id}) — {d.status}
-                  </option>
-                ))}
-              </select>
+                  <SearchableDropdown
+                    value={assignedDriverId}
+                    onChange={(value) => setAssignedDriverId(value as string)}
+                    placeholder="Unassigned (Floating Fleet)"
+                    options={[
+                      { value: '', label: 'Unassigned (Floating Fleet)' },
+                      ...drivers.map((d) => ({ value: d.id, label: `${d.name} (${d.employee_id})` }))
+                    ]}
+                  />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>

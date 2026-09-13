@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, X, Check, RefreshCw, Upload, SwitchCamera, AlertCircle, Sparkles } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
+import { SearchableDropdown } from './common/SearchableDropdown';
 
 interface Props {
   tripId: string;
@@ -336,19 +337,20 @@ export const CameraModal: React.FC<Props> = ({
             <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
               Proof Category
             </label>
-            <select
-              className="form-select"
+            <SearchableDropdown
               value={photoType}
-              onChange={(e) => setPhotoType(e.target.value)}
-            >
-              <option value="Delivery Proof">Delivery Proof (Signed invoice / Goods received)</option>
-              <option value="Pickup Proof">Pickup Proof (Warehouse loading dock)</option>
-              <option value="Delay Proof">Delay Proof (Traffic congestion / Road bottleneck)</option>
-              <option value="Damage">Damage or Cargo Discrepancy</option>
-              <option value="Vehicle Issue">Vehicle Mechanical / Tire Issue</option>
-              <option value="Loading / Unloading">Loading / Unloading Verification</option>
-              <option value="Other">Other Operational Proof</option>
-            </select>
+              onChange={(value) => setPhotoType(value as string)}
+              placeholder="Select proof category"
+              options={[
+                { value: 'Damage', label: 'Damage or Cargo Discrepancy' },
+                { value: 'Delay Proof', label: 'Delay Proof (Traffic congestion / Road bottleneck)' },
+                { value: 'Delivery Proof', label: 'Delivery Proof (Signed invoice / Goods received)' },
+                { value: 'Loading / Unloading', label: 'Loading / Unloading Verification' },
+                { value: 'Other', label: 'Other Operational Proof' },
+                { value: 'Pickup Proof', label: 'Pickup Proof (Warehouse loading dock)' },
+                { value: 'Vehicle Issue', label: 'Vehicle Mechanical / Tire Issue' }
+              ]}
+            />
           </div>
 
           {/* Viewfinder or Captured Preview */}

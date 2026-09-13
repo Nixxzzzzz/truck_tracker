@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { AlertTriangle, X, Send, Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
+import { SearchableDropdown } from './common/SearchableDropdown';
 
 interface Props {
   tripId: string;
@@ -10,18 +11,9 @@ interface Props {
 }
 
 const PREDEFINED_REASONS = [
-  'Traffic',
-  'Road Block',
-  'Vehicle Problem',
-  'Tyre / Puncture',
-  'Loading Delay',
-  'Unloading Delay',
-  'Customer / Site Unavailable',
-  'Weather',
-  'Fuel Issue',
-  'Documentation Issue',
-  'Accident / Incident',
-  'Other'
+  'Accident / Incident', 'Customer / Site Unavailable', 'Documentation Issue',
+  'Fuel Issue', 'Loading Delay', 'Other', 'Road Block', 'Traffic',
+  'Tyre / Puncture', 'Unloading Delay', 'Vehicle Problem', 'Weather'
 ];
 
 export const DelayModal: React.FC<Props> = ({ tripId, stopId, onSuccess, onClose }) => {
@@ -149,18 +141,13 @@ export const DelayModal: React.FC<Props> = ({ tripId, stopId, onSuccess, onClose
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Delay Cause</label>
-              <select
-                className="form-select"
+              <SearchableDropdown
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                onChange={(value) => setReason(value as string)}
                 required
-              >
-                {PREDEFINED_REASONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select delay cause"
+                options={PREDEFINED_REASONS.map((r) => ({ value: r, label: r }))}
+              />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>

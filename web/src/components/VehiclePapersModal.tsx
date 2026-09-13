@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Vehicle, VehicleDocument, VehicleChallan } from '../types';
 import { api } from '../services/api';
+import { SearchableDropdown } from './common/SearchableDropdown';
 
 interface Props {
   vehicle: Vehicle;
@@ -283,26 +284,22 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.74rem' }}>Certificate Category</label>
-                      <select
-                        className="form-select"
+                      <SearchableDropdown
                         value={docType}
-                        onChange={(e) => {
-                          const val = e.target.value as any;
-                          setDocType(val);
-                          if (val === 'RC') setDocTitle('Registration Certificate (RC)');
-                          else if (val === 'INSURANCE') setDocTitle('Commercial Comprehensive Insurance');
-                          else if (val === 'FITNESS') setDocTitle('Vehicle Fitness Certificate (Form 38)');
-                          else if (val === 'PUC') setDocTitle('Pollution Under Control (PUC)');
-                          else if (val === 'PERMIT') setDocTitle('National Goods Carriage Permit');
+                        onChange={(value) => {
+                          const nextType = value as VehicleDocument['type'];
+                          setDocType(nextType);
+                          setDocTitle(nextType === 'RC' ? 'Registration Certificate' : nextType === 'INSURANCE' ? 'Motor Insurance Policy' : nextType === 'FITNESS' ? 'Fitness Certificate' : nextType === 'PUC' ? 'Pollution Under Control Certificate' : nextType === 'PERMIT' ? 'National / State Permit' : 'Other Compliance Document');
                         }}
-                      >
-                        <option value="RC">Registration Certificate (RC)</option>
-                        <option value="INSURANCE">Insurance Policy</option>
-                        <option value="FITNESS">Fitness Certificate</option>
-                        <option value="PUC">Pollution (PUC)</option>
-                        <option value="PERMIT">National/State Permit</option>
-                        <option value="OTHER">Other Compliance Paper</option>
-                      </select>
+                        options={[
+                          { value: 'FITNESS', label: 'Fitness Certificate' },
+                          { value: 'INSURANCE', label: 'Insurance Policy' },
+                          { value: 'OTHER', label: 'Other Compliance Paper' },
+                          { value: 'PERMIT', label: 'National/State Permit' },
+                          { value: 'PUC', label: 'Pollution (PUC)' },
+                          { value: 'RC', label: 'Registration Certificate (RC)' }
+                        ]}
+                      />
                     </div>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.74rem' }}>Certificate Title</label>

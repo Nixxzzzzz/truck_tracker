@@ -499,7 +499,8 @@ export const api = {
         const trips = mockStore.getTrips();
         let filtered = [...trips];
         if (params.status && params.status !== 'ALL') {
-          filtered = filtered.filter((t) => t.status === params.status);
+          const statuses = params.status.split(',');
+          filtered = filtered.filter((t) => statuses.includes(t.status));
         }
         if (params.search) {
           const q = params.search.toLowerCase();

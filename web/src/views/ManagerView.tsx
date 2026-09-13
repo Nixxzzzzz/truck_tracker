@@ -51,6 +51,7 @@ import { KpiCard } from '../components/common/KpiCard';
 import { PageHeader } from '../components/common/PageHeader';
 import { EnterpriseTable, Column } from '../components/common/EnterpriseTable';
 import { EmptyState } from '../components/common/EmptyState';
+import { SearchableDropdown } from '../components/common/SearchableDropdown';
 import { SlaGauge, TrendBarChart, FleetStatusBar } from '../components/common/VisualCharts';
 
 interface Props {
@@ -79,9 +80,9 @@ export const ManagerView: React.FC<Props> = ({
 
   // Filters for Operations Trips
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [filterDriverId, setFilterDriverId] = useState('');
-  const [filterVehicleId, setFilterVehicleId] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [filterDriverId, setFilterDriverId] = useState<string[]>([]);
+  const [filterVehicleId, setFilterVehicleId] = useState<string[]>([]);
   const [filterDelaysOnly, setFilterDelaysOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -101,7 +102,7 @@ export const ManagerView: React.FC<Props> = ({
 
   // Fleet Sub-Search & Filters
   const [vehicleSearch, setVehicleSearch] = useState('');
-  const [vehicleStatusFilter, setVehicleStatusFilter] = useState('');
+  const [vehicleStatusFilter, setVehicleStatusFilter] = useState<string[]>([]);
   const [driverSearch, setDriverSearch] = useState('');
   const [destinationSearch, setDestinationSearch] = useState('');
 
@@ -142,7 +143,7 @@ export const ManagerView: React.FC<Props> = ({
   // Auto-refresh live operations every 30 seconds when on operations tab
   useEffect(() => {
     loadDashboardData();
-  }, [selectedDate, statusFilter]);
+  }, [selectedDate, statusFilter.join(',')]);
 
   useEffect(() => {
     if (!liveRefresh || activeSection !== 'operations') return;
@@ -152,7 +153,7 @@ export const ManagerView: React.FC<Props> = ({
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [liveRefresh, activeSection, selectedDate, statusFilter]);
+  }, [liveRefresh, activeSection, selectedDate, statusFilter.join(',')]);
 
   // Live Vehicle Telematics Simulation (Ola / Rapido style real-time movements)
   useEffect(() => {
@@ -237,7 +238,7 @@ export const ManagerView: React.FC<Props> = ({
       const [tripsRes, attentionRes] = await Promise.all([
         api.manager.getTrips({
           date: selectedDate,
-          status: statusFilter,
+          status: statusFilter.join(','),
           search: searchQuery
         }),
         api.manager.getAttention()
@@ -270,7 +271,7 @@ export const ManagerView: React.FC<Props> = ({
       const [tripsRes, attentionRes] = await Promise.all([
         api.manager.getTrips({
           date: selectedDate,
-          status: statusFilter,
+          status: statusFilter.join(','),
           search: searchQuery
         }),
         api.manager.getAttention()
@@ -521,18 +522,19 @@ export const ManagerView: React.FC<Props> = ({
   // Filter Reset & Helper State
   const resetAllFilters = () => {
     setSearchQuery('');
-    setStatusFilter('');
-    setFilterDriverId('');
-    setFilterVehicleId('');
+    setStatusFilter([]);
+    setFilterDriverId([]);
+    setFilterVehicleId([]);
+    setVehicleStatusFilter([]);
     setFilterDelaysOnly(false);
     setSelectedDate(new Date().toISOString().split('T')[0]);
   };
 
   const hasActiveFilters = Boolean(
     searchQuery.trim() ||
-    statusFilter ||
-    filterDriverId ||
-    filterVehicleId ||
+    statusFilter.length > 0 ||
+    filterDriverId.length > 0 ||
+    filterVehicleId.length > 0 ||
     filterDelaysOnly ||
     timeframeFilter !== 'today' ||
     selectedDate !== new Date().toISOString().split('T')[0]
@@ -615,9 +617,9 @@ export const ManagerView: React.FC<Props> = ({
 
   // Filtered Trips Computation
   const filteredTrips = trips.filter((trip) => {
-    if (statusFilter && trip.status !== statusFilter) return false;
-    if (filterDriverId && trip.driver_id !== filterDriverId && trip.driver_name !== filterDriverId) return false;
-    if (filterVehicleId && trip.vehicle_id !== filterVehicleId && trip.vehicle_number !== filterVehicleId) return false;
+    if (statusFilter.length > 0 && !statusFilter.includes(trip.status)) return false;
+    if (filterDriverId.length > 0 && !filterDriverId.includes(trip.driver_id) && !filterDriverId.includes(trip.driver_name || '')) return false;
+    if (filterVehicleId.length > 0 && !filterVehicleId.includes(trip.vehicle_id) && !filterVehicleId.includes(trip.vehicle_number || '')) return false;
     if (filterDelaysOnly && !(trip.total_delay_minutes && trip.total_delay_minutes > 0)) return false;
 
     // Timeframe period filtering
@@ -679,7 +681,7 @@ export const ManagerView: React.FC<Props> = ({
         v.vehicle_number.toLowerCase().includes(vehicleSearch.toLowerCase()) ||
         v.model.toLowerCase().includes(vehicleSearch.toLowerCase()) ||
         (v.assigned_driver_name || '').toLowerCase().includes(vehicleSearch.toLowerCase());
-      const matchesStatus = vehicleStatusFilter ? v.status === vehicleStatusFilter : true;
+      const matchesStatus = vehicleStatusFilter.length === 0 || vehicleStatusFilter.includes(v.status);
       return matchesSearch && matchesStatus;
     });
 
@@ -1105,51 +1107,39 @@ export const ManagerView: React.FC<Props> = ({
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Filters:</span>
 
               {/* Status filter */}
-              <select
-                className="form-select"
-                style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+              <SearchableDropdown
+                multiple
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All Statuses</option>
-                <option value="ASSIGNED">Assigned</option>
-                <option value="IN_PROGRESS">In Transit</option>
-                <option value="AT_DESTINATION">At Destination</option>
-                <option value="DELAYED">Delayed</option>
-                <option value="RETURNING">Returning</option>
-                <option value="COMPLETED">Delivered</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+                onChange={(value) => setStatusFilter(value as string[])}
+                placeholder="All Statuses"
+                options={[
+                  { value: 'ASSIGNED', label: 'Assigned' },
+                  { value: 'AT_DESTINATION', label: 'At Destination' },
+                  { value: 'CANCELLED', label: 'Cancelled' },
+                  { value: 'COMPLETED', label: 'Delivered' },
+                  { value: 'DELAYED', label: 'Delayed' },
+                  { value: 'IN_PROGRESS', label: 'In Transit' },
+                  { value: 'RETURNING', label: 'Returning' }
+                ]}
+              />
 
               {/* Driver filter */}
-              <select
-                className="form-select"
-                style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+              <SearchableDropdown
+                multiple
                 value={filterDriverId}
-                onChange={(e) => setFilterDriverId(e.target.value)}
-              >
-                <option value="">All Drivers</option>
-                {drivers.map((d) => (
-                  <option key={d.id} value={d.name}>
-                    {d.name} ({d.employee_id})
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilterDriverId(value as string[])}
+                placeholder="All Drivers"
+                options={drivers.map((d) => ({ value: d.name, label: `${d.name} (${d.employee_id})` }))}
+              />
 
               {/* Vehicle filter */}
-              <select
-                className="form-select"
-                style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+              <SearchableDropdown
+                multiple
                 value={filterVehicleId}
-                onChange={(e) => setFilterVehicleId(e.target.value)}
-              >
-                <option value="">All Vehicles</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.vehicle_number}>
-                    {v.vehicle_number} ({v.model})
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilterVehicleId(value as string[])}
+                placeholder="All Vehicles"
+                options={vehicles.map((v) => ({ value: v.vehicle_number, label: `${v.vehicle_number} (${v.model})` }))}
+              />
 
               {/* Delays Only Toggle Button */}
               <button
@@ -1176,20 +1166,19 @@ export const ManagerView: React.FC<Props> = ({
               {/* Alphabetical & Attribute Sort Dropdown */}
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}>
                 <ArrowDownAZ size={13} color="var(--text-muted)" />
-                <select
-                  className="form-select"
-                  style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+                <SearchableDropdown
                   value={tripSort}
-                  onChange={(e) => setTripSort(e.target.value as any)}
-                  title="Sort orders"
-                >
-                  <option value="default">Sort: Scheduled Order</option>
-                  <option value="driver_asc">Driver (A to Z)</option>
-                  <option value="driver_desc">Driver (Z to A)</option>
-                  <option value="vehicle_asc">Vehicle Plate (A to Z)</option>
-                  <option value="id_asc">Trip ID (A to Z)</option>
-                  <option value="delay_desc">Delay Duration (Highest First)</option>
-                </select>
+                  onChange={(value) => setTripSort(value as any)}
+                  placeholder="Sort: Scheduled Order"
+                  options={[
+                    { value: 'delay_desc', label: 'Delay Duration (Highest First)' },
+                    { value: 'driver_asc', label: 'Driver (A to Z)' },
+                    { value: 'driver_desc', label: 'Driver (Z to A)' },
+                    { value: 'id_asc', label: 'Trip ID (A to Z)' },
+                    { value: 'vehicle_asc', label: 'Vehicle Plate (A to Z)' },
+                    { value: 'default', label: 'Sort: Scheduled Order' }
+                  ]}
+                />
               </div>
 
               {/* Reset All Filters Button */}
@@ -1653,33 +1642,32 @@ export const ManagerView: React.FC<Props> = ({
             {/* Alphabetical Sorting Selector */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <ArrowDownAZ size={13} color="var(--text-muted)" />
-              <select
-                className="form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
+              <SearchableDropdown
                 value={vehicleSort}
-                onChange={(e) => setVehicleSort(e.target.value as any)}
-                title="Sort vehicles"
-              >
-                <option value="plate_asc">Plate Number (A to Z)</option>
-                <option value="plate_desc">Plate Number (Z to A)</option>
-                <option value="model_asc">Make / Model (A to Z)</option>
-                <option value="driver_asc">Assigned Driver (A to Z)</option>
-              </select>
+                onChange={(value) => setVehicleSort(value as any)}
+                placeholder="Sort vehicles"
+                options={[
+                  { value: 'driver_asc', label: 'Assigned Driver (A to Z)' },
+                  { value: 'model_asc', label: 'Make / Model (A to Z)' },
+                  { value: 'plate_asc', label: 'Plate Number (A to Z)' },
+                  { value: 'plate_desc', label: 'Plate Number (Z to A)' }
+                ]}
+              />
             </div>
 
             {/* Status Filter */}
-            <select
-              className="form-select"
-              style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
+            <SearchableDropdown
+              multiple
               value={vehicleStatusFilter}
-              onChange={(e) => setVehicleStatusFilter(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              <option value="AVAILABLE">Available</option>
-              <option value="ON_TRIP">On Trip</option>
-              <option value="MAINTENANCE">Maintenance</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
+              onChange={(value) => setVehicleStatusFilter(value as string[])}
+              placeholder="All Statuses"
+              options={[
+                { value: 'AVAILABLE', label: 'Available' },
+                { value: 'INACTIVE', label: 'Inactive' },
+                { value: 'MAINTENANCE', label: 'Maintenance' },
+                { value: 'ON_TRIP', label: 'On Trip' }
+              ]}
+            />
 
             <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
               Showing <b>{sortedVehicles.length}</b> of <b>{vehicles.length}</b> assets
@@ -1923,18 +1911,17 @@ export const ManagerView: React.FC<Props> = ({
             {/* Alphabetical & Deliveries Sorting Dropdown */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <ArrowDownAZ size={13} color="var(--text-muted)" />
-              <select
-                className="form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
+              <SearchableDropdown
                 value={driverSort}
-                onChange={(e) => setDriverSort(e.target.value as any)}
-                title="Sort drivers"
-              >
-                <option value="name_asc">Driver Name (A to Z)</option>
-                <option value="name_desc">Driver Name (Z to A)</option>
-                <option value="id_asc">Employee ID (A to Z)</option>
-                <option value="trips_desc">Completed Deliveries (High to Low)</option>
-              </select>
+                onChange={(value) => setDriverSort(value as any)}
+                placeholder="Sort drivers"
+                options={[
+                  { value: 'id_asc', label: 'Employee ID (A to Z)' },
+                  { value: 'trips_desc', label: 'Completed Deliveries (High to Low)' },
+                  { value: 'name_asc', label: 'Driver Name (A to Z)' },
+                  { value: 'name_desc', label: 'Driver Name (Z to A)' }
+                ]}
+              />
             </div>
 
             <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
@@ -2148,18 +2135,17 @@ export const ManagerView: React.FC<Props> = ({
             {/* Alphabetical & Code Sorting Dropdown */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <ArrowDownAZ size={13} color="var(--text-muted)" />
-              <select
-                className="form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
+              <SearchableDropdown
                 value={destinationSort}
-                onChange={(e) => setDestinationSort(e.target.value as any)}
-                title="Sort facilities"
-              >
-                <option value="code_asc">Area Code (A to Z)</option>
-                <option value="name_asc">Facility Name (A to Z)</option>
-                <option value="name_desc">Facility Name (Z to A)</option>
-                <option value="address_asc">Address (A to Z)</option>
-              </select>
+                onChange={(value) => setDestinationSort(value as any)}
+                placeholder="Sort facilities"
+                options={[
+                  { value: 'address_asc', label: 'Address (A to Z)' },
+                  { value: 'code_asc', label: 'Area Code (A to Z)' },
+                  { value: 'name_asc', label: 'Facility Name (A to Z)' },
+                  { value: 'name_desc', label: 'Facility Name (Z to A)' }
+                ]}
+              />
             </div>
 
             <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)' }}>

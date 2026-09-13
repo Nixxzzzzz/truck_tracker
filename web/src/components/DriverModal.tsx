@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserCheck, Check, AlertCircle, Phone, Mail, BadgeCheck } from 'lucide-react';
 import { api } from '../services/api';
+import { SearchableDropdown } from './common/SearchableDropdown';
 import { Driver, Vehicle } from '../types';
 
 interface Props {
@@ -160,15 +161,15 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Duty Status
                 </label>
-                <select
-                  className="form-select"
+                <SearchableDropdown
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  <option value="AVAILABLE">Available on Duty</option>
-                  <option value="OFF_DUTY">Off Duty / Rest Period</option>
-                  <option value="INACTIVE">Inactive / Leave</option>
-                </select>
+                  onChange={(value) => setStatus(value as any)}
+                  options={[
+                    { value: 'AVAILABLE', label: 'Available on Duty' },
+                    { value: 'INACTIVE', label: 'Inactive / Leave' },
+                    { value: 'OFF_DUTY', label: 'Off Duty / Rest Period' }
+                  ]}
+                />
               </div>
             </div>
 
@@ -225,15 +226,15 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   License Category
                 </label>
-                <select
-                  className="form-select"
+                <SearchableDropdown
                   value={licenseCategory}
-                  onChange={(e) => setLicenseCategory(e.target.value)}
-                >
-                  <option value="Commercial HMV">Commercial HMV (Heavy)</option>
-                  <option value="Commercial MGV">Commercial MGV (Medium)</option>
-                  <option value="Commercial LMV">Commercial LMV (Light)</option>
-                </select>
+                  onChange={(value) => setLicenseCategory(value as string)}
+                  options={[
+                    { value: 'Commercial HMV', label: 'Commercial HMV (Heavy)' },
+                    { value: 'Commercial LMV', label: 'Commercial LMV (Light)' },
+                    { value: 'Commercial MGV', label: 'Commercial MGV (Medium)' }
+                  ]}
+                />
               </div>
             </div>
 
@@ -254,18 +255,15 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
               <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                 Assign Primary Vehicle (Truck)
               </label>
-              <select
-                className="form-select"
+              <SearchableDropdown
                 value={assignedVehicleId}
-                onChange={(e) => setAssignedVehicleId(e.target.value)}
-              >
-                <option value="">— Unassigned (Floating Driver) —</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.vehicle_number} — {v.model} ({v.status})
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setAssignedVehicleId(value as string)}
+                placeholder="Unassigned (Floating Driver)"
+                options={[
+                  { value: '', label: 'Unassigned (Floating Driver)' },
+                  ...vehicles.map((v) => ({ value: v.id, label: `${v.vehicle_number} — ${v.model} (${v.status})` }))
+                ]}
+              />
             </div>
           </div>
 
