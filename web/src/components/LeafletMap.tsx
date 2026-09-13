@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { ExternalLink, Layers, Navigation, MapPin } from 'lucide-react';
 import { TripStop, TripEvent, Vehicle } from '../types';
 
@@ -14,6 +15,7 @@ interface Props {
   height?: string;
   theme?: 'dark' | 'light';
   showGoogleMapsButton?: boolean;
+  showToolbar?: boolean;
 }
 
 type MapLayerType = 'dark' | 'streets' | 'satellite';
@@ -28,7 +30,8 @@ export const LeafletMap: React.FC<Props> = ({
   focusedLocation,
   height = '420px',
   theme = 'dark',
-  showGoogleMapsButton = true
+  showGoogleMapsButton = true,
+  showToolbar = true
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -70,11 +73,10 @@ export const LeafletMap: React.FC<Props> = ({
         };
       case 'streets':
         return {
-          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           options: {
-            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; OpenStreetMap',
-            subdomains: 'abcd',
-            maxZoom: 20
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
           }
         };
       case 'dark':
@@ -89,6 +91,11 @@ export const LeafletMap: React.FC<Props> = ({
         };
     }
   };
+
+  // Sync layer with theme prop if changed
+  useEffect(() => {
+    setMapLayer(theme === 'light' ? 'streets' : 'dark');
+  }, [theme]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -110,6 +117,15 @@ export const LeafletMap: React.FC<Props> = ({
 
       tileLayerRef.current = tiles;
       mapInstanceRef.current = map;
+
+      // Force immediate and delayed size invalidations to wake up tile loading
+      map.invalidateSize();
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch {}
+      }, 50);
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch {}
+      }, 250);
     } else if (tileLayerRef.current) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
       const { url, options } = getTileUrl(mapLayer);
@@ -392,97 +408,141 @@ export const LeafletMap: React.FC<Props> = ({
     }
   }, [focusedLocation]);
 
-  // Clean teardown on component unmount
+  // Clean teardown & ResizeObserver to ensure map canvas always updates
   useEffect(() => {
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstanceRef.current) {
+          try {
+            mapInstanceRef.current.invalidateSize();
+          } catch {}
+        }
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    // Additional delayed invalidations to ensure smooth render after tab transitions
+    const t1 = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.invalidateSize();
+        } catch {}
+      }
+    }, 150);
+
+    const t2 = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.invalidateSize();
+        } catch {}
+      }
+    }, 500);
+
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (mapInstanceRef.current) {
         try {
           mapInstanceRef.current.remove();
-        } catch {
-          // ignore
-        }
+        } catch {}
         mapInstanceRef.current = null;
       }
     };
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      {/* Map Control Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '8px',
-          marginBottom: '10px'
-        }}
-      >
-        {/* Layer Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <button
-            type="button"
-            className={`btn ${mapLayer === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
-            onClick={() => setMapLayer('dark')}
-          >
-            🌙 Telematics Dark
-          </button>
-          <button
-            type="button"
-            className={`btn ${mapLayer === 'streets' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
-            onClick={() => setMapLayer('streets')}
-          >
-            🗺️ Streets (HD)
-          </button>
-          <button
-            type="button"
-            className={`btn ${mapLayer === 'satellite' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
-            onClick={() => setMapLayer('satellite')}
-          >
-            🛰️ Satellite (Esri)
-          </button>
-        </div>
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: height || '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      {/* Map Control Toolbar (optional) */}
+      {showToolbar && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px',
+            marginBottom: '10px'
+          }}
+        >
+          {/* Layer Switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+            <button
+              type="button"
+              className={`btn ${mapLayer === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+              onClick={() => setMapLayer('dark')}
+            >
+              🌙 Telematics Dark
+            </button>
+            <button
+              type="button"
+              className={`btn ${mapLayer === 'streets' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+              onClick={() => setMapLayer('streets')}
+            >
+              🗺️ Streets (HD)
+            </button>
+            <button
+              type="button"
+              className={`btn ${mapLayer === 'satellite' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+              onClick={() => setMapLayer('satellite')}
+            >
+              🛰️ Satellite (Esri)
+            </button>
+          </div>
 
-        {/* Google Maps External Routing Link */}
-        {showGoogleMapsButton && (
-          <a
-            href={getGoogleMapsUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '5px 12px',
-              fontSize: '0.78rem',
-              color: 'var(--accent-gold)',
-              borderColor: 'rgba(197, 160, 89, 0.4)',
-              textDecoration: 'none'
-            }}
-            title="Open complete multi-stop turn-by-turn routing in Google Maps"
-          >
-            <Navigation size={13} />
-            <span>Open in Google Maps Directions</span>
-            <ExternalLink size={12} />
-          </a>
-        )}
-      </div>
+          {/* Google Maps External Routing Link */}
+          {showGoogleMapsButton && (
+            <a
+              href={getGoogleMapsUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                fontSize: '0.78rem',
+                color: 'var(--accent-gold)',
+                borderColor: 'rgba(197, 160, 89, 0.4)',
+                textDecoration: 'none'
+              }}
+              title="Open complete multi-stop turn-by-turn routing in Google Maps"
+            >
+              <Navigation size={13} />
+              <span>Open in Google Maps Directions</span>
+              <ExternalLink size={12} />
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Leaflet Map Canvas */}
       <div
         ref={mapContainerRef}
         style={{
           width: '100%',
-          height,
+          height: showToolbar ? 'calc(100% - 44px)' : '100%',
+          flex: 1,
           borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--border-subtle)',
           overflow: 'hidden',
-          zIndex: 1
+          zIndex: 1,
+          minHeight: '350px'
         }}
       />
     </div>

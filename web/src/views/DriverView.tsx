@@ -452,6 +452,7 @@ export const DriverView: React.FC<Props> = ({
             justifyContent: 'center',
             padding: activeTab === 'map' ? '0' : '12px 14px 90px',
             width: '100%',
+            height: activeTab === 'map' ? '100%' : 'auto',
             boxSizing: 'border-box'
           }}
         >
@@ -459,9 +460,10 @@ export const DriverView: React.FC<Props> = ({
             style={{
               maxWidth: activeTab === 'map' ? '100%' : '520px',
               width: '100%',
+              height: activeTab === 'map' ? '100%' : 'auto',
               display: 'flex',
               flexDirection: 'column',
-              gap: '14px'
+              gap: activeTab === 'map' ? '0' : '14px'
             }}
           >
             {/* TAB 1: HOME SCREEN */}
@@ -636,14 +638,7 @@ export const DriverView: React.FC<Props> = ({
 
             {/* TAB 3: MAP / NAVIGATION SCREEN */}
             {activeTab === 'map' && (
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: 'calc(100vh - 68px)',
-                  minHeight: '480px'
-                }}
-              >
+              <div className="driver-map-viewport">
                 {/* Floating Top Next Stop Card */}
                 <FloatingNavigationCard
                   nextStop={targetNextStop}
@@ -671,6 +666,7 @@ export const DriverView: React.FC<Props> = ({
                   }}
                   height="100%"
                   theme={theme}
+                  showToolbar={false}
                   showGoogleMapsButton={false}
                 />
               </div>
