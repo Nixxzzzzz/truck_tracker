@@ -129,6 +129,7 @@ export interface Destination {
   id: string;
   name: string;
   address: string;
+  area_code?: string;
   latitude: number;
   longitude: number;
   contact_name?: string;

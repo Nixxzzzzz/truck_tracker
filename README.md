@@ -48,9 +48,9 @@ graph TD
         SQLite[("Authoritative SQLite WAL<br/>16 Canonical Tables")]
     end
 
-    subgraph External["Integration Ready"]
+    subgraph External["Enterprise Integration Ready"]
         ERP["ERP / SAP References<br/>(Shipment Num, Delivery Doc, Cost Center)"]
-        Sheets["Google Sheets Sync<br/>(8-Tab Operational Queue)"]
+        Exports["Periodic CSV / JSON Reports<br/>(Operational Audits)"]
     end
 
     Web -->|HTTPS / REST API| API
@@ -59,7 +59,7 @@ graph TD
     Migrations --> SQLite
     API --> SQLite
     API -.-> ERP
-    API -.-> Sheets
+    API -.-> Exports
 ```
 
 ### Authoritative Trip State Machine
@@ -125,6 +125,7 @@ npm run migrate
 - **`001_initial_core_schema`**: Foundational users, vehicles, trips, stops, events, delays, photos, locations, activities, offline queue.
 - **`002_add_enterprise_compliance_and_maintenance`**: Normalized statutory compliance (`vehicle_documents`), workshop servicing (`maintenance_records`), fuel entries (`fuel_transactions`), and alert triage (`operational_exceptions`).
 - **`003_add_erp_references_and_performance_indexes`**: ERP/SAP integration fields (`fleet_unit_id`, `sap_shipment_num`, `erp_delivery_doc`, `cost_center`) and compound indexes for fast query execution.
+- **`004_add_destination_area_code`**: Facility area identifiers (`area_code` e.g. `DL-OKH-110020`, `UP-NOI-201301`) for clear location grouping and instant filtering.
 
 ---
 

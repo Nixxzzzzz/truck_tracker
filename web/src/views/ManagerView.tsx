@@ -89,7 +89,7 @@ export const ManagerView: React.FC<Props> = ({
   const [tripSort, setTripSort] = useState<'default' | 'id_asc' | 'driver_asc' | 'driver_desc' | 'vehicle_asc' | 'delay_desc'>('default');
   const [vehicleSort, setVehicleSort] = useState<'plate_asc' | 'plate_desc' | 'model_asc' | 'driver_asc'>('plate_asc');
   const [driverSort, setDriverSort] = useState<'name_asc' | 'name_desc' | 'id_asc' | 'trips_desc'>('name_asc');
-  const [destinationSort, setDestinationSort] = useState<'name_asc' | 'name_desc' | 'address_asc'>('name_asc');
+  const [destinationSort, setDestinationSort] = useState<'code_asc' | 'name_asc' | 'name_desc' | 'address_asc'>('code_asc');
 
   // Multi-Select Checkboxes for Batch Actions
   const [selectedTripIds, setSelectedTripIds] = useState<string[]>([]);
@@ -136,9 +136,6 @@ export const ManagerView: React.FC<Props> = ({
   const [reportsLoading, setReportsLoading] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
 
-  // Google Sheets state
-  const [sheetsStatus, setSheetsStatus] = useState<any>(null);
-  const [syncing, setSyncing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [liveRefresh, setLiveRefresh] = useState(true);
 
@@ -232,9 +229,6 @@ export const ManagerView: React.FC<Props> = ({
     if (activeSection === 'reports') {
       loadReportsData();
     }
-    if (activeSection === 'sheets') {
-      loadSheetsStatus();
-    }
   }, [activeSection, selectedDate, reportsPeriod]);
 
   const loadDashboardData = async () => {
@@ -265,8 +259,6 @@ export const ManagerView: React.FC<Props> = ({
       await loadFleetData();
     } else if (activeSection === 'reports') {
       await loadReportsData();
-    } else if (activeSection === 'sheets') {
-      await loadSheetsStatus();
     } else {
       await loadDashboardData();
     }
@@ -376,15 +368,7 @@ export const ManagerView: React.FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  const loadSheetsStatus = async () => {
-    try {
-      const data = await api.googleSheets.getStatus();
-      setSheetsStatus(data);
-      setLastRefresh(new Date());
-    } catch (err) {
-      console.error('Sheets status error:', err);
-    }
-  };
+
 
   // Operational metrics
   const totalTrips = trips.length;
@@ -741,6 +725,7 @@ export const ManagerView: React.FC<Props> = ({
   const sortedDestinations = useMemo(() => {
     const list = destinations.filter((dest) => {
       return (
+        (dest.area_code || '').toLowerCase().includes(destinationSearch.toLowerCase()) ||
         dest.name.toLowerCase().includes(destinationSearch.toLowerCase()) ||
         dest.address.toLowerCase().includes(destinationSearch.toLowerCase()) ||
         (dest.contact_name || '').toLowerCase().includes(destinationSearch.toLowerCase())
@@ -748,6 +733,8 @@ export const ManagerView: React.FC<Props> = ({
     });
 
     switch (destinationSort) {
+      case 'code_asc':
+        return list.sort((a, b) => (a.area_code || a.name).localeCompare(b.area_code || b.name));
       case 'name_asc':
         return list.sort((a, b) => a.name.localeCompare(b.name));
       case 'name_desc':
@@ -2132,7 +2119,7 @@ export const ManagerView: React.FC<Props> = ({
                 type="text"
                 className="form-input"
                 style={{ padding: '6px 28px 6px 10px', fontSize: '0.85rem' }}
-                placeholder="Search facility name, address, or contact person..."
+                placeholder="Search area code, facility name, address, or contact..."
                 value={destinationSearch}
                 onChange={(e) => setDestinationSearch(e.target.value)}
               />
@@ -2158,7 +2145,7 @@ export const ManagerView: React.FC<Props> = ({
               )}
             </div>
 
-            {/* Alphabetical Sorting Dropdown */}
+            {/* Alphabetical & Code Sorting Dropdown */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <ArrowDownAZ size={13} color="var(--text-muted)" />
               <select
@@ -2168,6 +2155,7 @@ export const ManagerView: React.FC<Props> = ({
                 onChange={(e) => setDestinationSort(e.target.value as any)}
                 title="Sort facilities"
               >
+                <option value="code_asc">Area Code (A to Z)</option>
                 <option value="name_asc">Facility Name (A to Z)</option>
                 <option value="name_desc">Facility Name (Z to A)</option>
                 <option value="address_asc">Address (A to Z)</option>
@@ -2181,6 +2169,30 @@ export const ManagerView: React.FC<Props> = ({
 
           <EnterpriseTable
             columns={[
+              {
+                key: 'area_code',
+                header: 'Area Code',
+                sortable: true,
+                width: '130px',
+                render: (dest) => (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      color: 'var(--accent-primary)',
+                      letterSpacing: '0.02em',
+                      backgroundColor: 'var(--bg-secondary)',
+                      padding: '3px 7px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'inline-block'
+                    }}
+                  >
+                    {dest.area_code || '—'}
+                  </span>
+                )
+              },
               {
                 key: 'name',
                 header: 'Facility Site',
@@ -2726,118 +2738,7 @@ export const ManagerView: React.FC<Props> = ({
         </div>
       )}
 
-      {/* ========================================================
-          7. GOOGLE SHEETS OPERATIONAL SYNC
-          ======================================================== */}
-      {activeSection === 'sheets' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <PageHeader
-            breadcrumbs={[{ label: 'Integrations & Sync' }, { label: 'Google Sheets Live Sync' }]}
-            title="Google Sheets Operational Synchronization"
-            subtitle="Automated bi-directional synchronization linking SQLite primary database to 8 operational spreadsheet tabs."
-            lastUpdated={lastRefresh}
-            onRefresh={handleManualRefresh}
-            refreshing={refreshing}
-            actions={
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={async () => {
-                    setSyncing(true);
-                    await api.googleSheets.retry();
-                    await loadSheetsStatus();
-                    setSyncing(false);
-                  }}
-                  disabled={syncing}
-                >
-                  <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-                  <span>Retry Failed Items</span>
-                </button>
 
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={async () => {
-                    setSyncing(true);
-                    await api.googleSheets.syncAll();
-                    await loadSheetsStatus();
-                    setSyncing(false);
-                  }}
-                  disabled={syncing}
-                >
-                  <CheckCircle size={13} />
-                  <span>Sync All Records</span>
-                </button>
-              </div>
-            }
-          />
-
-          {sheetsStatus && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-              <KpiCard
-                label="Sync Engine Mode"
-                value={sheetsStatus.syncMode || 'ACTIVE'}
-                subValue="Automated append & update"
-                variant="info"
-              />
-              <KpiCard
-                label="Synchronized Records"
-                value={sheetsStatus.counts?.SYNCED || 0}
-                subValue="Rows matched to Google Sheets"
-                variant="success"
-              />
-              <KpiCard
-                label="Failed Queue"
-                value={sheetsStatus.counts?.FAILED || 0}
-                subValue="Awaiting retry or verification"
-                variant={sheetsStatus.counts?.FAILED > 0 ? 'danger' : 'default'}
-              />
-              <KpiCard
-                label="Active Spreadsheets"
-                value="8 Tabs"
-                subValue={sheetsStatus.spreadsheetId || 'Corporate Master Sheet'}
-              />
-            </div>
-          )}
-
-          {/* 8 Operational Tabs Documentation Grid */}
-          <div className="card">
-            <h4 style={{ fontSize: '0.96rem', marginBottom: '14px', fontWeight: 600 }}>
-              Synchronized Google Sheets Tabs (8)
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
-              {[
-                { name: 'Trips', fields: 'Trip ID, Date, Driver, Vehicle, Status, Departure, Arrival, Duration, Distance' },
-                { name: 'Stops', fields: 'Trip ID, Stop ID, Stop Number, Destination, Planned/Actual Arrival, Variance' },
-                { name: 'Events', fields: 'Event ID, Timestamp, Event Type, Driver, Vehicle, GPS Coordinates, Accuracy' },
-                { name: 'Delays', fields: 'Delay ID, Reason, Duration Minutes, Start/End Time, Driver, Location' },
-                { name: 'Activities', fields: 'Activity ID, Type, Status, Completion Time, Quantity, Signoff' },
-                { name: 'Photos', fields: 'Photo ID, Category, Driver, Vehicle, Timestamp, GPS, Storage URL' },
-                { name: 'Drivers', fields: 'Driver ID, Name, Phone, Employee ID, Status, Assigned Vehicle' },
-                { name: 'Vehicles', fields: 'Vehicle ID, Plate Number, Model, Type, Status, Driver' }
-              ].map((s) => (
-                <div
-                  key={s.name}
-                  style={{
-                    padding: '14px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-md)'
-                  }}
-                >
-                  <div style={{ fontWeight: 600, color: 'var(--accent-primary)', fontSize: '0.92rem' }}>
-                    📄 {s.name}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
-                    {s.fields}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Trip Creator Modal */}
       {isCreateModalOpen && (

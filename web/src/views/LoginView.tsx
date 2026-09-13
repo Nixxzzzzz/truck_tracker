@@ -27,7 +27,7 @@ const PRESETS: ProfilePreset[] = [
     roleBadge: 'Fleet Command',
     email: 'manager@company.com',
     password: 'manager123',
-    description: 'Fleet dispatch, real-time map, vehicles & Google Sheets sync',
+    description: 'Fleet dispatch, real-time map, vehicle registry & operational reports',
     icon: ShieldCheck
   },
   {

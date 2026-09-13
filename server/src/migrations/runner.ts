@@ -351,6 +351,17 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
         CREATE INDEX IF NOT EXISTS idx_destinations_active ON destinations(is_active);
       `);
     }
+  },
+  {
+    version: 4,
+    name: '004_add_destination_area_code',
+    up: () => {
+      const destCols = (db.prepare(`PRAGMA table_info(destinations)`).all() as any[]).map((c) => c.name);
+      if (!destCols.includes('area_code')) {
+        db.exec(`ALTER TABLE destinations ADD COLUMN area_code TEXT;`);
+      }
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_destinations_area_code ON destinations(area_code);`);
+    }
   }
 ];
 

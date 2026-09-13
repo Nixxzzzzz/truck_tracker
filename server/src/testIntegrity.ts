@@ -28,6 +28,7 @@ export async function runDatabaseIntegrityTests(): Promise<boolean> {
     assert(applied.some((m) => m.version === 1), 'Migration v1 Applied (Core Schema)');
     assert(applied.some((m) => m.version === 2), 'Migration v2 Applied (Enterprise Documents & Maintenance)');
     assert(applied.some((m) => m.version === 3), 'Migration v3 Applied (ERP References & Indexes)');
+    assert(applied.some((m) => m.version === 4), 'Migration v4 Applied (Destination Area Code)');
 
     // TEST 2: Schema Table Completeness (All 16 Canonical Tables)
     const requiredTables = [
@@ -53,10 +54,13 @@ export async function runDatabaseIntegrityTests(): Promise<boolean> {
     }
     assert(fkBlocked, 'Foreign Key Constraint Enforced (Orphaned stops rejected)');
 
-    // TEST 4: ERP/SAP Reference Columns Exist
+    // TEST 4: ERP/SAP Reference Columns & Area Code Exist
     const vehicleCols = (db.prepare(`PRAGMA table_info(vehicles)`).all() as any[]).map((c) => c.name);
     assert(vehicleCols.includes('fleet_unit_id'), 'Vehicles table has fleet_unit_id (SAP Asset Reference)');
     assert(vehicleCols.includes('chassis_number'), 'Vehicles table has chassis_number');
+
+    const destCols = (db.prepare(`PRAGMA table_info(destinations)`).all() as any[]).map((c) => c.name);
+    assert(destCols.includes('area_code'), 'Destinations table has area_code (Facility Area Identifier)');
 
     const tripCols = (db.prepare(`PRAGMA table_info(trips)`).all() as any[]).map((c) => c.name);
     assert(tripCols.includes('sap_shipment_num'), 'Trips table has sap_shipment_num (SAP TM Shipment Reference)');

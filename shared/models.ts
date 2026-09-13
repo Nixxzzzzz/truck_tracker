@@ -82,6 +82,7 @@ export interface Destination {
   id: string;
   name: string;
   address: string;
+  area_code?: string;
   contact_person?: string;
   contact_phone?: string;
   latitude: number;

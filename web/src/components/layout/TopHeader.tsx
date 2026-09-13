@@ -51,8 +51,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         return { group: 'Assets', title: 'Facility Directory' };
       case 'reports':
         return { group: 'Analytics', title: 'Performance Analytics' };
-      case 'sheets':
-        return { group: 'Integration', title: 'Google Sheets Sync' };
       default:
         return { group: 'Operations', title: 'Dispatch Command' };
     }

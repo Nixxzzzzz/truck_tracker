@@ -22,8 +22,7 @@ export type NavSection =
   | 'vehicles'
   | 'drivers'
   | 'destinations'
-  | 'reports'
-  | 'sheets';
+  | 'reports';
 
 interface SidebarProps {
   activeSection: NavSection;
@@ -65,10 +64,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ]
     },
     {
-      label: 'Reports & Sync',
+      label: 'Reports & Audit',
       items: [
-        { id: 'reports' as NavSection, label: 'Performance Analytics', icon: <FileText size={16} /> },
-        { id: 'sheets' as NavSection, label: 'Google Sheets Sync', icon: <Database size={16} /> }
+        { id: 'reports' as NavSection, label: 'Performance Analytics', icon: <FileText size={16} /> }
       ]
     }
   ];

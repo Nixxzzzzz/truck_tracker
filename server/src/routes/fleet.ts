@@ -277,7 +277,7 @@ router.get('/destinations', requireAuth, (req, res) => {
 });
 
 router.post('/destinations', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
-  const { name, address, latitude, longitude, contact_name, contact_number, geofence_radius_meters = 150, notes } = req.body;
+  const { name, address, area_code, latitude, longitude, contact_name, contact_number, geofence_radius_meters = 150, notes } = req.body;
 
   if (!name || !address || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: 'Name, address, latitude, and longitude are required' });
@@ -286,9 +286,9 @@ router.post('/destinations', requireAuth, requireRole('MANAGER'), (req: Authenti
   const id = uuidv4();
   try {
     db.prepare(`
-      INSERT INTO destinations (id, name, address, latitude, longitude, contact_name, contact_number, geofence_radius_meters, notes, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(id, name, address, latitude, longitude, contact_name || null, contact_number || null, geofence_radius_meters, notes || null);
+      INSERT INTO destinations (id, name, address, area_code, latitude, longitude, contact_name, contact_number, geofence_radius_meters, notes, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(id, name, address, area_code || null, latitude, longitude, contact_name || null, contact_number || null, geofence_radius_meters, notes || null);
 
     return res.status(201).json({ message: 'Destination created', id });
   } catch (err: any) {
@@ -298,13 +298,14 @@ router.post('/destinations', requireAuth, requireRole('MANAGER'), (req: Authenti
 
 router.put('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { name, address, latitude, longitude, contact_name, contact_number, geofence_radius_meters, notes, is_active } = req.body;
+  const { name, address, area_code, latitude, longitude, contact_name, contact_number, geofence_radius_meters, notes, is_active } = req.body;
 
   try {
     db.prepare(`
       UPDATE destinations
       SET name = COALESCE(?, name),
           address = COALESCE(?, address),
+          area_code = COALESCE(?, area_code),
           latitude = COALESCE(?, latitude),
           longitude = COALESCE(?, longitude),
           contact_name = COALESCE(?, contact_name),
@@ -316,6 +317,7 @@ router.put('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: Authe
     `).run(
       name || null,
       address || null,
+      area_code || null,
       latitude ?? null,
       longitude ?? null,
       contact_name || null,

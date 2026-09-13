@@ -88,18 +88,18 @@ export async function seed() {
   const destConnaughtPlaceId = uuidv4();
 
   const insertDest = db.prepare(`
-    INSERT INTO destinations (id, name, address, latitude, longitude, contact_name, contact_number, geofence_radius_meters, notes, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    INSERT INTO destinations (id, name, address, area_code, latitude, longitude, contact_name, contact_number, geofence_radius_meters, notes, is_active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
   `);
 
-  insertDest.run(destOkhlaId, 'Company North Central Depot', 'Okhla Industrial Area Phase-III, New Delhi', 28.5355, 77.2680, 'Rajesh Khanna', '+91 98101 22334', 200, 'Primary Fleet Hub & Dispatch Dock');
-  insertDest.run(destLajpatId, 'Lajpat Nagar Central Transit Hub', 'Ring Road Commercial Complex, Lajpat Nagar, New Delhi', 28.5677, 77.2433, 'Manoj Tiwari', '+91 98102 33445', 150, 'Loading Bay 2 at rear entry');
-  insertDest.run(destMayurViharId, 'Mayur Vihar Phase-1 Distribution Facility', 'Pocket 1, Commercial Sector, Mayur Vihar, East Delhi', 28.6015, 77.2940, 'Satish Chawla', '+91 98103 44556', 150, 'Delhi-Noida link transit depot');
-  insertDest.run(destGhazipurId, 'Ghazipur Border Freight Terminal & Cold Hub', 'Delhi-UP Border Highway Junction, Ghazipur', 28.6240, 77.3310, 'Anand Singh', '+91 98104 55667', 200, 'Border commercial tax & refrigerated cargo gate');
-  insertDest.run(destNoida18Id, 'Noida Sector 18 Commercial Logistics Bay', 'Atta Market Logistics Lane, Sector 18, Noida', 28.5708, 77.3260, 'Vikas Malhotra', '+91 98105 66778', 150, 'Deliveries permitted 08:00 - 18:00 only');
-  insertDest.run(destNoida62Id, 'Noida Sector 62 Electronic City Mega Hub', 'Block C, Electronic City, Sector 62, Noida', 28.6280, 77.3680, 'Deepa Rastogi', '+91 98106 77889', 250, 'Automated Fulfillment Center Bay 4');
-  insertDest.run(destGreaterNoidaId, 'Ecotech-III Logistics Park', 'Industrial Area, Ecotech-III, Greater Noida', 28.4744, 77.5040, 'Sandeep Yadav', '+91 98107 88990', 250, 'Heavy vehicle 24/7 container yard');
-  insertDest.run(destConnaughtPlaceId, 'Connaught Place Rapid Transit Depot', 'Barakhamba Road Annex, Connaught Place, New Delhi', 28.6315, 77.2167, 'Harish Verma', '+91 98108 99001', 150, 'Early morning express supply window');
+  insertDest.run(destOkhlaId, 'Company North Central Depot', 'Okhla Industrial Area Phase-III, New Delhi', 'DL-OKH-110020', 28.5355, 77.2680, 'Rajesh Khanna', '+91 98101 22334', 200, 'Primary Fleet Hub & Dispatch Dock');
+  insertDest.run(destLajpatId, 'Lajpat Nagar Central Transit Hub', 'Ring Road Commercial Complex, Lajpat Nagar, New Delhi', 'DL-LJP-110024', 28.5677, 77.2433, 'Manoj Tiwari', '+91 98102 33445', 150, 'Loading Bay 2 at rear entry');
+  insertDest.run(destMayurViharId, 'Mayur Vihar Phase-1 Distribution Facility', 'Pocket 1, Commercial Sector, Mayur Vihar, East Delhi', 'DL-MYV-110091', 28.6015, 77.2940, 'Satish Chawla', '+91 98103 44556', 150, 'Delhi-Noida link transit depot');
+  insertDest.run(destGhazipurId, 'Ghazipur Border Freight Terminal & Cold Hub', 'Delhi-UP Border Highway Junction, Ghazipur', 'DL-GZP-110096', 28.6240, 77.3310, 'Anand Singh', '+91 98104 55667', 200, 'Border commercial tax & refrigerated cargo gate');
+  insertDest.run(destNoida18Id, 'Noida Sector 18 Commercial Logistics Bay', 'Atta Market Logistics Lane, Sector 18, Noida', 'UP-NOI-201301', 28.5708, 77.3260, 'Vikas Malhotra', '+91 98105 66778', 150, 'Deliveries permitted 08:00 - 18:00 only');
+  insertDest.run(destNoida62Id, 'Noida Sector 62 Electronic City Mega Hub', 'Block C, Electronic City, Sector 62, Noida', 'UP-NOI-201309', 28.6280, 77.3680, 'Deepa Rastogi', '+91 98106 77889', 250, 'Automated Fulfillment Center Bay 4');
+  insertDest.run(destGreaterNoidaId, 'Ecotech-III Logistics Park', 'Industrial Area, Ecotech-III, Greater Noida', 'UP-GNO-201306', 28.4744, 77.5040, 'Sandeep Yadav', '+91 98107 88990', 250, 'Heavy vehicle 24/7 container yard');
+  insertDest.run(destConnaughtPlaceId, 'Connaught Place Rapid Transit Depot', 'Barakhamba Road Annex, Connaught Place, New Delhi', 'DL-CP-110001', 28.6315, 77.2167, 'Harish Verma', '+91 98108 99001', 150, 'Early morning express supply window');
 
   const today = new Date().toISOString().split('T')[0];
 
