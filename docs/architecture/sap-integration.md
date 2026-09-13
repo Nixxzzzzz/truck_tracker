@@ -30,6 +30,43 @@ TruckTracker is designed as an **edge execution system** for fleet operations an
 
 ## 3. Integration Topology Diagram
 
+```mermaid
+flowchart TD
+    subgraph SAP["Enterprise SAP Landscape (S/4HANA)"]
+        TM["SAP TM<br/>(Freight Order / TOR_ID)"]
+        SD["SAP SD / LE<br/>(Outbound Delivery / VBELN)"]
+        PM["SAP PM<br/>(Equipment / EQUNR)"]
+        CO["SAP CO<br/>(Cost Center / KOSTL)"]
+    end
+
+    subgraph BTP["Enterprise Integration Layer (SAP BTP / CPI)"]
+        CPI["SAP Cloud Integration<br/>• OData / IDoc to REST JSON<br/>• OAuth 2.0 and mTLS<br/>• In-flight Event Buffering & DLQ"]
+    end
+
+    subgraph TT["TruckTracker Fleet Execution Platform"]
+        API["TruckTracker Core API<br/>(/api/trips, /api/fleet/vehicles)"]
+        DB[("PostgreSQL Database<br/>• trips (sap_shipment_num)<br/>• vehicles (fleet_unit_id)")]
+        EXEC["Dispatch & Mobile Driver Execution<br/>• Live Execution & POD Capture<br/>• Real-time Telematics & Geofences"]
+        WH["Milestone Webhook Dispatcher"]
+    end
+
+    TM -->|"Freight Order (TOR)"| CPI
+    SD -->|"Delivery (VBELN)"| CPI
+    PM -->|"Equipment Master"| CPI
+
+    CPI -->|"POST /api/trips (Bearer Token)"| API
+    CPI -->|"POST /api/fleet/vehicles"| API
+    API --> DB
+    API --> EXEC
+
+    EXEC -->|"Milestones (POD, Arrival, Delay)"| WH
+    WH -->|"POST /cpi/v1/milestone"| CPI
+    CPI -->|"Event Status Update"| TM
+    CPI -->|"Goods Issue / POD Confirmation"| SD
+    WH -->|"Fuel & Toll Actuals"| CPI
+    CPI -->|"Cost Center Settlement"| CO
+```
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                           Enterprise SAP Landscape                              │
