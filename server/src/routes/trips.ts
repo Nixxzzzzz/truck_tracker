@@ -195,7 +195,10 @@ router.post('/', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest
     reference_number,
     planned_departure_time,
     notes,
-    stops
+    stops,
+    sap_shipment_num,
+    erp_delivery_doc,
+    cost_center
   } = req.body;
 
   if (!date || !driver_id || !vehicle_id || !planned_departure_time) {
@@ -215,8 +218,9 @@ router.post('/', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest
     db.prepare(`
       INSERT INTO trips (
         id, date, driver_id, vehicle_id, starting_location, starting_latitude, starting_longitude,
-        purpose, reference_number, planned_departure_time, status, notes, created_by, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ASSIGNED', ?, ?, ?, ?)
+        purpose, reference_number, planned_departure_time, status, notes, created_by, created_at, updated_at,
+        sap_shipment_num, erp_delivery_doc, cost_center
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ASSIGNED', ?, ?, ?, ?, ?, ?, ?)
     `).run(
       tripId,
       date,
@@ -231,7 +235,10 @@ router.post('/', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest
       notes || null,
       userId,
       now,
-      now
+      now,
+      sap_shipment_num || null,
+      erp_delivery_doc || null,
+      cost_center || null
     );
 
     const insertStopStmt = db.prepare(`
@@ -281,7 +288,7 @@ router.post('/', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest
 router.put('/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
   const tripId = req.params.id;
   const userId = req.user!.id;
-  const { driver_id, vehicle_id, planned_departure_time, purpose, reference_number, notes, reason } = req.body;
+  const { driver_id, vehicle_id, planned_departure_time, purpose, reference_number, notes, reason, sap_shipment_num, erp_delivery_doc, cost_center } = req.body;
 
   const currentTrip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip | undefined;
   if (!currentTrip) {
@@ -326,6 +333,9 @@ router.put('/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedReque
         purpose = COALESCE(?, purpose),
         reference_number = COALESCE(?, reference_number),
         notes = COALESCE(?, notes),
+        sap_shipment_num = COALESCE(?, sap_shipment_num),
+        erp_delivery_doc = COALESCE(?, erp_delivery_doc),
+        cost_center = COALESCE(?, cost_center),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
@@ -335,6 +345,9 @@ router.put('/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedReque
     purpose || null,
     reference_number || null,
     notes || null,
+    sap_shipment_num || null,
+    erp_delivery_doc || null,
+    cost_center || null,
     tripId
   );
 

@@ -228,6 +228,7 @@ Comprehensive engineering specifications, operational SOPs, and architectural gu
 - [**Fleet Management SOP**](file:///u:/tracktracker/docs/operations/fleet-management.md): Vehicle onboarding, document renewals, and servicing.
 - [**Dispatch Operations Manual**](file:///u:/tracktracker/docs/operations/dispatch.md): Manifest planning, execution, and delay resolution.
 - [**Exceptions & Escalation Matrix**](file:///u:/tracktracker/docs/operations/exceptions.md): Incident triage and acknowledgment workflows.
+- [**SAP ERP & S/4HANA Integration Guide**](file:///u:/tracktracker/docs/architecture/sap-integration.md): End-to-end integration protocol for SAP TM, SD, and PM.
 - [**Local Setup & Onboarding Guide**](file:///u:/tracktracker/docs/development/local-setup.md): Complete development workstation configuration.
 - [**Testing & Quality Assurance**](file:///u:/tracktracker/docs/development/testing.md): Automated verification guidelines.
 

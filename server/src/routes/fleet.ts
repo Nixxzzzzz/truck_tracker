@@ -23,7 +23,17 @@ router.get('/vehicles', requireAuth, (req, res) => {
 });
 
 router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
-  const { vehicle_number, vehicle_type, model, assigned_driver_id, status = 'AVAILABLE', notes } = req.body;
+  const {
+    vehicle_number,
+    vehicle_type,
+    model,
+    assigned_driver_id,
+    status = 'AVAILABLE',
+    notes,
+    fleet_unit_id,
+    chassis_number,
+    telematics_imei
+  } = req.body;
 
   if (!vehicle_number || !vehicle_type || !model) {
     return res.status(400).json({ error: 'Vehicle number, type, and model are required' });
@@ -32,9 +42,20 @@ router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: Authenticate
   const id = uuidv4();
   try {
     db.prepare(`
-      INSERT INTO vehicles (id, vehicle_number, vehicle_type, model, assigned_driver_id, status, notes)
-      VALUES (?, UPPER(?), ?, ?, ?, ?, ?)
-    `).run(id, vehicle_number, vehicle_type, model, assigned_driver_id || null, status, notes || null);
+      INSERT INTO vehicles (id, vehicle_number, vehicle_type, model, assigned_driver_id, status, notes, fleet_unit_id, chassis_number, telematics_imei)
+      VALUES (?, UPPER(?), ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      vehicle_number,
+      vehicle_type,
+      model,
+      assigned_driver_id || null,
+      status,
+      notes || null,
+      fleet_unit_id || null,
+      chassis_number || null,
+      telematics_imei || null
+    );
 
     logAudit({
       action: 'VEHICLE_CREATED',
@@ -50,7 +71,17 @@ router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: Authenticate
 
 router.put('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { vehicle_number, vehicle_type, model, assigned_driver_id, status, notes } = req.body;
+  const {
+    vehicle_number,
+    vehicle_type,
+    model,
+    assigned_driver_id,
+    status,
+    notes,
+    fleet_unit_id,
+    chassis_number,
+    telematics_imei
+  } = req.body;
 
   try {
     db.prepare(`
@@ -60,15 +91,21 @@ router.put('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: Authentic
           model = COALESCE(?, model),
           assigned_driver_id = ?,
           status = COALESCE(?, status),
-          notes = COALESCE(?, notes)
+          notes = COALESCE(?, notes),
+          fleet_unit_id = COALESCE(?, fleet_unit_id),
+          chassis_number = COALESCE(?, chassis_number),
+          telematics_imei = COALESCE(?, telematics_imei)
       WHERE id = ?
     `).run(
       vehicle_number || null,
       vehicle_type || null,
       model || null,
-      assigned_driver_id || null,
+      assigned_driver_id,
       status || null,
       notes || null,
+      fleet_unit_id || null,
+      chassis_number || null,
+      telematics_imei || null,
       id
     );
 
