@@ -142,7 +142,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
           </div>
 
           <h1 style={{ fontSize: '1.4rem', letterSpacing: '-0.02em', fontWeight: 700, margin: '0 0 4px' }}>
-            TruckTracker Operations
+            FleetTracker Operations
           </h1>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
             Enterprise Fleet Dispatch & Logistics Operations

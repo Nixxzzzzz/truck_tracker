@@ -87,7 +87,7 @@ export const App: React.FC = () => {
           TT
         </div>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 500 }}>
-          Initializing TruckTracker Operations...
+          Initializing FleetTracker Operations...
         </div>
       </div>
     );

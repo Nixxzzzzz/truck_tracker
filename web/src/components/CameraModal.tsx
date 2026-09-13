@@ -239,7 +239,7 @@ export const CameraModal: React.FC<Props> = ({
     ctx.fillStyle = '#ffffff';
     ctx.font = `600 ${Math.max(12, Math.round(bannerHeight * 0.38))}px system-ui, -apple-system, sans-serif`;
     ctx.textBaseline = 'middle';
-    ctx.fillText(`TRUCKTRACKER PROOF  |  ${photoType.toUpperCase()}  |  ${dateStr} ${timeStr}`, 28, height - bannerHeight / 2);
+    ctx.fillText(`FLEETTRACKER PROOF  |  ${photoType.toUpperCase()}  |  ${dateStr} ${timeStr}`, 28, height - bannerHeight / 2);
 
     canvas.toBlob(
       (blob) => {

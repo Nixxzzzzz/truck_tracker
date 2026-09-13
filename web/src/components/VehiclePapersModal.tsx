@@ -700,7 +700,7 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
                 {previewDoc.notes && <div style={{ color: '#94a3b8' }}>REMARKS: {previewDoc.notes}</div>}
               </div>
               <div style={{ borderTop: '1px solid #334155', paddingTop: '10px', fontSize: '0.68rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                <span>TruckTracker Fleet Compliance Vault</span>
+                <span>FleetTracker Fleet Compliance Vault</span>
                 <span>Audit Ref: #{previewDoc.id}</span>
               </div>
             </div>

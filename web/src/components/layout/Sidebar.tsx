@@ -58,8 +58,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       label: 'Assets & Personnel',
       items: [
-        { id: 'vehicles' as NavSection, label: 'Vehicle Registry', icon: <Truck size={16} /> },
-        { id: 'drivers' as NavSection, label: 'Driver Directory', icon: <Users size={16} /> },
+        { id: 'vehicles' as NavSection, label: 'Vehicle Master', icon: <Truck size={16} /> },
+        { id: 'drivers' as NavSection, label: 'Driver Master', icon: <Users size={16} /> },
         { id: 'destinations' as NavSection, label: 'Facility Directory', icon: <MapPin size={16} /> }
       ]
     },
@@ -143,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 lineHeight: 1.2
               }}
             >
-              TruckTracker
+              FleetTracker
             </div>
             <div
               style={{

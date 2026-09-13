@@ -782,7 +782,7 @@ export const ManagerView: React.FC<Props> = ({
                 onClick={() => setIsCreateModalOpen(true)}
               >
                 <Plus size={14} />
-                <span>Dispatch Trip</span>
+                <span>Schedule Trip</span>
               </button>
             }
           />
@@ -1552,13 +1552,13 @@ export const ManagerView: React.FC<Props> = ({
       )}
 
       {/* ========================================================
-          3. VEHICLE REGISTRY
+          3. VEHICLE MASTER
           ======================================================== */}
       {activeSection === 'vehicles' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <PageHeader
-            breadcrumbs={[{ label: 'Assets' }, { label: 'Vehicle Registry' }]}
-            title="Vehicle Registry"
+            breadcrumbs={[{ label: 'Assets' }, { label: 'Vehicle Master' }]}
+            title="Vehicle Master"
             subtitle="Commercial fleet assets, assigned drivers, mechanical readiness, and regulatory compliance certificates."
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}
@@ -1823,13 +1823,13 @@ export const ManagerView: React.FC<Props> = ({
       )}
 
       {/* ========================================================
-          4. DRIVER DIRECTORY
+          4. DRIVER MASTER
           ======================================================== */}
       {activeSection === 'drivers' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <PageHeader
-            breadcrumbs={[{ label: 'Personnel' }, { label: 'Driver Directory' }]}
-            title="Driver Directory"
+            breadcrumbs={[{ label: 'Personnel' }, { label: 'Driver Master' }]}
+            title="Driver Master"
             subtitle="Active roster of commercial drivers, assigned logistics vehicles, direct phone lines, and license verification."
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}

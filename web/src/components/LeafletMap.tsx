@@ -82,7 +82,7 @@ export const LeafletMap: React.FC<Props> = ({
         return {
           url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
           options: {
-            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; TruckTracker Telematics',
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; FleetTracker Telematics',
             subdomains: 'abcd',
             maxZoom: 20
           }

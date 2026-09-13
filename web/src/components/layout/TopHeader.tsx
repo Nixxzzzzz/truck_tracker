@@ -44,9 +44,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       case 'map':
         return { group: 'Operations', title: 'Live Fleet Map' };
       case 'vehicles':
-        return { group: 'Assets', title: 'Vehicle Registry' };
+        return { group: 'Assets', title: 'Vehicle Master' };
       case 'drivers':
-        return { group: 'Personnel', title: 'Driver Directory' };
+        return { group: 'Personnel', title: 'Driver Master' };
       case 'destinations':
         return { group: 'Assets', title: 'Facility Directory' };
       case 'reports':
@@ -353,7 +353,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <span className="hide-on-mobile">Sync</span>
         </button>
 
-        {/* Primary CTA: Dispatch Trip */}
+          {/* Primary CTA: Schedule Trip */}
         <button
           type="button"
           onClick={onNewTrip}
@@ -361,7 +361,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           style={{ padding: '6px 12px' }}
         >
           <Plus size={14} />
-          <span>Dispatch Trip</span>
+          <span>Schedule Trip</span>
         </button>
       </div>
 
