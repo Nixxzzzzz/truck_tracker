@@ -477,6 +477,10 @@ export const DriverView: React.FC<Props> = ({
             offlineCount={offlineCount}
             onOpenDocuments={() => setIsVehiclePapersOpen(true)}
             onOpenAlerts={() => setIsDelayOpen(true)}
+            onOpenVehicles={() => setIsVehicleInfoOpen(true)}
+            onOpenDrivers={() => setIsHelpOpen(true)}
+            onOpenReports={() => setActiveTab('trip')}
+            onOpenSettings={() => setActiveTab('more')}
           />
         </div>
 

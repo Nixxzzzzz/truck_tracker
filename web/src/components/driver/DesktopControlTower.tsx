@@ -11,7 +11,8 @@ import {
   Navigation,
   Check,
   Play,
-  RotateCcw
+  RotateCcw,
+  Check as CheckIcon
 } from 'lucide-react';
 import { Trip, TripStop, User, Destination, Vehicle } from '../../types';
 import { KpiCard } from './KpiCard';
@@ -44,7 +45,11 @@ export const DesktopControlTower: React.FC<Props> = ({
   getStopAreaCode,
   calculateDistanceKm
 }) => {
-  const [dateFilter, setDateFilter] = useState<'today' | 'week'>('today');
+  const [dateFilter, setDateFilter] = useState<'today' | 'weekly' | 'monthly'>('today');
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+
+  const [vehicleFilter, setVehicleFilter] = useState<string>('all');
+  const [isVehicleMenuOpen, setIsVehicleMenuOpen] = useState(false);
 
   // Operational metrics
   const activeCount = trips.filter((t) =>
@@ -69,6 +74,27 @@ export const DesktopControlTower: React.FC<Props> = ({
       : null;
   const currentStopEta = currentStopDist !== null ? Math.max(5, Math.round(currentStopDist / 0.47)) : null;
 
+  const dateFilterLabels: Record<string, string> = {
+    today: 'Today',
+    weekly: 'Weekly (7D)',
+    monthly: 'Monthly (30D)'
+  };
+
+  const vehicleOptions = [
+    { id: 'all', label: 'All Vehicles (12)' },
+    { id: 'DL01TA4920', label: 'DL01TA4920 - Tata Ultra T.7 (On Route)' },
+    { id: 'DL01TA5012', label: 'DL01TA5012 - Tata 407 (Stopped)' },
+    { id: 'DL01TA3891', label: 'DL01TA3891 - Eicher Pro 2049 (Delayed)' },
+    { id: 'DL01TA1102', label: 'DL01TA1102 - BharatBenz 1015R (Completed)' }
+  ];
+
+  const handleTrackOnMap = () => {
+    if (currentStop) {
+      onSelectStop(currentStop);
+    }
+    onOpenLiveMap();
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Top Greeting & Date Filter */}
@@ -78,7 +104,8 @@ export const DesktopControlTower: React.FC<Props> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px'
+          gap: '12px',
+          position: 'relative'
         }}
       >
         <div>
@@ -105,26 +132,75 @@ export const DesktopControlTower: React.FC<Props> = ({
         </div>
 
         {/* Filter Dropdown */}
-        <button
-          type="button"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: 'var(--app-surface, #FFFFFF)',
-            border: '1px solid var(--app-border, #D9E1E8)',
-            borderRadius: '10px',
-            padding: '8px 14px',
-            fontSize: '0.84rem',
-            fontWeight: 700,
-            color: 'var(--text-primary, #12202F)',
-            cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)'
-          }}
-        >
-          <span>Today</span>
-          <ChevronDown size={15} color="var(--text-muted, #667085)" />
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setIsDateMenuOpen(!isDateMenuOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'var(--app-surface, #FFFFFF)',
+              border: '1px solid var(--app-border, #D9E1E8)',
+              borderRadius: '10px',
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              color: 'var(--text-primary, #12202F)',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)'
+            }}
+          >
+            <span>{dateFilterLabels[dateFilter]}</span>
+            <ChevronDown size={15} color="var(--text-muted, #667085)" />
+          </button>
+
+          {isDateMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '110%',
+                right: 0,
+                width: '160px',
+                backgroundColor: 'var(--app-surface, #FFFFFF)',
+                border: '1px solid var(--app-border, #D9E1E8)',
+                borderRadius: '10px',
+                boxShadow: '0 8px 24px rgba(16, 24, 40, 0.12)',
+                zIndex: 50,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {(['today', 'weekly', 'monthly'] as const).map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  onClick={() => {
+                    setDateFilter(period);
+                    setIsDateMenuOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '9px 12px',
+                    fontSize: '0.82rem',
+                    fontWeight: dateFilter === period ? 700 : 500,
+                    color: dateFilter === period ? 'var(--brand-blue, #1764A8)' : 'var(--text-primary, #12202F)',
+                    backgroundColor: dateFilter === period ? 'var(--brand-blue-light, #EAF3FA)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span>{dateFilterLabels[period]}</span>
+                  {dateFilter === period && <CheckIcon size={14} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* KPI Metrics Row (4 Cards) */}
@@ -137,7 +213,7 @@ export const DesktopControlTower: React.FC<Props> = ({
       >
         <KpiCard
           title="Active Trips"
-          value={Math.max(12, activeCount)}
+          value={dateFilter === 'weekly' ? 28 : dateFilter === 'monthly' ? 94 : Math.max(12, activeCount)}
           subtitle="↑ +2 from yesterday"
           icon={<Truck size={20} />}
           iconBg="var(--brand-blue-light, #EAF3FA)"
@@ -146,7 +222,7 @@ export const DesktopControlTower: React.FC<Props> = ({
 
         <KpiCard
           title="On Route"
-          value={Math.max(8, onRouteCount)}
+          value={dateFilter === 'weekly' ? 18 : dateFilter === 'monthly' ? 62 : Math.max(8, onRouteCount)}
           subtitle="67% of active trips"
           icon={<MapPin size={20} />}
           iconBg="rgba(2, 132, 199, 0.12)"
@@ -155,7 +231,7 @@ export const DesktopControlTower: React.FC<Props> = ({
 
         <KpiCard
           title="Completed"
-          value={Math.max(7, completedCount)}
+          value={dateFilter === 'weekly' ? 42 : dateFilter === 'monthly' ? 186 : Math.max(7, completedCount)}
           subtitle="↑ +3 from yesterday"
           icon={<CheckCircle2 size={20} />}
           iconBg="var(--operational-green-bg, #E8F8F0)"
@@ -201,7 +277,8 @@ export const DesktopControlTower: React.FC<Props> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid var(--app-border, #D9E1E8)'
+              borderBottom: '1px solid var(--app-border, #D9E1E8)',
+              position: 'relative'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -241,25 +318,75 @@ export const DesktopControlTower: React.FC<Props> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                type="button"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: 'var(--app-bg, #F4F7FA)',
-                  border: '1px solid var(--app-border, #D9E1E8)',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary, #12202F)',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>All Vehicles</span>
-                <ChevronDown size={13} />
-              </button>
+              {/* Vehicle selector dropdown */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsVehicleMenuOpen(!isVehicleMenuOpen)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: 'var(--app-bg, #F4F7FA)',
+                    border: '1px solid var(--app-border, #D9E1E8)',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    color: 'var(--text-primary, #12202F)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>{vehicleOptions.find((v) => v.id === vehicleFilter)?.label.split(' - ')[0] || 'All Vehicles'}</span>
+                  <ChevronDown size={13} />
+                </button>
+
+                {isVehicleMenuOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '110%',
+                      right: 0,
+                      width: '260px',
+                      backgroundColor: 'var(--app-surface, #FFFFFF)',
+                      border: '1px solid var(--app-border, #D9E1E8)',
+                      borderRadius: '10px',
+                      boxShadow: '0 8px 24px rgba(16, 24, 40, 0.12)',
+                      zIndex: 50,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    {vehicleOptions.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => {
+                          setVehicleFilter(v.id);
+                          setIsVehicleMenuOpen(false);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '9px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: vehicleFilter === v.id ? 700 : 500,
+                          color: vehicleFilter === v.id ? 'var(--brand-blue, #1764A8)' : 'var(--text-primary, #12202F)',
+                          backgroundColor: vehicleFilter === v.id ? 'var(--brand-blue-light, #EAF3FA)' : 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span>{v.label}</span>
+                        {vehicleFilter === v.id && <CheckIcon size={14} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button
                 type="button"
@@ -553,7 +680,7 @@ export const DesktopControlTower: React.FC<Props> = ({
 
                 <button
                   type="button"
-                  onClick={() => onSelectStop(currentStop)}
+                  onClick={handleTrackOnMap}
                   style={{
                     backgroundColor: 'var(--brand-blue, #1764A8)',
                     color: '#FFFFFF',
@@ -616,34 +743,49 @@ export const DesktopControlTower: React.FC<Props> = ({
 
             {/* Activity List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem' }}>
+              <div
+                onClick={onViewTripDetails}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
                 <span style={{ fontWeight: 700, color: 'var(--text-muted, #667085)', minWidth: '42px' }}>10:15</span>
                 <span style={{ color: 'var(--operational-green, #12A66A)' }}>✓</span>
                 <span style={{ color: 'var(--text-primary, #12202F)', fontWeight: 600 }}>Delivered at Mayur Vihar Phase-1</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem' }}>
+              <div
+                onClick={onViewTripDetails}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
                 <span style={{ fontWeight: 700, color: 'var(--text-muted, #667085)', minWidth: '42px' }}>09:30</span>
                 <span style={{ color: 'var(--brand-blue, #1764A8)' }}>📍</span>
                 <span style={{ color: 'var(--text-primary, #12202F)', fontWeight: 600 }}>Checked in at Lajpat Nagar Hub</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem' }}>
+              <div
+                onClick={onViewTripDetails}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
                 <span style={{ fontWeight: 700, color: 'var(--text-muted, #667085)', minWidth: '42px' }}>08:15</span>
                 <span style={{ color: 'var(--text-muted, #667085)' }}>🚛</span>
                 <span style={{ color: 'var(--text-primary, #12202F)', fontWeight: 600 }}>Departed from Okhla Phase-III</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem' }}>
+              <div
+                onClick={onViewTripDetails}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
                 <span style={{ fontWeight: 700, color: 'var(--text-muted, #667085)', minWidth: '42px' }}>07:45</span>
                 <span style={{ color: '#D97706' }}>⚠</span>
                 <span style={{ color: 'var(--text-primary, #12202F)', fontWeight: 600 }}>Delay reported (Traffic bottleneck)</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem' }}>
+              <div
+                onClick={onViewTripDetails}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
                 <span style={{ fontWeight: 700, color: 'var(--text-muted, #667085)', minWidth: '42px' }}>06:00</span>
                 <span style={{ color: 'var(--brand-blue, #1764A8)' }}>▶</span>
-                <span style={{ color: 'var(--text-primary, #12202F)', fontWeight: 600 }}>Trip started - Central Depot</span>
+                <span style={{ color: 'var(--text-primary, #12202F)', fontWeight: 600 }}>Trip started - Delhi Central Depot</span>
               </div>
             </div>
           </div>

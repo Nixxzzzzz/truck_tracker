@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { User } from '../../types';
 import { ThemeToggle } from '../ThemeToggle';
+import { HoseXpertsLogo } from '../common/HoseXpertsLogo';
 
 export type NavSection =
   | 'operations'
@@ -110,53 +111,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             padding: '18px 20px',
             borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
+            alignItems: 'center'
           }}
         >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--accent-primary)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '0.95rem',
-              fontFamily: 'var(--font-display)',
-              boxShadow: 'var(--shadow-xs)'
-            }}
-          >
-            TT
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: '1rem',
-                letterSpacing: '-0.02em',
-                fontFamily: 'var(--font-display)',
-                lineHeight: 1.2
-              }}
-            >
-              FleetTracker
-            </div>
-            <div
-              style={{
-                fontSize: '0.68rem',
-                color: 'var(--text-muted)',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase'
-              }}
-            >
-              Logistics & Fleet
-            </div>
-          </div>
+          <HoseXpertsLogo variant={theme === 'dark' ? 'white' : 'blue'} height={32} showTagline={true} />
         </div>
 
         {/* Nav Groups */}

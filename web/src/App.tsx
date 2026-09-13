@@ -73,7 +73,7 @@ export const App: React.FC = () => {
             width: '36px',
             height: '36px',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--accent-primary)',
+            backgroundColor: '#1764A8',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -84,10 +84,10 @@ export const App: React.FC = () => {
             boxShadow: 'var(--shadow-sm)'
           }}
         >
-          TT
+          HX
         </div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 500 }}>
-          Initializing FleetTracker Operations...
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 600 }}>
+          Initializing HoseXperts Operations...
         </div>
       </div>
     );

@@ -3,6 +3,7 @@ import { Truck, ArrowRight, Lock, Mail, Smartphone, ShieldCheck, Eye, EyeOff, Ba
 import { api } from '../services/api';
 import { User } from '../types';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { HoseXpertsLogo } from '../components/common/HoseXpertsLogo';
 
 interface Props {
   onLoginSuccess: (user: User, token: string) => void;
@@ -120,32 +121,10 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
         }}
       >
         {/* Brand Header */}
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--accent-primary)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 12px',
-              fontWeight: 800,
-              fontSize: '1.25rem',
-              fontFamily: 'var(--font-display)',
-              boxShadow: '0 4px 14px rgba(0, 168, 132, 0.35)'
-            }}
-          >
-            TT
-          </div>
-
-          <h1 style={{ fontSize: '1.4rem', letterSpacing: '-0.02em', fontWeight: 700, margin: '0 0 4px' }}>
-            FleetTracker Operations
-          </h1>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-            Enterprise Fleet Dispatch & Logistics Operations
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px' }}>
+          <HoseXpertsLogo variant={theme === 'dark' ? 'white' : 'blue'} height={44} showTagline={true} />
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+            Enterprise Fleet Dispatch & Logistics Terminal
           </p>
         </div>
 

@@ -32,6 +32,10 @@ interface Props {
   offlineCount: number;
   onOpenDocuments?: () => void;
   onOpenAlerts?: () => void;
+  onOpenVehicles?: () => void;
+  onOpenDrivers?: () => void;
+  onOpenReports?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const DesktopSidebar: React.FC<Props> = ({
@@ -45,7 +49,11 @@ export const DesktopSidebar: React.FC<Props> = ({
   isOnline,
   offlineCount,
   onOpenDocuments,
-  onOpenAlerts
+  onOpenAlerts,
+  onOpenVehicles,
+  onOpenDrivers,
+  onOpenReports,
+  onOpenSettings
 }) => {
   const initials = currentUser.name
     ? currentUser.name
@@ -77,12 +85,23 @@ export const DesktopSidebar: React.FC<Props> = ({
     } else if (id === 'alerts') {
       if (onOpenAlerts) onOpenAlerts();
       else onTabChange('home');
+    } else if (id === 'vehicles') {
+      if (onOpenVehicles) onOpenVehicles();
+      else onTabChange('more');
+    } else if (id === 'drivers') {
+      if (onOpenDrivers) onOpenDrivers();
+      else onTabChange('more');
+    } else if (id === 'reports') {
+      if (onOpenReports) onOpenReports();
+      else onTabChange('trip');
+    } else if (id === 'settings') {
+      if (onOpenSettings) onOpenSettings();
+      else onTabChange('more');
     } else if (id === 'stops') {
       onTabChange('trip');
     } else if (id === 'home' || id === 'trip' || id === 'map' || id === 'emergency' || id === 'more') {
       onTabChange(id as DriverTab);
     } else {
-      // For mock navigation items
       onTabChange('home');
     }
   };
