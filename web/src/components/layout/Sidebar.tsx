@@ -50,24 +50,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navGroups = [
     {
-      label: 'Operations Command',
+      label: 'Fleet Operations',
       items: [
-        { id: 'operations' as NavSection, label: 'Command Center', icon: <Activity size={16} /> },
-        { id: 'map' as NavSection, label: 'Live Telematics Map', icon: <MapIcon size={16} /> }
+        { id: 'operations' as NavSection, label: 'Dispatch Command', icon: <Activity size={16} /> },
+        { id: 'map' as NavSection, label: 'Live Fleet Map', icon: <MapIcon size={16} /> }
       ]
     },
     {
-      label: 'Fleet & Personnel',
+      label: 'Assets & Personnel',
       items: [
-        { id: 'vehicles' as NavSection, label: 'Vehicles Register', icon: <Truck size={16} /> },
-        { id: 'drivers' as NavSection, label: 'Drivers Roster', icon: <Users size={16} /> },
-        { id: 'destinations' as NavSection, label: 'Saved Destinations', icon: <MapPin size={16} /> }
+        { id: 'vehicles' as NavSection, label: 'Vehicle Registry', icon: <Truck size={16} /> },
+        { id: 'drivers' as NavSection, label: 'Driver Directory', icon: <Users size={16} /> },
+        { id: 'destinations' as NavSection, label: 'Facility Directory', icon: <MapPin size={16} /> }
       ]
     },
     {
-      label: 'Intelligence & Integration',
+      label: 'Reports & Sync',
       items: [
-        { id: 'reports' as NavSection, label: 'Operational Reports', icon: <FileText size={16} /> },
+        { id: 'reports' as NavSection, label: 'Performance Analytics', icon: <FileText size={16} /> },
         { id: 'sheets' as NavSection, label: 'Google Sheets Sync', icon: <Database size={16} /> }
       ]
     }
@@ -156,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 textTransform: 'uppercase'
               }}
             >
-              Fleet Intelligence
+              Logistics & Fleet
             </div>
           </div>
         </div>

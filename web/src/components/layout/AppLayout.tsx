@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sidebar, NavSection } from './Sidebar';
-import { TopHeader } from './TopHeader';
+import { TopHeader, AlertItem } from './TopHeader';
 import { User } from '../../types';
 
 interface AppLayoutProps {
@@ -15,6 +15,9 @@ interface AppLayoutProps {
   lastUpdated: Date;
   onRefresh: () => void;
   refreshing?: boolean;
+  alerts?: AlertItem[];
+  onDismissAlert?: (id: string) => void;
+  onClearAllAlerts?: () => void;
   children: React.ReactNode;
 }
 
@@ -30,6 +33,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   lastUpdated,
   onRefresh,
   refreshing = false,
+  alerts,
+  onDismissAlert,
+  onClearAllAlerts,
   children
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -58,6 +64,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           lastUpdated={lastUpdated}
           onRefresh={onRefresh}
           refreshing={refreshing}
+          alerts={alerts}
+          onDismissAlert={onDismissAlert}
+          onClearAllAlerts={onClearAllAlerts}
         />
 
         <main

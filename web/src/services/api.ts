@@ -751,7 +751,15 @@ export const api = {
       mockStore.downloadReportCSV(date);
       return { success: true };
     },
-    getPeriodic: (period: 'weekly' | 'monthly') => request(`/reports/periodic?period=${period}`)
+    getPeriodic: async (period: 'weekly' | 'monthly') => {
+      try {
+        const res = await request(`/reports/periodic?period=${period}`);
+        if (res && res.overview) return res;
+        return mockStore.getPeriodicReport(period);
+      } catch {
+        return mockStore.getPeriodicReport(period);
+      }
+    }
   },
 
   googleSheets: {

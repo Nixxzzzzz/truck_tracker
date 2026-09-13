@@ -1623,6 +1623,66 @@ class MockStore {
     };
   }
 
+  getPeriodicReport(period: 'weekly' | 'monthly'): any {
+    const days = period === 'monthly' ? 30 : 7;
+    const trips = this.getTrips();
+    const totalTrips = trips.length;
+    const completedTrips = trips.filter((t) => t.status === 'COMPLETED').length;
+    const activeTrips = trips.filter((t) =>
+      ['IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'].includes(t.status)
+    ).length;
+    const delayedTrips = trips.filter((t) => (t.total_delay_minutes || 0) > 0).length;
+    const cancelledTrips = trips.filter((t) => t.status === 'CANCELLED').length;
+    const totalDelayMinutes = trips.reduce((acc, t) => acc + (t.total_delay_minutes || 0), 0);
+
+    const allStops = trips.flatMap((t) => t.stops || []);
+    const totalDestinations = allStops.length || 14;
+    const completedStops = allStops.filter((s) => s.status === 'COMPLETED');
+    const onTimeStops = completedStops.filter(
+      (s) => s.arrival_status === 'ON_TIME' || s.arrival_status === 'EARLY' || !s.arrival_status
+    ).length;
+    const onTimePercentage = completedStops.length > 0 ? Math.round((onTimeStops / completedStops.length) * 100) : 94;
+
+    const delayReasons = [
+      { reason: 'Traffic Congestion (NCR Highway & Expressways)', count: period === 'monthly' ? 14 : 4, total_minutes: period === 'monthly' ? 185 : 55 },
+      { reason: 'Customer Loading Bay Queue / Receiving Delay', count: period === 'monthly' ? 9 : 2, total_minutes: period === 'monthly' ? 120 : 35 },
+      { reason: 'Border Toll & Security Verification Check', count: period === 'monthly' ? 6 : 2, total_minutes: period === 'monthly' ? 70 : 22 },
+      { reason: 'Inclement Weather / Local Route Diversion', count: period === 'monthly' ? 3 : 1, total_minutes: period === 'monthly' ? 45 : 15 }
+    ];
+
+    const driverSummary = [
+      { driver_name: 'Rahul Sharma', trip_count: period === 'monthly' ? 18 : 5, completed_count: period === 'monthly' ? 17 : 4, total_delay: period === 'monthly' ? 45 : 22 },
+      { driver_name: 'Amit Verma', trip_count: period === 'monthly' ? 14 : 4, completed_count: period === 'monthly' ? 14 : 4, total_delay: 0 },
+      { driver_name: 'Vikram Singh', trip_count: period === 'monthly' ? 12 : 3, completed_count: period === 'monthly' ? 11 : 2, total_delay: period === 'monthly' ? 35 : 15 }
+    ];
+
+    const vehicleSummary = [
+      { vehicle_number: 'DL01 TA 4920', model: 'Tata Ultra T.7', trip_count: period === 'monthly' ? 20 : 6, total_distance_km: period === 'monthly' ? 640.5 : 185.4 },
+      { vehicle_number: 'UP16 BT 9845', model: 'Ashok Leyland Ecomet', trip_count: period === 'monthly' ? 16 : 4, total_distance_km: period === 'monthly' ? 490.0 : 124.0 },
+      { vehicle_number: 'HR55 AM 7712', model: 'Mahindra Bolero Maxi', trip_count: period === 'monthly' ? 14 : 4, total_distance_km: period === 'monthly' ? 385.2 : 98.6 }
+    ];
+
+    return {
+      period,
+      daysAnalyzed: days,
+      overview: {
+        totalTrips: period === 'monthly' ? totalTrips * 3 : totalTrips,
+        completedTrips: period === 'monthly' ? completedTrips * 3 : completedTrips,
+        activeTrips,
+        delayedTrips: period === 'monthly' ? delayedTrips * 2 : delayedTrips,
+        cancelledTrips,
+        totalDestinations: period === 'monthly' ? totalDestinations * 3 : totalDestinations,
+        totalDelayMinutes: period === 'monthly' ? totalDelayMinutes * 2 : totalDelayMinutes,
+        totalDelayFormatted: `${Math.floor((period === 'monthly' ? totalDelayMinutes * 2 : totalDelayMinutes) / 60)}h ${(period === 'monthly' ? totalDelayMinutes * 2 : totalDelayMinutes) % 60}m`,
+        onTimePercentage
+      },
+      trips,
+      delayReasons,
+      driverSummary,
+      vehicleSummary
+    };
+  }
+
   downloadReportCSV(date?: string): void {
     const report = this.getDailyReport(date);
     const queryDate = date || new Date().toISOString().split('T')[0];

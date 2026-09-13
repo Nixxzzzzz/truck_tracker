@@ -26,6 +26,11 @@ interface EnterpriseTableProps<T> {
   onEmptyAction?: () => void;
   className?: string;
   style?: React.CSSProperties;
+  selectable?: boolean;
+  selectedKeys?: (string | number)[];
+  onToggleSelect?: (key: string | number) => void;
+  onToggleSelectAll?: () => void;
+  batchBar?: React.ReactNode;
 }
 
 export function EnterpriseTable<T>({
@@ -39,7 +44,12 @@ export function EnterpriseTable<T>({
   emptyActionLabel,
   onEmptyAction,
   className = '',
-  style
+  style,
+  selectable = false,
+  selectedKeys = [],
+  onToggleSelect,
+  onToggleSelectAll,
+  batchBar
 }: EnterpriseTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -90,88 +100,125 @@ export function EnterpriseTable<T>({
     return <TableSkeleton rows={5} columns={columns.length} />;
   }
 
-  return (
-    <div className={`enterprise-table-container ${className}`} style={style}>
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table className="enterprise-table">
-          <thead>
-            <tr>
-              {columns.map((col) => {
-                const isSorted = sortKey === col.key;
-                return (
-                  <th
-                    key={col.key}
-                    onClick={() => handleSort(col)}
-                    className={col.sortable ? 'sortable' : ''}
-                    style={{
-                      width: col.width,
-                      textAlign: col.align || 'left',
-                      cursor: col.sortable ? 'pointer' : 'default'
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        justifyContent: col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start',
-                        width: '100%'
-                      }}
-                    >
-                      <span>{col.header}</span>
-                      {col.sortable && (
-                        <span style={{ color: isSorted ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
-                          {isSorted ? (
-                            sortDirection === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
-                          ) : (
-                            <ArrowUpDown size={11} style={{ opacity: 0.6 }} />
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.length === 0 ? (
+    const isAllSelected =
+      sortedData.length > 0 &&
+      sortedData.every((item, i) => selectedKeys.includes(keyExtractor(item, i)));
+
+    return (
+      <div className={`enterprise-table-container ${className}`} style={style}>
+        {batchBar && <div style={{ marginBottom: '10px' }}>{batchBar}</div>}
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="enterprise-table">
+            <thead>
               <tr>
-                <td colSpan={columns.length} style={{ padding: 0 }}>
-                  <EmptyState
-                    title={emptyTitle}
-                    description={emptyDescription}
-                    actionLabel={emptyActionLabel}
-                    onAction={onEmptyAction}
-                  />
-                </td>
-              </tr>
-            ) : (
-              sortedData.map((item, rowIdx) => (
-                <tr
-                  key={keyExtractor(item, rowIdx)}
-                  onClick={() => onRowClick && onRowClick(item)}
-                  style={{
-                    cursor: onRowClick ? 'pointer' : 'default'
-                  }}
-                >
-                  {columns.map((col) => (
-                    <td
+                {selectable && (
+                  <th style={{ width: '44px', textAlign: 'center', padding: '0 10px' }}>
+                    <input
+                      type="checkbox"
+                      className="form-checkbox"
+                      checked={isAllSelected}
+                      onChange={() => onToggleSelectAll && onToggleSelectAll()}
+                      aria-label="Select all rows"
+                      style={{ cursor: 'pointer', verticalAlign: 'middle' }}
+                    />
+                  </th>
+                )}
+                {columns.map((col) => {
+                  const isSorted = sortKey === col.key;
+                  return (
+                    <th
                       key={col.key}
+                      onClick={() => handleSort(col)}
+                      className={col.sortable ? 'sortable' : ''}
                       style={{
-                        textAlign: col.align || 'left'
+                        width: col.width,
+                        textAlign: col.align || 'left',
+                        cursor: col.sortable ? 'pointer' : 'default'
                       }}
-                      className={col.className}
                     >
-                      {col.render ? col.render(item, rowIdx) : (item as any)[col.key]}
-                    </td>
-                  ))}
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          justifyContent: col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start',
+                          width: '100%'
+                        }}
+                      >
+                        <span>{col.header}</span>
+                        {col.sortable && (
+                          <span style={{ color: isSorted ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                            {isSorted ? (
+                              sortDirection === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                            ) : (
+                              <ArrowUpDown size={11} style={{ opacity: 0.6 }} />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedData.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + (selectable ? 1 : 0)} style={{ padding: 0 }}>
+                    <EmptyState
+                      title={emptyTitle}
+                      description={emptyDescription}
+                      actionLabel={emptyActionLabel}
+                      onAction={onEmptyAction}
+                    />
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                sortedData.map((item, rowIdx) => {
+                  const rowKey = keyExtractor(item, rowIdx);
+                  const isRowSelected = selectedKeys.includes(rowKey);
+                  return (
+                    <tr
+                      key={rowKey}
+                      onClick={() => onRowClick && onRowClick(item)}
+                      style={{
+                        cursor: onRowClick ? 'pointer' : 'default',
+                        backgroundColor: isRowSelected ? 'rgba(59, 130, 246, 0.06)' : undefined
+                      }}
+                    >
+                      {selectable && (
+                        <td
+                          style={{ width: '44px', textAlign: 'center', padding: '0 10px' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="form-checkbox"
+                            checked={isRowSelected}
+                            onChange={() => onToggleSelect && onToggleSelect(rowKey)}
+                            aria-label={`Select item ${rowKey}`}
+                            style={{ cursor: 'pointer', verticalAlign: 'middle' }}
+                          />
+                        </td>
+                      )}
+                      {columns.map((col) => (
+                        <td
+                          key={col.key}
+                          style={{
+                            textAlign: col.align || 'left'
+                          }}
+                          className={col.className}
+                        >
+                          {col.render ? col.render(item, rowIdx) : (item as any)[col.key]}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
+    );
 }

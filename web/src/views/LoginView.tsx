@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, ArrowRight, Lock, Mail, Smartphone, ShieldCheck, Eye, EyeOff, Sparkles, CheckCircle2, UserCheck } from 'lucide-react';
+import { Truck, ArrowRight, Lock, Mail, Smartphone, ShieldCheck, Eye, EyeOff, BarChart3, CheckCircle2, UserCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -42,11 +42,11 @@ const PRESETS: ProfilePreset[] = [
   {
     id: 'director',
     title: 'Executive Director',
-    roleBadge: 'Analytics',
+    roleBadge: 'Operations Audit',
     email: 'director@company.com',
     password: 'director123',
-    description: 'Executive logistics intelligence, SLA punctuality & reports',
-    icon: Sparkles
+    description: 'Executive logistics oversight, SLA punctuality & audit reports',
+    icon: BarChart3
   }
 ];
 
@@ -145,7 +145,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
             TruckTracker Operations
           </h1>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-            Enterprise Fleet & Logistics Intelligence Platform
+            Enterprise Fleet Dispatch & Logistics Operations
           </p>
         </div>
 
