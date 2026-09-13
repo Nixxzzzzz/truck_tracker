@@ -1110,6 +1110,187 @@ video.camera-viewfinder {
   }
 }
 
+/* ==========================================================================
+   SAP OnePortal / Fiori Horizon Theme — Driver Logistics Terminal
+   ========================================================================== */
 
+:root {
+  --sap-brand: #0070F2;
+  --sap-brand-hover: #0057B8;
+  --sap-brand-active: #00438F;
+  --sap-brand-light: #EBF3FC;
+  --sap-shellbar-bg: #1D2D3E;
+  --sap-shellbar-text: #FFFFFF;
+  --sap-shellbar-subtext: #8FA8BF;
+  --sap-positive: #107E3E;
+  --sap-positive-bg: #F1FBF3;
+  --sap-positive-border: #A3E3B6;
+  --sap-critical: #E9730C;
+  --sap-critical-bg: #FFF5EB;
+  --sap-critical-border: #FCD5B5;
+  --sap-negative: #BB0000;
+  --sap-negative-bg: #FFF0F0;
+  --sap-info: #0070F2;
+  --sap-info-bg: #EEF5FF;
+  --sap-neutral: #556B82;
+  --sap-neutral-bg: #F5F6F7;
+  --sap-card-bg: #FFFFFF;
+  --sap-border-color: #D9E1E8;
+  --sap-text-title: #1D2D3E;
+  --sap-text-body: #32363A;
+  --sap-text-caption: #6A7D8F;
+  --sap-shadow-card: 0 2px 8px rgba(0, 32, 70, 0.08);
+}
 
+[data-theme="dark"] {
+  --sap-card-bg: #1A2228;
+  --sap-border-color: #2D3A45;
+  --sap-text-title: #F5F6F7;
+  --sap-text-body: #D1D7DC;
+  --sap-text-caption: #8A9BA8;
+  --sap-neutral-bg: #141B20;
+  --sap-positive-bg: rgba(16, 126, 62, 0.18);
+  --sap-positive-border: rgba(16, 126, 62, 0.35);
+  --sap-critical-bg: rgba(233, 115, 12, 0.18);
+  --sap-critical-border: rgba(233, 115, 12, 0.35);
+  --sap-info-bg: rgba(0, 112, 242, 0.18);
+  --sap-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
 
+/* SAP Fiori Button Styles */
+.btn-sap-primary {
+  background-color: var(--sap-brand) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--sap-brand) !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 8px rgba(0, 112, 242, 0.28) !important;
+  transition: all 0.15s ease-in-out !important;
+}
+.btn-sap-primary:hover:not(:disabled) {
+  background-color: var(--sap-brand-hover) !important;
+  border-color: var(--sap-brand-hover) !important;
+  transform: translateY(-1px);
+}
+.btn-sap-primary:active:not(:disabled) {
+  background-color: var(--sap-brand-active) !important;
+  transform: translateY(0);
+}
+
+.btn-sap-positive {
+  background-color: var(--sap-positive) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--sap-positive) !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 8px rgba(16, 126, 62, 0.28) !important;
+  transition: all 0.15s ease-in-out !important;
+}
+.btn-sap-positive:hover:not(:disabled) {
+  background-color: #0b6832 !important;
+  transform: translateY(-1px);
+}
+
+.btn-sap-secondary {
+  background-color: var(--sap-card-bg) !important;
+  color: var(--sap-text-body) !important;
+  border: 1px solid var(--sap-border-color) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease !important;
+}
+.btn-sap-secondary:hover:not(:disabled) {
+  background-color: var(--sap-neutral-bg) !important;
+  border-color: var(--sap-brand) !important;
+  color: var(--sap-brand) !important;
+}
+
+.btn-sap-critical {
+  background-color: var(--sap-critical-bg) !important;
+  color: var(--sap-critical) !important;
+  border: 1px solid var(--sap-critical-border) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease !important;
+}
+.btn-sap-critical:hover:not(:disabled) {
+  background-color: var(--sap-critical) !important;
+  color: #ffffff !important;
+}
+
+/* SAP Milestone Timeline */
+.sap-milestone-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  position: relative;
+  margin: 12px 0 6px;
+  padding: 4px 0;
+}
+.sap-milestone-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  text-align: center;
+}
+.sap-milestone-step::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background-color: var(--sap-border-color);
+  z-index: 1;
+}
+.sap-milestone-step:first-child::before {
+  display: none;
+}
+.sap-milestone-step.completed::before {
+  background-color: var(--sap-positive);
+}
+.sap-milestone-step.active::before {
+  background-color: var(--sap-brand);
+}
+
+.sap-step-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+.sap-step-circle.completed {
+  background-color: var(--sap-positive);
+  color: #ffffff;
+}
+.sap-step-circle.active {
+  background-color: var(--sap-brand);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--sap-info-bg);
+}
+.sap-step-circle.upcoming {
+  background-color: var(--sap-neutral-bg);
+  color: var(--sap-text-caption);
+  border: 1px solid var(--sap-border-color);
+}
+.sap-step-label {
+  font-size: 0.68rem;
+  margin-top: 5px;
+  font-weight: 600;
+  color: var(--sap-text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sap-step-label.active {
+  color: var(--sap-brand);
+  font-weight: 700;
+}
+.sap-step-label.completed {
+  color: var(--sap-positive);
+}

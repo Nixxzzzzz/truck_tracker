@@ -23,7 +23,9 @@ import {
   ChevronDown,
   ChevronUp,
   Map as MapIcon,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  Check
 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
 import { mockStore } from '../services/mockData';
@@ -279,6 +281,15 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   // Active unresolved delay if any
   const activeDelay = activeTrip?.delays?.find((d) => !d.is_resolved);
 
+  // Helper to resolve official Facility Area Code for any stop
+  const getStopAreaCode = (stop: TripStop): string | undefined => {
+    if (stop.area_code) return stop.area_code;
+    const match = fleetDestinations.find(
+      (d) => d.id === stop.destination_id || d.name.toLowerCase() === stop.destination_name.toLowerCase()
+    );
+    return match?.area_code;
+  };
+
   // ==========================================
   // ACTION HANDLERS
   // ==========================================
@@ -404,121 +415,108 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', justifyContent: 'center', padding: '12px 12px 110px' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--sap-neutral-bg, var(--bg-primary))',
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '12px 12px 110px'
+      }}
+    >
       {/* Mobile Frame Container */}
       <div
         style={{
-          maxWidth: '520px',
+          maxWidth: '540px',
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px'
+          gap: '14px'
         }}
       >
-        {/* Role Simulator Return Banner (if manager simulating driver) */}
-        {onSwitchRole && currentUser.role === 'MANAGER' && (
-          <div
-            style={{
-              backgroundColor: 'var(--accent-primary-subtle)',
-              border: '1px solid var(--accent-primary-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.8rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)', fontWeight: 600 }}>
-              <Smartphone size={14} />
-              <span>Simulating Driver Mobile Terminal</span>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => onSwitchRole('MANAGER')}
-              style={{ padding: '3px 9px', fontSize: '0.74rem' }}
-            >
-              Return to Manager
-            </button>
-          </div>
-        )}
-
-        {/* Driver Top Header */}
+        {/* SAP OnePortal Fiori ShellBar Header */}
         <header
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '12px 16px',
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)'
+            backgroundColor: 'var(--sap-shellbar-bg, #1D2D3E)',
+            color: 'var(--sap-shellbar-text, #FFFFFF)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            boxShadow: '0 4px 14px rgba(0, 32, 70, 0.18)'
           }}
         >
+          {/* SAP Brand & Driver Title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--accent-primary)',
-                color: '#ffffff',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: '0.9rem'
+                gap: '5px',
+                backgroundColor: 'var(--sap-brand, #0070F2)',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.85rem',
+                letterSpacing: '0.5px'
               }}
             >
-              <Truck size={18} />
+              <span>SAP</span>
             </div>
             <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 600 }}>
-                {currentUser.name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.96rem', fontWeight: 700, color: '#ffffff' }}>OnePortal</span>
+                <span style={{ fontSize: '0.68rem', backgroundColor: 'rgba(255,255,255,0.15)', padding: '1px 6px', borderRadius: '4px', color: '#e0ecf8' }}>
+                  DRIVER
+                </span>
               </div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                Field Logistics Driver
+              <div style={{ fontSize: '0.72rem', color: 'var(--sap-shellbar-subtext, #8FA8BF)', marginTop: '1px' }}>
+                {currentUser.name} • Fleet Terminal
               </div>
             </div>
           </div>
 
+          {/* Status Indicators & Quick Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Real Hardware Device GPS Status */}
+            {/* Real Hardware Device GPS Status Pill */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                fontSize: '0.72rem',
-                color: gpsAccuracy !== null ? 'var(--status-success)' : 'var(--text-muted)',
-                backgroundColor: gpsAccuracy !== null ? 'var(--status-success-bg)' : 'rgba(255, 255, 255, 0.05)',
-                border: `1px solid ${gpsAccuracy !== null ? 'var(--status-success-border)' : 'var(--border-subtle)'}`,
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                color: gpsAccuracy !== null ? '#107E3E' : '#A9BCCF',
+                backgroundColor: gpsAccuracy !== null ? 'rgba(16, 126, 62, 0.22)' : 'rgba(255, 255, 255, 0.1)',
+                border: `1px solid ${gpsAccuracy !== null ? 'rgba(16, 126, 62, 0.45)' : 'rgba(255, 255, 255, 0.2)'}`,
                 padding: '3px 8px',
-                borderRadius: 'var(--radius-full)'
+                borderRadius: '9999px'
               }}
               title={gpsAccuracy !== null ? `Hardware GPS active: ±${gpsAccuracy}m` : 'Acquiring GPS fix...'}
             >
               <MapPin size={11} />
-              {gpsAccuracy !== null ? `GPS ±${gpsAccuracy}m` : 'GPS'}
+              {gpsAccuracy !== null ? `±${gpsAccuracy}m` : 'GPS'}
             </div>
 
-            {/* Connection Status Indicator */}
+            {/* Live SAP Sync Status Pill */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                fontSize: '0.72rem',
-                color: isOnline ? 'var(--status-success)' : 'var(--status-delayed)',
-                backgroundColor: isOnline ? 'var(--status-success-bg)' : 'var(--status-delayed-bg)',
-                border: `1px solid ${isOnline ? 'var(--status-success-border)' : 'var(--status-delayed-border)'}`,
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                color: isOnline ? '#107E3E' : '#E9730C',
+                backgroundColor: isOnline ? 'rgba(16, 126, 62, 0.22)' : 'rgba(233, 115, 12, 0.22)',
+                border: `1px solid ${isOnline ? 'rgba(16, 126, 62, 0.45)' : 'rgba(233, 115, 12, 0.45)'}`,
                 padding: '3px 8px',
-                borderRadius: 'var(--radius-full)'
+                borderRadius: '9999px'
               }}
             >
               {isOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
-              {isOnline ? 'Online' : 'Offline'}
+              {isOnline ? 'SAP Live' : 'Offline'}
             </div>
 
             {onToggleTheme && (
@@ -528,7 +526,12 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
             <button
               onClick={onLogout}
               className="btn btn-secondary btn-sm"
-              style={{ padding: '5px 8px' }}
+              style={{
+                padding: '5px 8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                color: '#ffffff',
+                borderColor: 'rgba(255, 255, 255, 0.25)'
+              }}
               title="Logout"
             >
               <LogOut size={13} />
@@ -536,67 +539,57 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           </div>
         </header>
 
-        {/* Native Android APK Download Banner */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '8px 12px',
-            fontSize: '0.78rem'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.1rem' }}>🤖</span>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Native Android App</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v1.0.0 APK • Geofencing & Offline Telematics</div>
-            </div>
-          </div>
-          <a
-            href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary btn-sm"
+        {/* Role Simulator Return Banner (if manager simulating driver) */}
+        {onSwitchRole && currentUser.role === 'MANAGER' && (
+          <div
             style={{
-              padding: '3px 9px',
-              fontSize: '0.74rem',
-              color: 'var(--accent-primary)',
-              borderColor: 'var(--border-medium)',
-              textDecoration: 'none',
-              display: 'inline-flex',
+              backgroundColor: 'var(--sap-info-bg, rgba(0, 112, 242, 0.12))',
+              border: '1px solid var(--sap-brand, #0070F2)',
+              borderRadius: 'var(--radius-md, 8px)',
+              padding: '8px 12px',
+              display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              justifyContent: 'space-between',
+              fontSize: '0.8rem'
             }}
           >
-            <span>Download APK</span>
-          </a>
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sap-brand, #0070F2)', fontWeight: 600 }}>
+              <Smartphone size={15} />
+              <span>Simulating SAP Driver Execution Terminal</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sap-primary btn-sm"
+              onClick={() => onSwitchRole('MANAGER')}
+              style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+            >
+              Return to Manager
+            </button>
+          </div>
+        )}
 
         {/* Offline Queued Events Banner */}
         {offlineCount > 0 && (
           <div
             style={{
-              backgroundColor: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--sap-critical-bg, #FFF5EB)',
+              border: '1px solid var(--sap-critical-border, #FCD5B5)',
+              borderRadius: 'var(--radius-md, 8px)',
               padding: '10px 14px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              fontSize: '0.82rem'
+              fontSize: '0.82rem',
+              color: 'var(--sap-critical, #E9730C)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--status-delayed)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
               <Clock size={16} />
-              <span>Saved — waiting for network ({offlineCount} queued)</span>
+              <span>Events queued locally ({offlineCount} actions pending SAP sync)</span>
             </div>
             <button
-              className="btn btn-secondary"
-              style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+              className="btn btn-sap-secondary btn-sm"
+              style={{ padding: '4px 9px', fontSize: '0.74rem' }}
               onClick={() => offlineQueue.processQueue()}
             >
               Sync Now
@@ -604,135 +597,224 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
           </div>
         )}
 
-        {/* Active Unresolved Delay Banner */}
+        {/* Active Unresolved Delay Banner (SAP Fiori Critical Warning) */}
         {activeDelay && (
           <div
             style={{
-              backgroundColor: 'var(--status-delayed-bg)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--sap-critical-bg, #FFF5EB)',
+              border: '1px solid var(--sap-critical-border, #FCD5B5)',
+              borderRadius: 'var(--radius-lg, 12px)',
               padding: '16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px'
+              gap: '12px',
+              boxShadow: 'var(--sap-shadow-card)'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--status-delayed)', fontWeight: 600 }}>
-                <AlertTriangle size={18} />
-                <span>DELAY REPORTED: {activeDelay.reason}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sap-critical, #E9730C)', fontWeight: 700 }}>
+                <AlertTriangle size={20} />
+                <span style={{ fontSize: '0.92rem' }}>ACTIVE DELAY: {activeDelay.reason.toUpperCase()}</span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--sap-text-caption, #6A7D8F)', fontWeight: 600 }}>
                 Started {new Date(activeDelay.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             {activeDelay.description && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{activeDelay.description}</p>
+              <p style={{ fontSize: '0.86rem', color: 'var(--sap-text-body, #32363A)', margin: 0 }}>{activeDelay.description}</p>
             )}
             {activeDelay.photo_id && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--accent-gold)' }}>
-                <Camera size={14} /> Photo evidence attached to delay report
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--sap-brand, #0070F2)' }}>
+                <Camera size={14} /> Photo proof attached to delay log
               </div>
             )}
             <button
-              className="btn btn-huge"
+              className="btn btn-sap-positive btn-huge"
               style={{
-                backgroundColor: 'var(--status-success)',
-                color: '#0d0e11',
                 padding: '14px',
                 fontSize: '1rem',
-                marginTop: '4px'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
               }}
               onClick={handleResolveDelay}
               disabled={actionLoading}
             >
-              <CheckCircle size={18} /> DELAY RESOLVED
+              <CheckCircle size={18} /> DELAY RESOLVED — RESUME ROUTE
             </button>
           </div>
         )}
 
         {/* Main Content: Trip Controller or No Trip Assigned */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            Loading your operational assignments...
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--sap-text-caption, #6A7D8F)' }}>
+            Loading SAP dispatch assignments...
           </div>
         ) : !activeTrip ? (
-          <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <Truck size={48} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '6px' }}>No Trips Assigned Today</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-              Check in with dispatch manager to receive your vehicle route schedule.
+          <div className="card" style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'var(--sap-card-bg)', border: '1px solid var(--sap-border-color)' }}>
+            <Truck size={48} color="var(--sap-text-caption, #6A7D8F)" style={{ margin: '0 auto 12px' }} />
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '6px', color: 'var(--sap-text-title)' }}>No Assigned Shipments Today</h3>
+            <p style={{ fontSize: '0.88rem', color: 'var(--sap-text-body)' }}>
+              Check with Dispatch Command to receive your SAP Freight Order and route schedule.
             </p>
             <button
-              className="btn btn-secondary"
+              className="btn btn-sap-secondary"
               style={{ marginTop: '16px' }}
               onClick={loadTodayTrips}
             >
-              <RotateCcw size={16} /> Refresh
+              <RotateCcw size={16} /> Refresh Assignments
             </button>
           </div>
         ) : (
-          /* Guided Trip Card */
-          <div className="card card-gold-border" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Trip Header Info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          /* SAP Horizon Guided Trip Card */
+          <div
+            className="card"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              backgroundColor: 'var(--sap-card-bg)',
+              border: '1px solid var(--sap-border-color)',
+              boxShadow: 'var(--sap-shadow-card)',
+              borderRadius: 'var(--radius-lg, 12px)'
+            }}
+          >
+            {/* SAP Freight Order Header Info */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', fontWeight: 600, letterSpacing: '0.04em' }}>
-                  ACTIVE ASSIGNMENT
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      backgroundColor: 'var(--sap-info-bg)',
+                      color: 'var(--sap-brand)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      letterSpacing: '0.04em'
+                    }}
+                  >
+                    SAP FREIGHT ORDER (TOR)
+                  </span>
+                  {activeTrip.cost_center && (
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 600,
+                        backgroundColor: 'var(--sap-neutral-bg)',
+                        color: 'var(--sap-text-caption)',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      {activeTrip.cost_center}
+                    </span>
+                  )}
                 </div>
-                <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginTop: '2px' }}>
-                  {activeTrip.id}
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--sap-text-title)', marginTop: '4px', letterSpacing: '-0.02em' }}>
+                  {activeTrip.sap_shipment_num || activeTrip.id}
                 </h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{activeTrip.vehicle_number}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--sap-text-caption)', marginTop: '2px' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--sap-text-body)' }}>{activeTrip.vehicle_number}</span>
                   <span>•</span>
-                  <span>{activeTrip.vehicle_model}</span>
+                  <span>{activeTrip.vehicle_model || 'Heavy Truck'}</span>
+                  {activeTrip.erp_delivery_doc && (
+                    <>
+                      <span>•</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem' }}>Doc: {activeTrip.erp_delivery_doc}</span>
+                    </>
+                  )}
                 </div>
               </div>
 
               <StatusBadge status={activeTrip.status} />
             </div>
 
-            {/* Planned Departure & Base */}
+            {/* Planned Departure & Base Strip */}
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: '10px',
-                padding: '12px',
-                backgroundColor: 'var(--bg-secondary)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.82rem'
+                padding: '10px 14px',
+                backgroundColor: 'var(--sap-neutral-bg)',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                border: '1px solid var(--sap-border-color)'
               }}
             >
               <div>
-                <div style={{ color: 'var(--text-muted)' }}>Planned Departure</div>
-                <div style={{ fontWeight: 600, marginTop: '2px', color: 'var(--text-primary)' }}>
+                <div style={{ color: 'var(--sap-text-caption)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 600 }}>Planned Departure</div>
+                <div style={{ fontWeight: 700, marginTop: '2px', color: 'var(--sap-text-body)' }}>
                   {activeTrip.planned_departure_time}
                 </div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-muted)' }}>Starting Base</div>
-                <div style={{ fontWeight: 600, marginTop: '2px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ color: 'var(--sap-text-caption)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 600 }}>Starting Depot</div>
+                <div style={{ fontWeight: 700, marginTop: '2px', color: 'var(--sap-text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {activeTrip.starting_location}
                 </div>
               </div>
             </div>
 
-            {/* Destination Progress Indicator */}
-            <div style={{ padding: '4px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '6px' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Destination Progress</span>
-                <span style={{ fontWeight: 600, color: 'var(--accent-gold)' }}>
-                  {completedStopsCount} of {totalStopsCount} Completed
+            {/* SAP Milestone 4-Stage Stepper */}
+            <div className="sap-milestone-bar">
+              {/* Step 1: Base Start */}
+              <div className={`sap-milestone-step ${activeTrip.status !== 'ASSIGNED' && activeTrip.status !== 'PLANNED' ? 'completed' : 'active'}`}>
+                <div className={`sap-step-circle ${activeTrip.status !== 'ASSIGNED' && activeTrip.status !== 'PLANNED' ? 'completed' : 'active'}`}>
+                  {activeTrip.status !== 'ASSIGNED' && activeTrip.status !== 'PLANNED' ? <Check size={14} /> : '1'}
+                </div>
+                <div className={`sap-step-label ${activeTrip.status === 'ASSIGNED' || activeTrip.status === 'PLANNED' ? 'active' : 'completed'}`}>
+                  Base Start
+                </div>
+              </div>
+
+              {/* Step 2: Deliveries */}
+              <div className={`sap-milestone-step ${allStopsCompleted ? 'completed' : (activeTrip.status === 'IN_PROGRESS' || activeTrip.status === 'AT_DESTINATION') ? 'active' : 'upcoming'}`}>
+                <div className={`sap-step-circle ${allStopsCompleted ? 'completed' : (activeTrip.status === 'IN_PROGRESS' || activeTrip.status === 'AT_DESTINATION') ? 'active' : 'upcoming'}`}>
+                  {allStopsCompleted ? <Check size={14} /> : `${completedStopsCount}/${totalStopsCount}`}
+                </div>
+                <div className={`sap-step-label ${(activeTrip.status === 'IN_PROGRESS' || activeTrip.status === 'AT_DESTINATION') ? 'active' : allStopsCompleted ? 'completed' : ''}`}>
+                  Deliveries
+                </div>
+              </div>
+
+              {/* Step 3: Base Return */}
+              <div className={`sap-milestone-step ${activeTrip.status === 'COMPLETED' || (activeTrip.status === 'RETURNING' && activeTrip.base_arrival_time) ? 'completed' : activeTrip.status === 'RETURNING' ? 'active' : 'upcoming'}`}>
+                <div className={`sap-step-circle ${activeTrip.status === 'COMPLETED' || (activeTrip.status === 'RETURNING' && activeTrip.base_arrival_time) ? 'completed' : activeTrip.status === 'RETURNING' ? 'active' : 'upcoming'}`}>
+                  {activeTrip.status === 'COMPLETED' || (activeTrip.status === 'RETURNING' && activeTrip.base_arrival_time) ? <Check size={14} /> : '3'}
+                </div>
+                <div className={`sap-step-label ${activeTrip.status === 'RETURNING' ? 'active' : activeTrip.status === 'COMPLETED' ? 'completed' : ''}`}>
+                  Return
+                </div>
+              </div>
+
+              {/* Step 4: TM Settlement */}
+              <div className={`sap-milestone-step ${activeTrip.status === 'COMPLETED' ? 'completed' : (activeTrip.status === 'RETURNING' && activeTrip.base_arrival_time) ? 'active' : 'upcoming'}`}>
+                <div className={`sap-step-circle ${activeTrip.status === 'COMPLETED' ? 'completed' : 'upcoming'}`}>
+                  {activeTrip.status === 'COMPLETED' ? <Check size={14} /> : '4'}
+                </div>
+                <div className={`sap-step-label ${activeTrip.status === 'COMPLETED' ? 'completed' : ''}`}>
+                  Settlement
+                </div>
+              </div>
+            </div>
+
+            {/* Destination Progress Bar */}
+            <div style={{ padding: '2px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '5px' }}>
+                <span style={{ color: 'var(--sap-text-caption)' }}>Execution Progress</span>
+                <span style={{ fontWeight: 700, color: 'var(--sap-brand)' }}>
+                  {completedStopsCount} of {totalStopsCount} Destinations Delivered
                 </span>
               </div>
-              <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '7px', backgroundColor: 'var(--sap-neutral-bg)', borderRadius: '9999px', overflow: 'hidden' }}>
                 <div
                   style={{
                     height: '100%',
                     width: `${totalStopsCount > 0 ? (completedStopsCount / totalStopsCount) * 100 : 0}%`,
-                    backgroundColor: 'var(--accent-gold)',
+                    backgroundColor: 'var(--sap-positive)',
                     transition: 'width 0.3s ease'
                   }}
                 />
@@ -1086,20 +1168,28 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
               </div>
             )}
 
-            {/* STAGE CONTROLLER ACTIONS */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
+            {/* STAGE CONTROLLER ACTIONS (SAP Fiori Horizon Driver Journey) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '4px' }}>
               {/* STAGE 1: Trip Not Started Yet */}
               {(activeTrip.status === 'ASSIGNED' || activeTrip.status === 'PLANNED') && (
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <button
-                    className="btn btn-huge btn-primary"
+                    className="btn btn-sap-primary btn-huge"
                     onClick={handleStartTrip}
                     disabled={actionLoading}
+                    style={{
+                      padding: '16px',
+                      fontSize: '1.05rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px'
+                    }}
                   >
-                    <Play size={20} /> START TRIP
+                    <Play size={22} /> START TRIP & DEPART BASE
                   </button>
-                  <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                    Press when departing company depot. Departure GPS & server timestamp will be recorded.
+                  <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--sap-text-caption, #6A7D8F)', margin: 0 }}>
+                    Departing from {activeTrip.starting_location}. Departure GPS coordinates & server timestamp will be synced to SAP TM.
                   </p>
                 </div>
               )}
@@ -1113,135 +1203,167 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                 const arrivalClock = etaMins !== null
                   ? new Date(Date.now() + etaMins * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : currentStop.planned_arrival_time;
+                const stopAreaCode = getStopAreaCode(currentStop);
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Active Destination Card */}
                     <div
                       style={{
-                        padding: '14px',
-                        backgroundColor: 'var(--bg-secondary)',
-                        borderRadius: 'var(--radius-md)',
-                        borderLeft: '4px solid var(--accent-whatsapp)',
+                        padding: '16px',
+                        backgroundColor: 'var(--sap-neutral-bg)',
+                        borderRadius: 'var(--radius-md, 8px)',
+                        borderLeft: '5px solid var(--sap-brand, #0070F2)',
+                        borderTop: '1px solid var(--sap-border-color)',
+                        borderRight: '1px solid var(--sap-border-color)',
+                        borderBottom: '1px solid var(--sap-border-color)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '8px'
+                        gap: '10px'
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--accent-whatsapp)', fontWeight: 700, letterSpacing: '0.5px' }}>
-                          NEXT DESTINATION (STOP {currentStop.stop_number} OF {totalStopsCount})
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--sap-brand)', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                          NEXT STOP (STOP {currentStop.stop_number} OF {totalStopsCount})
                         </div>
                         {distToCurrent !== null && (
                           <div
                             style={{
-                              fontSize: '0.72rem',
+                              fontSize: '0.74rem',
                               fontWeight: 700,
-                              backgroundColor: 'rgba(37, 211, 102, 0.15)',
-                              color: 'var(--accent-whatsapp)',
+                              backgroundColor: 'var(--sap-positive-bg)',
+                              color: 'var(--sap-positive)',
+                              border: '1px solid var(--sap-positive-border)',
                               padding: '2px 8px',
-                              borderRadius: 'var(--radius-full)'
+                              borderRadius: '9999px'
                             }}
                           >
-                            📍 {distToCurrent} km away
+                            📍 {distToCurrent} km away • ~{etaMins} mins
                           </div>
                         )}
                       </div>
 
-                      <div style={{ fontSize: '1.15rem', fontWeight: 600 }}>
-                        {currentStop.destination_name}
+                      {/* Destination Name with Official Area Code Badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--sap-text-title)' }}>
+                          {currentStop.destination_name}
+                        </span>
+                        {stopAreaCode && (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: 700,
+                              backgroundColor: 'var(--sap-brand-light, #EBF3FC)',
+                              color: 'var(--sap-brand, #0070F2)',
+                              border: '1px solid var(--sap-border-color)',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              letterSpacing: '0.4px'
+                            }}
+                            title="Facility Area Code"
+                          >
+                            {stopAreaCode}
+                          </span>
+                        )}
                       </div>
 
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <MapPin size={14} style={{ flexShrink: 0 }} />
+                      <div style={{ fontSize: '0.86rem', color: 'var(--sap-text-body)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MapPin size={15} style={{ flexShrink: 0, color: 'var(--sap-brand)' }} />
                         <span>{currentStop.address}</span>
                       </div>
 
-                      {/* Distance, ETA & Coordinates Strip */}
+                      {/* Distance & ETA Schedule Strip */}
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                          gap: '8px',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '10px',
                           paddingTop: '8px',
-                          borderTop: '1px solid var(--border-subtle)',
+                          borderTop: '1px solid var(--sap-border-color)',
                           fontSize: '0.78rem'
                         }}
                       >
                         <div>
-                          <div style={{ color: 'var(--text-muted)' }}>Reaching Time (ETA)</div>
-                          <div style={{ fontWeight: 600, color: 'var(--accent-whatsapp)' }}>
-                            {etaMins !== null ? `~${etaMins} mins (${arrivalClock})` : currentStop.planned_arrival_time}
+                          <div style={{ color: 'var(--sap-text-caption)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 600 }}>Estimated Arrival</div>
+                          <div style={{ fontWeight: 700, color: 'var(--sap-brand)', marginTop: '2px' }}>
+                            {etaMins !== null ? `~${etaMins}m (${arrivalClock})` : currentStop.planned_arrival_time}
                           </div>
                         </div>
                         <div>
-                          <div style={{ color: 'var(--text-muted)' }}>Coordinates</div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem' }}>
-                            {currentStop.latitude?.toFixed(4)}, {currentStop.longitude?.toFixed(4)}
+                          <div style={{ color: 'var(--sap-text-caption)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 600 }}>Planned Schedule</div>
+                          <div style={{ fontWeight: 600, color: 'var(--sap-text-body)', marginTop: '2px' }}>
+                            {currentStop.planned_arrival_time}
                           </div>
                         </div>
                       </div>
 
-                      {/* Turn-by-Turn Google Navigation Button */}
+                      {/* Direct Turn-by-Turn Google Navigation Button */}
                       {currentStop.latitude && currentStop.longitude && (
                         <a
                           href={`https://www.google.com/maps/dir/?api=1&destination=${currentStop.latitude},${currentStop.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="btn btn-secondary btn-sm"
+                          className="btn btn-sap-secondary btn-sm"
                           style={{
                             marginTop: '4px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            fontSize: '0.78rem',
-                            color: 'var(--accent-whatsapp)',
-                            borderColor: 'var(--border-medium)',
-                            textDecoration: 'none'
+                            gap: '8px',
+                            padding: '10px 14px',
+                            fontSize: '0.86rem',
+                            textDecoration: 'none',
+                            color: 'var(--sap-brand)'
                           }}
                         >
-                          <Navigation size={13} />
+                          <Navigation size={15} />
                           <span>Start Turn-by-Turn Google Navigation</span>
-                          <ExternalLink size={12} />
+                          <ExternalLink size={13} />
                         </a>
                       )}
                     </div>
 
+                    {/* MASSIVE 1-TAP ARRIVAL BUTTON */}
                     <button
-                      className="btn btn-huge btn-primary"
+                      className="btn btn-sap-positive btn-huge"
                       onClick={handleArriveAtStop}
                       disabled={actionLoading}
                       style={{
-                        backgroundColor: 'var(--accent-whatsapp)',
-                        borderColor: 'var(--accent-whatsapp)',
-                        color: '#0b141a',
-                        fontWeight: 700
+                        padding: '16px',
+                        fontSize: '1.05rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
                       }}
                     >
-                      <MapPin size={20} /> ARRIVED AT STOP
+                      <MapPin size={22} /> ARRIVED AT FACILITY (DOCK / BAY)
                     </button>
 
+                    {/* Quick Auxiliary 2-Column Buttons */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-sap-critical"
+                        style={{ padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                         onClick={() => setIsDelayOpen(true)}
                       >
                         <AlertTriangle size={16} /> Report Delay
                       </button>
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-sap-secondary"
+                        style={{ padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                         onClick={() => setIsCameraOpen(true)}
                       >
-                        <Camera size={16} /> Take Photo
+                        <Camera size={16} /> Take Photo / Proof
                       </button>
                     </div>
 
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="btn btn-sap-secondary"
                       onClick={() => setIsCustomStopOpen(true)}
                       style={{
                         display: 'flex',
@@ -1249,121 +1371,157 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                         justifyContent: 'center',
                         gap: '6px',
                         padding: '10px 14px',
-                        borderStyle: 'dashed'
+                        borderStyle: 'dashed',
+                        fontSize: '0.82rem'
                       }}
                     >
-                      <Plus size={16} color="var(--accent-whatsapp)" />
-                      <span>Add Custom Stop (Emergency / Ad-hoc)</span>
+                      <Plus size={15} color="var(--sap-brand)" />
+                      <span>Add Ad-hoc Stop (Emergency / Unplanned)</span>
                     </button>
                   </div>
                 );
               })()}
 
               {/* STAGE 3: At Destination (Arrived / In Progress Stop) */}
-              {(activeTrip.status === 'AT_DESTINATION' || (activeTrip.status === 'IN_PROGRESS' && currentStop?.status === 'ARRIVED')) && currentStop && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div
-                    style={{
-                      padding: '14px',
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderRadius: 'var(--radius-md)',
-                      borderLeft: '4px solid var(--status-success)'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.75rem', color: 'var(--status-success)', fontWeight: 600 }}>
-                      CURRENTLY AT STOP {currentStop.stop_number}
+              {(activeTrip.status === 'AT_DESTINATION' || (activeTrip.status === 'IN_PROGRESS' && currentStop?.status === 'ARRIVED')) && currentStop && (() => {
+                const stopAreaCode = getStopAreaCode(currentStop);
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: 'var(--sap-positive-bg)',
+                        borderRadius: 'var(--radius-md, 8px)',
+                        borderLeft: '5px solid var(--sap-positive)',
+                        borderTop: '1px solid var(--sap-positive-border)',
+                        borderRight: '1px solid var(--sap-positive-border)',
+                        borderBottom: '1px solid var(--sap-positive-border)'
+                      }}
+                    >
+                      <div style={{ fontSize: '0.74rem', color: 'var(--sap-positive)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        AT FACILITY DOCK — STOP {currentStop.stop_number}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--sap-text-title)' }}>
+                          {currentStop.destination_name}
+                        </span>
+                        {stopAreaCode && (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: 700,
+                              backgroundColor: '#ffffff',
+                              color: 'var(--sap-positive)',
+                              border: '1px solid var(--sap-positive-border)',
+                              padding: '2px 8px',
+                              borderRadius: '4px'
+                            }}
+                          >
+                            {stopAreaCode}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--sap-text-body)', marginTop: '4px' }}>
+                        Arrived: {currentStop.actual_arrival_time ? new Date(currentStop.actual_arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                        {currentStop.arrival_diff_minutes ? ` (${currentStop.arrival_diff_minutes > 0 ? `+${currentStop.arrival_diff_minutes}m late` : `${currentStop.arrival_diff_minutes}m early`})` : ' • On Schedule'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 600, marginTop: '2px' }}>
-                      {currentStop.destination_name}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <button
+                        className="btn btn-sap-primary"
+                        style={{ padding: '14px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        onClick={handleCompleteActivity}
+                        disabled={actionLoading}
+                      >
+                        <CheckCircle size={18} /> COMPLETE UNLOAD
+                      </button>
+
+                      <button
+                        className="btn btn-sap-secondary"
+                        style={{ padding: '14px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        onClick={() => setIsCameraOpen(true)}
+                      >
+                        <Camera size={18} /> POD PHOTO
+                      </button>
                     </div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Arrived: {currentStop.actual_arrival_time ? new Date(currentStop.actual_arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-                      {currentStop.arrival_diff_minutes ? ` (${currentStop.arrival_diff_minutes > 0 ? `+${currentStop.arrival_diff_minutes}m late` : `${currentStop.arrival_diff_minutes}m early`})` : ''}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <button
+                        className="btn btn-sap-critical"
+                        style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        onClick={() => setIsDelayOpen(true)}
+                      >
+                        <AlertTriangle size={16} /> Report Delay
+                      </button>
+
+                      <button
+                        className="btn btn-sap-positive"
+                        style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        onClick={handleDepartStop}
+                        disabled={actionLoading}
+                      >
+                        <Navigation size={16} /> DEPART DOCK
+                      </button>
                     </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <button
-                      className="btn btn-primary"
-                      style={{ padding: '14px', backgroundColor: 'var(--accent-whatsapp)', borderColor: 'var(--accent-whatsapp)', color: '#0b141a', fontWeight: 700 }}
-                      onClick={handleCompleteActivity}
-                      disabled={actionLoading}
-                    >
-                      <CheckCircle size={18} /> COMPLETE ACTIVITY
-                    </button>
 
                     <button
-                      className="btn btn-secondary"
-                      style={{ padding: '14px' }}
-                      onClick={() => setIsCameraOpen(true)}
+                      type="button"
+                      className="btn btn-sap-secondary btn-sm"
+                      onClick={() => setIsCustomStopOpen(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '10px 14px',
+                        borderStyle: 'dashed',
+                        fontSize: '0.8rem'
+                      }}
                     >
-                      <Camera size={18} /> TAKE PHOTO
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setIsDelayOpen(true)}
-                    >
-                      <AlertTriangle size={16} /> Report Delay
-                    </button>
-
-                    <button
-                      className="btn btn-success"
-                      onClick={handleDepartStop}
-                      disabled={actionLoading}
-                    >
-                      <Navigation size={16} /> DEPART STOP
+                      <Plus size={14} color="var(--sap-brand)" />
+                      <span>Add Another Destination Stop</span>
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setIsCustomStopOpen(true)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '8px 12px',
-                      borderStyle: 'dashed',
-                      fontSize: '0.78rem'
-                    }}
-                  >
-                    <Plus size={14} color="var(--accent-whatsapp)" />
-                    <span>Add Another Stop Next</span>
-                  </button>
-                </div>
-              )}
+                );
+              })()}
 
               {/* STAGE 4: All Stops Completed -> Start Return */}
               {allStopsCompleted && activeTrip.status === 'IN_PROGRESS' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div
                     style={{
-                      padding: '14px',
-                      backgroundColor: 'var(--status-success-bg)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      backgroundColor: 'var(--sap-positive-bg)',
+                      border: '1px solid var(--sap-positive-border)',
+                      borderRadius: 'var(--radius-md, 8px)',
                       textAlign: 'center'
                     }}
                   >
-                    <div style={{ color: 'var(--status-success)', fontWeight: 600, fontSize: '1rem' }}>
-                      🎉 ALL DESTINATIONS COMPLETED!
+                    <div style={{ color: 'var(--sap-positive)', fontWeight: 800, fontSize: '1.05rem' }}>
+                      🎉 ALL STOPS DELIVERED & COMPLETED!
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      All {totalStopsCount} stops delivered and departed. Ready to head back to base.
+                    <div style={{ fontSize: '0.86rem', color: 'var(--sap-text-body)', marginTop: '4px' }}>
+                      All {totalStopsCount} customer destinations reached and unloaded. Ready to return to depot.
                     </div>
                   </div>
 
                   <button
-                    className="btn btn-huge btn-primary"
+                    className="btn btn-sap-primary btn-huge"
                     onClick={handleStartReturn}
                     disabled={actionLoading}
+                    style={{
+                      padding: '16px',
+                      fontSize: '1.05rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px'
+                    }}
                   >
-                    <RotateCcw size={20} /> START RETURN JOURNEY
+                    <RotateCcw size={22} /> START RETURN JOURNEY
                   </button>
                 </div>
               )}
@@ -1373,31 +1531,41 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div
                     style={{
-                      padding: '14px',
-                      backgroundColor: 'var(--status-returning-bg)',
-                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      backgroundColor: 'var(--sap-info-bg)',
+                      border: '1px solid var(--sap-border-color)',
+                      borderRadius: 'var(--radius-md, 8px)',
                       textAlign: 'center'
                     }}
                   >
-                    <div style={{ color: 'var(--status-returning)', fontWeight: 600 }}>
-                      VEHICLE EN ROUTE TO BASE
+                    <div style={{ color: 'var(--sap-brand)', fontWeight: 800, fontSize: '1rem' }}>
+                      VEHICLE EN ROUTE TO BASE DEPOT
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      Head back safely to {activeTrip.starting_location}
+                    <div style={{ fontSize: '0.86rem', color: 'var(--sap-text-body)', marginTop: '4px' }}>
+                      Drive safely back to {activeTrip.starting_location}
                     </div>
                   </div>
 
                   <button
-                    className="btn btn-huge btn-primary"
+                    className="btn btn-sap-positive btn-huge"
                     onClick={handleArriveAtBase}
                     disabled={actionLoading}
+                    style={{
+                      padding: '16px',
+                      fontSize: '1.05rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px'
+                    }}
                   >
-                    <MapPin size={20} /> ARRIVED AT BASE
+                    <MapPin size={22} /> ARRIVED AT BASE DEPOT
                   </button>
 
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-sap-critical"
                     onClick={() => setIsDelayOpen(true)}
+                    style={{ padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                   >
                     <AlertTriangle size={16} /> Report Transit Delay
                   </button>
@@ -1406,32 +1574,40 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
 
               {/* STAGE 6: Arrived at Base -> Complete Trip Summary */}
               {activeTrip.status === 'RETURNING' && activeTrip.base_arrival_time && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div
                     style={{
                       padding: '16px',
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-medium)'
+                      backgroundColor: 'var(--sap-neutral-bg)',
+                      borderRadius: 'var(--radius-md, 8px)',
+                      border: '1px solid var(--sap-border-color)'
                     }}
                   >
-                    <h4 style={{ fontSize: '1rem', color: 'var(--accent-gold)', marginBottom: '10px' }}>
-                      TRIP SUMMARY
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--sap-brand)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      SAP TM TRIP CLOSURE SUMMARY
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
-                      <div>Total Destinations: <b>{totalStopsCount}</b></div>
-                      <div>Completed: <b>{completedStopsCount}</b></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem' }}>
+                      <div>Total Deliveries: <b>{totalStopsCount}</b></div>
+                      <div>Completed: <b style={{ color: 'var(--sap-positive)' }}>{completedStopsCount}</b></div>
                       <div>Total Delays: <b>{activeTrip.total_delay_minutes || 0} mins</b></div>
-                      <div>Base Arrival: <b>Recorded</b></div>
+                      <div>Base Arrival: <b>Recorded & Verified</b></div>
                     </div>
                   </div>
 
                   <button
-                    className="btn btn-huge btn-primary"
+                    className="btn btn-sap-primary btn-huge"
                     onClick={handleCompleteTrip}
                     disabled={actionLoading}
+                    style={{
+                      padding: '16px',
+                      fontSize: '1.05rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px'
+                    }}
                   >
-                    <CheckCircle size={20} /> COMPLETE TRIP
+                    <CheckCircle size={22} /> SUBMIT & CLOSE TRIP (SAP SETTLEMENT)
                   </button>
                 </div>
               )}
@@ -1440,23 +1616,24 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
               {activeTrip.status === 'COMPLETED' && (
                 <div
                   style={{
-                    padding: '20px',
-                    backgroundColor: 'var(--status-success-bg)',
-                    borderRadius: 'var(--radius-lg)',
+                    padding: '22px',
+                    backgroundColor: 'var(--sap-positive-bg)',
+                    border: '1px solid var(--sap-positive-border)',
+                    borderRadius: 'var(--radius-lg, 12px)',
                     textAlign: 'center'
                   }}
                 >
-                  <CheckCircle size={36} color="var(--status-success)" style={{ margin: '0 auto 8px' }} />
-                  <h3 style={{ fontSize: '1.15rem', color: 'var(--status-success)' }}>Trip Completed Successfully</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    All logs, timestamps, and GPS proof points are recorded and synchronized to headquarters.
+                  <CheckCircle size={40} color="var(--sap-positive)" style={{ margin: '0 auto 10px' }} />
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sap-positive)' }}>Trip Completed & Settled</h3>
+                  <p style={{ fontSize: '0.86rem', color: 'var(--sap-text-body)', marginTop: '4px' }}>
+                    All milestones, proof of deliveries, and telematics logs have been synchronized to SAP TM & S/4HANA.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Destination Stops List Accordion */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginTop: '4px' }}>
+            {/* Destination Stops List Accordion (SAP Stage Schedule) */}
+            <div style={{ borderTop: '1px solid var(--sap-border-color)', paddingTop: '16px', marginTop: '4px' }}>
               <div
                 style={{
                   display: 'flex',
@@ -1465,25 +1642,23 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                   marginBottom: '12px'
                 }}
               >
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Trip Route Stops ({activeTrip.stops?.length || 0})
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sap-text-caption)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  SAP ROUTE STAGES & STOPS ({activeTrip.stops?.length || 0})
                 </div>
                 <button
                   type="button"
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-sap-secondary btn-sm"
                   onClick={() => setIsCustomStopOpen(true)}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    gap: '5px',
                     padding: '4px 10px',
-                    fontSize: '0.74rem',
-                    color: 'var(--accent-whatsapp)',
-                    borderColor: 'var(--border-medium)'
+                    fontSize: '0.74rem'
                   }}
                 >
-                  <Plus size={13} />
-                  <span>Add Custom Stop</span>
+                  <Plus size={13} color="var(--sap-brand)" />
+                  <span>Add Stop</span>
                 </button>
               </div>
 
@@ -1491,6 +1666,7 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                 {activeTrip.stops?.map((stop, index) => {
                   const isCurrent = currentStop?.id === stop.id;
                   const isDone = stop.status === 'COMPLETED';
+                  const stopAreaCode = getStopAreaCode(stop);
 
                   // Calculate inter-stop leg distance
                   const prevLat = index === 0 ? (28.5355) : (activeTrip.stops![index - 1].latitude || 28.5355);
@@ -1508,9 +1684,9 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                         flexDirection: 'column',
                         gap: '8px',
                         padding: '12px 14px',
-                        backgroundColor: isCurrent ? 'var(--bg-surface-elevated)' : 'var(--bg-secondary)',
-                        border: `1px solid ${isCurrent ? 'var(--accent-whatsapp)' : 'var(--border-subtle)'}`,
-                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: isCurrent ? 'var(--sap-brand-light, #EBF3FC)' : 'var(--sap-neutral-bg)',
+                        border: `1px solid ${isCurrent ? 'var(--sap-brand)' : 'var(--sap-border-color)'}`,
+                        borderRadius: 'var(--radius-md, 8px)',
                         opacity: isDone ? 0.75 : 1
                       }}
                     >
@@ -1518,27 +1694,48 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div
                             style={{
-                              width: '26px',
-                              height: '26px',
+                              width: '28px',
+                              height: '28px',
                               borderRadius: '50%',
                               backgroundColor: isDone
-                                ? 'var(--status-success)'
+                                ? 'var(--sap-positive)'
                                 : isCurrent
-                                ? 'var(--accent-whatsapp)'
-                                : 'var(--border-medium)',
-                              color: isCurrent || isDone ? '#0d0e11' : 'var(--text-primary)',
+                                ? 'var(--sap-brand)'
+                                : 'var(--sap-border-color)',
+                              color: isCurrent || isDone ? '#ffffff' : 'var(--sap-text-caption)',
                               fontSize: '0.75rem',
                               fontWeight: 700,
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              flexShrink: 0
                             }}
                           >
-                            {isDone ? '✓' : stop.stop_number}
+                            {isDone ? <Check size={14} /> : stop.stop_number}
                           </div>
                           <div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{stop.destination_name}</div>
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--sap-text-title)' }}>
+                                {stop.destination_name}
+                              </span>
+                              {stopAreaCode && (
+                                <span
+                                  style={{
+                                    fontSize: '0.68rem',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontWeight: 700,
+                                    backgroundColor: '#ffffff',
+                                    color: 'var(--sap-brand)',
+                                    border: '1px solid var(--sap-border-color)',
+                                    padding: '1px 6px',
+                                    borderRadius: '3px'
+                                  }}
+                                >
+                                  {stopAreaCode}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--sap-text-caption)', marginTop: '2px' }}>
                               {stop.address}
                             </div>
                           </div>
@@ -1547,7 +1744,7 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                         <StatusBadge status={stop.status} />
                       </div>
 
-                      {/* Technical Route Telemetry: Coordinates, Leg Distance & Reaching Time */}
+                      {/* Distance & Navigation Row */}
                       <div
                         style={{
                           display: 'flex',
@@ -1556,20 +1753,15 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                           flexWrap: 'wrap',
                           gap: '6px',
                           paddingTop: '6px',
-                          borderTop: '1px dashed var(--border-subtle)',
+                          borderTop: '1px dashed var(--sap-border-color)',
                           fontSize: '0.72rem',
-                          color: 'var(--text-secondary)'
+                          color: 'var(--sap-text-caption)'
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           {legDist !== null && (
-                            <span style={{ fontWeight: 600, color: 'var(--accent-whatsapp)' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--sap-brand)' }}>
                               📏 {legDist} km from {index === 0 ? 'Depot' : `Stop #${index}`} (~{legMins}m)
-                            </span>
-                          )}
-                          {stop.latitude && stop.longitude && (
-                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                              GPS: {stop.latitude.toFixed(4)}, {stop.longitude.toFixed(4)}
                             </span>
                           )}
                         </div>
@@ -1580,15 +1772,15 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
-                              color: 'var(--accent-whatsapp)',
+                              color: 'var(--sap-brand)',
                               textDecoration: 'none',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '3px',
-                              fontWeight: 600
+                              gap: '4px',
+                              fontWeight: 700
                             }}
                           >
-                            <Navigation size={11} />
+                            <Navigation size={12} />
                             <span>Navigate</span>
                           </a>
                         )}
@@ -1603,9 +1795,9 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
 
         {/* Other Trips for Today */}
         {trips.length > 1 && (
-          <div style={{ marginTop: '8px' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>
-              Other Scheduled Trips ({trips.length - 1})
+          <div style={{ marginTop: '4px' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sap-text-caption)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Other Scheduled Shipments ({trips.length - 1})
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {trips
@@ -1620,21 +1812,59 @@ export const DriverView: React.FC<Props> = ({ currentUser, onLogout, theme = 'da
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      backgroundColor: 'var(--sap-card-bg)',
+                      border: '1px solid var(--sap-border-color)',
+                      borderRadius: 'var(--radius-md, 8px)'
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{t.id}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        Vehicle: {t.vehicle_number} • {t.planned_departure_time}
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--sap-text-title)' }}>{t.sap_shipment_num || t.id}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--sap-text-caption)' }}>
+                        Vehicle: {t.vehicle_number} • Dep: {t.planned_departure_time}
                       </div>
                     </div>
-                    <ChevronRight size={18} color="var(--text-muted)" />
+                    <ChevronRight size={18} color="var(--sap-text-caption)" />
                   </div>
                 ))}
             </div>
           </div>
         )}
+
+        {/* SAP Terminal Utility Footer */}
+        <footer
+          style={{
+            marginTop: '8px',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.74rem',
+            color: 'var(--sap-text-caption)',
+            borderTop: '1px solid var(--sap-border-color)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontWeight: 700, color: 'var(--sap-brand)' }}>SAP OnePortal</span>
+            <span>• TM Mobile Driver v1.2</span>
+          </div>
+          <a
+            href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'var(--sap-brand)',
+              textDecoration: 'none',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Smartphone size={12} />
+            <span>Download APK</span>
+          </a>
+        </footer>
       </div>
 
       {/* Camera Capture Modal */}

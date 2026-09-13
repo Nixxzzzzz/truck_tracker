@@ -69,7 +69,7 @@ export interface Vehicle {
   current_location?: string;
   last_ping?: string;
   total_fine_amount?: number;
-  // Live Telematics Feed properties
+  // Live Telematics Feed & SAP Equipment properties
   latitude?: number;
   longitude?: number;
   speed_kmh?: number;
@@ -78,6 +78,9 @@ export interface Vehicle {
   current_longitude?: number;
   current_speed_kmh?: number;
   current_heading?: number;
+  fleet_unit_id?: string;
+  chassis_number?: string;
+  telematics_imei?: string;
   battery_pct?: number;
   ignition?: boolean;
   documents?: VehicleDocument[];
@@ -224,6 +227,7 @@ export interface TripStop {
   stop_number: number;
   destination_name: string;
   address: string;
+  area_code?: string;
   latitude: number;
   longitude: number;
   geofence_radius_meters: number;
@@ -268,6 +272,10 @@ export interface Trip {
   total_stops?: number;
   completed_stops?: number;
   current_destination?: string;
+  // SAP ERP / TM Integration Attributes
+  sap_shipment_num?: string;
+  erp_delivery_doc?: string;
+  cost_center?: string;
   stops?: TripStop[];
   events?: TripEvent[];
   delays?: Delay[];
