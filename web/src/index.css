@@ -1294,3 +1294,344 @@ video.camera-viewfinder {
 .sap-step-label.completed {
   color: var(--sap-positive);
 }
+
+/* ==========================================================================
+   Driver-First Mobile & Desktop Design System
+   Benchmarked for Native Usability, High Contrast & Low Cognitive Load
+   ========================================================================== */
+
+.driver-theme-root {
+  --driver-primary: #008F72;
+  --driver-primary-hover: #00765E;
+  --driver-primary-light: #E6F5F1;
+  --driver-primary-border: #A3D9CE;
+  --driver-secondary: #00A884;
+  --driver-bg: #F5F7F8;
+  --driver-card-bg: #FFFFFF;
+  --driver-card-border: #E4E7EC;
+  --driver-text-primary: #101828;
+  --driver-text-secondary: #667085;
+  --driver-text-muted: #98A2B3;
+  --driver-warning: #F79009;
+  --driver-warning-bg: #FFFAEB;
+  --driver-warning-border: #FEDF89;
+  --driver-danger: #D92D20;
+  --driver-danger-bg: #FEF3F2;
+  --driver-danger-border: #FECDCA;
+  --driver-success: #039855;
+  --driver-success-bg: #ECFDF3;
+  --driver-success-border: #A6F4C5;
+  --driver-radius-card: 16px;
+  --driver-radius-btn: 12px;
+  --driver-shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05), 0 1px 2px rgba(16, 24, 40, 0.03);
+  --driver-shadow-float: 0 10px 25px -4px rgba(16, 24, 40, 0.15), 0 4px 10px -2px rgba(16, 24, 40, 0.08);
+  font-family: var(--font-body);
+  background-color: var(--driver-bg);
+  color: var(--driver-text-primary);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .driver-theme-root {
+  --driver-bg: #0C111D;
+  --driver-card-bg: #161B26;
+  --driver-card-border: #2B3444;
+  --driver-text-primary: #F5F7F8;
+  --driver-text-secondary: #98A2B3;
+  --driver-text-muted: #667085;
+  --driver-primary-light: rgba(0, 143, 114, 0.16);
+  --driver-primary-border: rgba(0, 143, 114, 0.4);
+  --driver-warning-bg: rgba(247, 144, 9, 0.12);
+  --driver-warning-border: rgba(247, 144, 9, 0.3);
+  --driver-danger-bg: rgba(217, 45, 32, 0.14);
+  --driver-danger-border: rgba(217, 45, 32, 0.3);
+  --driver-success-bg: rgba(3, 152, 85, 0.14);
+  --driver-success-border: rgba(3, 152, 85, 0.3);
+  --driver-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --driver-shadow-float: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Touch targets and clickable items */
+.driver-tap-target {
+  min-height: 48px;
+  min-width: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* Primary Action CTA */
+.driver-btn-primary {
+  width: 100%;
+  min-height: 52px;
+  background-color: var(--driver-primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--driver-radius-btn);
+  font-size: 1.02rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 143, 114, 0.25);
+  transition: background-color 0.18s ease, transform 0.12s ease;
+  touch-action: manipulation;
+}
+
+.driver-btn-primary:hover:not(:disabled) {
+  background-color: var(--driver-primary-hover);
+}
+
+.driver-btn-primary:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.driver-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Secondary Action Button */
+.driver-btn-secondary {
+  min-height: 46px;
+  background-color: var(--driver-card-bg);
+  color: var(--driver-text-primary);
+  border: 1px solid var(--driver-card-border);
+  border-radius: var(--driver-radius-btn);
+  font-size: 0.92rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+}
+
+.driver-btn-secondary:hover:not(:disabled) {
+  background-color: var(--driver-bg);
+  border-color: var(--driver-text-muted);
+}
+
+.driver-btn-secondary:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+/* Card base */
+.driver-card {
+  background-color: var(--driver-card-bg);
+  border: 1px solid var(--driver-card-border);
+  border-radius: var(--driver-radius-card);
+  box-shadow: var(--driver-shadow-card);
+  padding: 18px;
+  box-sizing: border-box;
+}
+
+/* Hero Green Trip Card */
+.driver-hero-trip {
+  background: linear-gradient(135deg, #008F72 0%, #006F58 100%);
+  color: #FFFFFF;
+  border-radius: var(--driver-radius-card);
+  padding: 20px 18px;
+  box-shadow: 0 8px 24px rgba(0, 143, 114, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.driver-hero-trip::after {
+  content: '';
+  position: absolute;
+  right: -25px;
+  bottom: -25px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+}
+
+/* 2x2 Quick Action Tiles */
+.driver-quick-action-tile {
+  background-color: var(--driver-card-bg);
+  border: 1px solid var(--driver-card-border);
+  border-radius: 14px;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: var(--driver-shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  min-height: 92px;
+  text-align: left;
+}
+
+.driver-quick-action-tile:hover {
+  border-color: var(--driver-primary-border);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+.driver-quick-action-tile:active {
+  transform: scale(0.97);
+}
+
+/* Sticky Bottom Navigation for Mobile */
+.driver-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background-color: var(--driver-card-bg);
+  border-top: 1px solid var(--driver-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 1000;
+  box-shadow: 0 -4px 16px rgba(16, 24, 40, 0.06);
+}
+
+.driver-nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--driver-text-secondary);
+  background: transparent;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  height: 100%;
+  min-height: 48px;
+  position: relative;
+  transition: color 0.15s ease;
+  touch-action: manipulation;
+}
+
+.driver-nav-tab.active {
+  color: var(--driver-primary);
+  font-weight: 700;
+}
+
+.driver-nav-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 32px;
+  height: 3px;
+  background-color: var(--driver-primary);
+  border-radius: 0 0 3px 3px;
+}
+
+/* Timeline Components */
+.driver-timeline-node {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.driver-timeline-node:last-child {
+  padding-bottom: 0;
+}
+
+.driver-timeline-node:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 32px;
+  left: 15px;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--driver-card-border);
+}
+
+.driver-timeline-node.completed:not(:last-child)::after {
+  background-color: var(--driver-success);
+}
+
+.driver-timeline-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.driver-timeline-icon.completed {
+  background-color: var(--driver-success);
+  color: #FFFFFF;
+}
+
+.driver-timeline-icon.current {
+  background-color: var(--driver-primary);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 4px var(--driver-primary-light);
+}
+
+.driver-timeline-icon.pending {
+  background-color: var(--driver-bg);
+  color: var(--driver-text-muted);
+  border: 1px solid var(--driver-card-border);
+}
+
+/* Floating Navigation Cards on Map */
+.driver-floating-top {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 500;
+  background-color: var(--driver-card-bg);
+  border: 1px solid var(--driver-card-border);
+  border-radius: var(--driver-radius-card);
+  box-shadow: var(--driver-shadow-float);
+  padding: 14px 16px;
+}
+
+.driver-floating-bottom {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 500;
+  background-color: var(--driver-card-bg);
+  border: 1px solid var(--driver-card-border);
+  border-radius: var(--driver-radius-card);
+  box-shadow: var(--driver-shadow-float);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Desktop Sidebar and Responsive Shell */
+.desktop-sidebar-wrapper {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .driver-bottom-nav {
+    display: none;
+  }
+  .desktop-sidebar-wrapper {
+    display: flex !important;
+  }
+}
+
