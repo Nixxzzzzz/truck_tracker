@@ -1,455 +1,236 @@
-# 🚛 TruckTracker — Internal Fleet & Multi-Client Logistics Operational System
+# 🚛 TruckTracker — Enterprise Fleet Operations & Logistics Tracking System
 
-> **A mission-critical internal company logistics and fleet-tracking platform connecting field drivers and operations managers through a single authoritative backend.**
+> **A production-grade logistics management platform connecting dispatch operations managers and field drivers through a unified, authoritative backend engine.**
 
-[![Live Full-Stack App (Render)](https://img.shields.io/badge/Live%20Deployment-truck--tracker--api--9yhq.onrender.com-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
-[![Render Project](https://img.shields.io/badge/Render%20Project-TruckTracker%20%7C%20Production-000000.svg?logo=render)](https://dashboard.render.com/)
-[![Live Backend API](https://img.shields.io/badge/Live%20API-Health%20200%20OK-34d399.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
-[![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0%20(APK%20Available)-34d399.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
-[![Download APK](https://img.shields.io/badge/Download-TruckTracker--v1.0.0.apk%20(20%20MB)-c5a059.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk)
-[![Stack: Android Kotlin Compose + React 19 + Node 24](https://img.shields.io/badge/Stack-Kotlin%20Compose%20%7C%20React%2019%20%7C%20Node%2024-c5a059.svg)](#)
-[![Database: SQLite WAL](https://img.shields.io/badge/Database-SQLite%20WAL%20(Auto--Seeded)-3b82f6.svg)](#)
-[![Tests: 46 Passed](https://img.shields.io/badge/Automated%20Tests-46%20Passed%20%7C%200%20Failed-34d399.svg)](#)
-[![Aesthetics: Luxury Corporate Dark](https://img.shields.io/badge/UI%2FUX-Luxury%20Corporate%20Dark-c5a059.svg)](#)
+[![Live Web Platform](https://img.shields.io/badge/Production%20Deployment-truck--tracker--api--9yhq.onrender.com-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
+[![Health Check](https://img.shields.io/badge/Health%20Endpoint-200%20OK-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
+[![Stack](https://img.shields.io/badge/Stack-Node%2024%20%7C%20React%2019%20%7C%20TypeScript-2563eb.svg)](#)
+[![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(Versioned%20Migrations)-d97706.svg)](#)
+[![Integrity Suite](https://img.shields.io/badge/Integrity%20Tests-29%20Passed%20%7C%200%20Failed-059669.svg)](#)
+[![Release: v1.0.0](https://img.shields.io/badge/Android%20Driver%20Client-v1.0.0%20(Compose)-4f46e5.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
 
 ---
 
-## 💡 Quick Overview & Asan Guide (Hinglish + English)
+## 📌 Executive Summary
 
-> [!TIP]
-> **Yeh Project Kya Hai?**
-> TruckTracker ek enterprise-grade **internal company logistics aur fleet operational system** hai. Iska main kaam company ke trucks, drivers, routes, trip status, delays aur proof photos ko real-time me track karna hai.
+TruckTracker is an internal enterprise logistics operations system engineered for companies operating private fleets and direct-employment drivers. It provides end-to-end operational visibility across multi-stop dispatch, route progression, delay logging, fuel tracking, maintenance scheduling, and statutory vehicle compliance.
 
-### 🌟 4 Key Points Jo Samajhna Zaroori Hai:
-
-1. **Sab Kuch Ek Hi Jagah (All-in-One on Render)**:
-   * Frontend (React 19) aur Backend (Express API + SQLite) dono ab **Render pe ek hi single URL** par live hain: **[`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)**.
-   * Pehle Vercel aur Render alag-alag the jisse CORS aur token sync me dikkat aati thi. Ab Vercel ko **poori tarah remove** kar diya gaya hai, aur sab kuch Render ke **`TruckTracker` (Production)** project ke andar smoothly chal raha hai.
-
-2. **Turant Login & Demo Kaise Check Karein?**:
-   * Direct link kholein: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
-   * Login screen par **1-Click Quick Demo Buttons** diye gaye hain:
-     * 🏢 **Dispatch Manager**: `manager@company.com` (Full map command center, trip dispatch, delays, fleet CRUD)
-     * 🚚 **Route Driver**: `rahul@company.com` (Mobile trip driver view, stops checklist, photo upload, delay reporting)
-
-3. **Database & Zero-Setup Auto-Seeding**:
-   * Isme **SQLite WAL mode** database use hota hai.
-   * Jaise hi server deploy hota hai, agar database khali hai toh system **automatically seed data daal deta hai** (vehicles, drivers, demo trips, stops) bina kisi manual SQL run kiye.
-
-4. **Android App**:
-   * Field drivers ke liye native Android app bani hui hai jo offline bhi kaam karti hai. APK download direct available hai: [TruckTracker-v1.0.0.apk](https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk).
+### Core Capabilities:
+- **Centralized Dispatch & Route Builder**: Visual planning of multi-stop delivery and pickup runs with sequential ordering, cargo assignments, and geofenced checkpoints.
+- **Authoritative Trip State Machine**: Server-enforced lifecycles (`PLANNED` → `IN_PROGRESS` → `DELAYED` → `RETURNING` → `COMPLETED`) preventing invalid status progressions.
+- **Enterprise Fleet Compliance**: Tracking of mandatory transport documents (Registration Certificate, Fitness Certificate, National Permits, Commercial Insurance, Pollution Under Control) with proactive expiration warnings.
+- **Maintenance & Fuel Auditing**: Vehicle servicing schedules, odometer records, breakdown repairs, and fuel expense tracking with volume and receipt capture.
+- **Operational Exceptions Engine**: Dispatcher escalation and resolution workflow for route deviations, breakdown alerts, off-geofence attempts, and delayed shipments.
+- **Native Android Field Application**: Offline-first driver client built with Kotlin and Jetpack Compose featuring hardware CameraX proof-of-delivery capture and FusedLocationProviderClient GPS geofence verification.
+- **Canonical Contracts & Versioned Migrations**: Zero-duplication TypeScript domain contracts, version-tracked database migrations, and a transparent roadmap toward enterprise PostgreSQL persistence.
 
 ---
 
-## 📋 System Purpose & Non-Negotiables
-
-**TruckTracker** is built specifically for internal company logistics tracking of company-owned vehicles and employed drivers.
-
-### 🚫 What this system is NOT:
-* Not a public delivery marketplace or customer-facing tracking portal
-* Not an Uber, Porter, Swiggy, or Delhivery clone
-* Not a bloated generic HR/payroll system
-* Not an expensive multi-tenant SaaS fleet subscription
-
-### 🎯 Core Architecture & Operational Principles:
-1. **SHARED BACKEND AS SINGLE SOURCE OF TRUTH**: All business rules, trip state machines, event sequences, geofence radius validations (100–250m), server timestamps (`CURRENT_TIMESTAMP`), and photo proof requirements are enforced exclusively by the backend SQLite database.
-2. **NATIVE ANDROID DRIVER APP**: Kotlin + Jetpack Compose mobile client designed for safe, one-handed field operation while parked. Includes local Room persistence for offline event queuing, CameraX photo proof capture, and FusedLocationProviderClient GPS acquisition.
-3. **WEB MANAGER COMMAND CENTER**: React 19 + TypeScript + Leaflet.js desktop/tablet dispatch hub with real-time fleet map, multi-stop trip builder, photo inspection viewer, delay analytics, daily operational reports, and Google Sheets sync console.
-4. **SHARED CANONICAL DATA CONTRACTS**: Zero duplicated business definitions. Canonical TypeScript interfaces, event vocabulary, and API contracts are centralized in [`shared/`](file:///u:/tracktracker/shared/).
-
----
-
-## 🗺️ Multi-Stop Route Topology & Lifecycle
-
-TruckTracker natively models complex logistics journeys where **a single trip record contains multiple sequential stops**:
+## 🏛️ System Architecture
 
 ```mermaid
-graph LR
-    DepotStart["🏢 Company Depot<br/>(Trip Start)"] --> Stop1["📦 Stop 1: ABC Warehouse<br/>(Delivery + Photo)"]
-    Stop1 --> Stop2["🏪 Stop 2: XYZ Retail<br/>(Traffic Delay 22m)"]
-    Stop2 --> Stop3["🏬 Stop 3: Central Depot<br/>(Cargo Pickup)"]
-    Stop3 --> ReturnJ["🚚 Return Journey<br/>(En Route to Base)"]
-    ReturnJ --> DepotEnd["🏁 Company Depot<br/>(Base Arrival & Completion)"]
+graph TD
+    subgraph Clients["Operational Clients"]
+        Web["💻 Dispatch Command Center<br/>(React 19 + TypeScript + Leaflet)"]
+        Mobile["📱 Native Android Driver Client<br/>(Kotlin + Jetpack Compose + CameraX)"]
+    end
 
-    style DepotStart fill:#242A35,stroke:#C5A059,stroke-width:2px,color:#F5F5F7
-    style Stop1 fill:#1A1E26,stroke:#34D399,stroke-width:1px,color:#F5F5F7
-    style Stop2 fill:#1A1E26,stroke:#F87171,stroke-width:1px,color:#F5F5F7
-    style Stop3 fill:#1A1E26,stroke:#60A5FA,stroke-width:1px,color:#F5F5F7
-    style ReturnJ fill:#1A1E26,stroke:#FBBF24,stroke-width:1px,color:#F5F5F7
-    style DepotEnd fill:#242A35,stroke:#C5A059,stroke-width:2px,color:#F5F5F7
+    subgraph API["Authoritative Backend (Express + TypeScript)"]
+        Auth["JWT Authentication & RBAC<br/>(Manager / Driver)"]
+        Dispatch["Trip & Route Dispatch Engine<br/>(State Machine Guards)"]
+        Fleet["Fleet Compliance & Maintenance<br/>(Documents, Fuel, Exceptions)"]
+        Reports["Periodic Analytics Engine<br/>(Daily / Weekly / Monthly)"]
+        Uploads["Static Proof Asset Storage<br/>(Multer + Local Disk)"]
+    end
+
+    subgraph DB["Relational Persistence Layer"]
+        Migrations["Migration Runner<br/>(_schema_migrations table)"]
+        SQLite[("Authoritative SQLite WAL<br/>16 Canonical Tables")]
+    end
+
+    subgraph External["Integration Ready"]
+        ERP["ERP / SAP References<br/>(Shipment Num, Delivery Doc, Cost Center)"]
+        Sheets["Google Sheets Sync<br/>(8-Tab Operational Queue)"]
+    end
+
+    Web -->|HTTPS / REST API| API
+    Mobile -->|HTTPS / REST API| API
+    API --> Migrations
+    Migrations --> SQLite
+    API --> SQLite
+    API -.-> ERP
+    API -.-> Sheets
 ```
 
 ### Authoritative Trip State Machine
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PLANNED : Manager Dispatches Route
-    PLANNED --> IN_PROGRESS : Driver Taps 'START TRIP'
+    [*] --> PLANNED : Dispatcher creates trip & assigns driver/vehicle
+    PLANNED --> IN_PROGRESS : Driver confirms start
     
     state IN_PROGRESS {
-        [*] --> Stop_Approaching
-        Stop_Approaching --> Stop_Arrived : Haversine Geofence Verified (<=250m)
-        Stop_Arrived --> Activity_Complete : Unload/Load + Required Photo
-        Activity_Complete --> Stop_Departed : Driver Taps 'DEPART'
-        Stop_Departed --> Stop_Approaching : More Stops Remaining
+        [*] --> Approaching_Stop
+        Approaching_Stop --> Arrived_At_Stop : Haversine Geofence Verified (<=250m)
+        Arrived_At_Stop --> Cargo_Handled : Loading/Unloading + Proof Photo
+        Cargo_Handled --> Departed_Stop : Driver marks stop departure
+        Departed_Stop --> Approaching_Stop : Subsequent stops remaining
     }
     
-    IN_PROGRESS --> DELAYED : Driver Reports Traffic / Breakdown
-    DELAYED --> IN_PROGRESS : Driver Taps 'RESOLVE DELAY'
+    IN_PROGRESS --> DELAYED : Breakdown / Traffic / Weather logged
+    DELAYED --> IN_PROGRESS : Delay resolved & operations resumed
     
-    IN_PROGRESS --> RETURNING : All Destination Stops Departed
-    RETURNING --> BASE_ARRIVED : Reached Depot Gate
-    BASE_ARRIVED --> COMPLETED : Driver Taps 'COMPLETE TRIP'
+    IN_PROGRESS --> RETURNING : All scheduled manifest stops completed
+    RETURNING --> COMPLETED : Vehicle returned to base depot & signed off
     COMPLETED --> [*]
 ```
 
-All operational events, delay records, and captured proof photos link directly to the parent `trip_id` and specific `stop_id`.
-
 ---
 
-## 🏛️ Multi-Client System Architecture
+## 🗄️ Relational Data Model & Migrations
 
-```mermaid
-graph TD
-    subgraph Drivers["Field Operations"]
-        AndroidApp["📱 Native Android Driver App<br/>(Kotlin + Jetpack Compose)"]
-    end
+TruckTracker enforces relational integrity using SQLite in **Write-Ahead Logging (WAL)** mode with `PRAGMA foreign_keys = ON`.
 
-    subgraph Managers["Dispatch Operations"]
-        WebApp["💻 Web Manager Command Center<br/>(React 19 + TypeScript + Leaflet)"]
-    end
+### Canonical Domain Model (16 Tables)
 
-    subgraph Shared["Canonical Contracts"]
-        Contracts["📦 Shared Models & Contracts<br/>(/shared/models.ts, events.ts)"]
-    end
+| Domain Category | Table Name | Business Responsibility |
+|---|---|---|
+| **System & Migrations** | `_schema_migrations` | Tracks applied migration versions, checksums, and execution timestamps |
+| **Identity & Access** | `users` | Drivers and dispatch managers with hashed credentials and active status |
+| **Fleet Assets** | `vehicles` | Fleet inventory, registration, payload, capacity, and ERP references |
+| **Fleet Compliance** | `vehicle_documents` | Statutory RC, Fitness, Permits, Insurance, and PUC certificates |
+| **Fleet Maintenance** | `maintenance_records` | Preventive servicing, breakdown repairs, costs, and odometer logs |
+| **Fuel & Operations** | `fuel_transactions` | Fuel fills, liters, costs, fuel stations, and odometer metrics |
+| **Trip & Manifest** | `trips` | Master route runs, assignments, ERP shipment numbers, and status |
+| **Route Manifest** | `trip_stops` | Ordered pickup/delivery points, geofences, and execution timestamps |
+| **Audit & Telemetry** | `trip_events` | Immutable chronological operational event log with GPS coordinates |
+| **Delays & Disruptions**| `trip_delays` | Documented transit interruptions, reasons, and duration minutes |
+| **Exception Alerts** | `operational_exceptions` | Dispatcher escalations for off-geofence, document expiry, or breakdowns |
+| **Operational Proof** | `trip_photos` | Timestamped, geotagged cargo and odometer inspection photographs |
+| **Cargo Line Items** | `cargo_activities` | Quantity and delivery references handled at each stop |
+| **Offline Telemetry** | `offline_events` | Queue for events recorded by drivers when disconnected |
+| **Geofenced Hubs** | `locations` | Authorized company depots, customer warehouses, and distribution centers |
+| **External Reporting** | `sync_status` | Status tracking for Google Sheets and third-party operational replicas |
 
-    subgraph Backend["Authoritative Backend Engine"]
-        API["🚀 Express + Node.js 24 Engine<br/>• State Machine Validation<br/>• Server Timestamps<br/>• Haversine Geofence (100-250m)<br/>• Photo Proof Storage"]
-    end
+### Idempotent Database Migrations
 
-    subgraph Storage["Primary Storage"]
-        DB[("🗄️ SQLite Database (WAL Mode)<br/>truck_tracker.sqlite")]
-    end
+TruckTracker replaces ad-hoc initialization with an explicit, version-tracked migration engine located at [`server/src/migrations/runner.ts`](file:///u:/tracktracker/server/src/migrations/runner.ts).
 
-    subgraph External["External Reporting Replica"]
-        Sheets[("📊 Google Sheets<br/>8-Tab Sync Replica")]
-    end
-
-    AndroidApp -->|HTTPS / REST API| API
-    WebApp -->|HTTPS / REST API| API
-    AndroidApp -.->|Imports| Contracts
-    WebApp -.->|Imports| Contracts
-    API -.->|Implements| Contracts
-    API --> DB
-    API -.->|Async Queue| Sheets
+```bash
+# Execute pending migrations
+cd server
+npm run migrate
 ```
 
----
-
-## 🏗️ Repository Architecture
-
-```text
-truck_tracker/
-├── android/                         # Native Android Driver Client (Kotlin + Jetpack Compose)
-│   ├── app/                         # App module (CameraX, Room Offline Queue, FusedLocation)
-│   │   ├── src/main/java/com/company/trucktracker/
-│   │   │   ├── camera/              # CameraManager (CameraX lifecycle-bound photo capture)
-│   │   │   ├── data/                # Room entities, DAOs, Retrofit API client, EncryptedSharedPreferences
-│   │   │   ├── location/            # LocationService (FusedLocation & Haversine geofence verification)
-│   │   │   ├── ui/                  # 20 Jetpack Compose screens, luxury theme, components
-│   │   │   ├── MainActivity.kt      # Application root host & runtime permissions
-│   │   │   └── TruckTrackerApp.kt   # Application container & dependency orchestration
-│   │   └── src/test/java/           # LocationGeofenceTest suite (6/6 unit tests passing)
-│   ├── gradle/                      # Version catalog (libs.versions.toml) and wrapper
-│   └── gradlew.bat                  # Gradle execution wrapper
-├── web/                             # Web Manager Command Center (React 19 + TypeScript + Leaflet)
-│   ├── src/
-│   │   ├── components/              # Command Center, Route Map, Stop Editor, Delay Modal, Reports
-│   │   ├── styles/                  # Luxury corporate dark theme design tokens & layout utilities
-│   │   └── api.ts                   # Authoritative backend API integration client
-│   └── package.json                 # Web client dependencies & build scripts
-├── server/                          # Authoritative Backend (Node.js 24 + Express + SQLite WAL)
-│   ├── src/
-│   │   ├── routes/                  # auth, driver, trips, fleet, reports, photos, google-sheets
-│   │   ├── services/                # Google Sheets 8-tab synchronizer & disk photo storage
-│   │   ├── db.ts                    # SQLite database schema, WAL configuration, and indexes
-│   │   ├── testProductionScenarios.ts # 20 automated real-world edge case tests
-│   │   ├── testWorkflow.ts          # 20 automated end-to-end lifecycle workflow tests
-│   │   └── backup.ts                # SQLite zero-downtime hot backup & restore tool
-│   └── data/                        # SQLite WAL database file (`truck_tracker.sqlite`)
-├── shared/                          # Canonical Shared Types & Contracts
-│   ├── models.ts                    # User, Trip, TripStop, TripEvent, TripDelay, Photo models
-│   ├── events.ts                    # Canonical event vocabulary
-│   ├── constants.ts                 # System constants, geofence radius (100–250m), API endpoints
-│   └── api-contracts.ts             # Typed REST request/response schemas
-└── documentation/                   # Complete Architectural & Operational Specifications
-    ├── architecture.md              # Detailed multi-client architecture & data contracts
-    ├── android.md                   # Native Android implementation & 20 screens reference
-    ├── web.md                       # Dispatch Manager Command Center manual
-    ├── api.md                       # REST API specification & event schema
-    ├── deployment.md                # LAN staging & production HTTPS reverse-proxy setup
-    ├── testing.md                   # Complete test matrix & scenario verification
-    └── operations-manual.md         # Field driver handbook & fleet manager SOP
-```
+- **`001_initial_core_schema`**: Foundational users, vehicles, trips, stops, events, delays, photos, locations, activities, offline queue.
+- **`002_add_enterprise_compliance_and_maintenance`**: Normalized statutory compliance (`vehicle_documents`), workshop servicing (`maintenance_records`), fuel entries (`fuel_transactions`), and alert triage (`operational_exceptions`).
+- **`003_add_erp_references_and_performance_indexes`**: ERP/SAP integration fields (`fleet_unit_id`, `sap_shipment_num`, `erp_delivery_doc`, `cost_center`) and compound indexes for fast query execution.
 
 ---
 
-## 📱 Native Android Driver Application
-
-### Key Features
-* **100% Jetpack Compose UI**: 20 distinct driver states adhering to the luxury corporate dark design system (Charcoal `#0E1013`, Slate `#242A35`, Warm Ivory `#F5F5F7`, Champagne Gold `#C5A059`).
-* **Hardware CameraX Integration**: Native photo capture with on-screen preview, retake capabilities, and background JPEG compression.
-* **FusedLocationProviderClient**: Precise GPS acquisition with automatic accuracy threshold detection (> 300m flagged as poor accuracy) and offline Haversine geofence calculation.
-* **Offline-First Room Queue**: All operational actions work seamlessly without an internet connection. Events are serialized with UUID v4 idempotency keys and stored in the local SQLite Room database (`offline_events`).
-* **Auto-Draining Sync Manager**: Monitors network connectivity via `ConnectivityManager` and automatically drains queued events sequentially upon network restoration without duplicate records.
-* **On-Device Server URL Configuration**: Dedicated server configuration panel on the Login Screen allows instant switching between:
-  - **Local LAN Server**: `http://192.168.1.5:5000/`
-  - **Local Emulator**: `http://10.0.2.2:5000/`
-  - **Production HTTPS**: `https://logistics.company.com/`
-* **Production HTTPS Network Security**: Hardened [`network_security_config.xml`](file:///u:/tracktracker/android/app/src/main/res/xml/network_security_config.xml) enforcing `cleartextTrafficPermitted="false"` across production endpoints with scoped local loopbacks for development.
-
-### Verified Debug APK Details
-* **Location:** `android/app/build/outputs/apk/debug/TruckTracker-v1.0.0.apk`
-* **Size:** `19,966,300 bytes` (~19.96 MB)
-* **Package:** `com.company.trucktracker.debug`
-* **SDK:** Min SDK 26 (Android 8.0) | Target SDK 34 (Android 14)
-* **Supported Architectures:** `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` (Universal)
-
-### Offline Queue & Auto-Draining Synchronization Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Driver as 📱 Driver (In Field)
-    participant App as Android Compose UI
-    participant Room as Room SQLite DB (offline_events)
-    participant Net as ConnectivityManager
-    participant Backend as Express API Engine
-
-    Driver->>App: Executes action while offline
-    App->>Room: Store event with UUID v4 idempotency_key (Status: PENDING)
-    App-->>Driver: Display "Saved — waiting for network"
-    
-    Note over Driver,Net: Network restored upon entering cellular area
-    Net->>App: onAvailable() Triggered
-    App->>Room: Query pending events ordered by timestamp ASC
-    loop Drain Each Event Sequentially
-        App->>Backend: POST /api/trips/:id/events (Payload + Idempotency Key)
-        Backend->>Backend: Deduplication check on idempotency_key
-        Backend-->>App: 200 OK
-        App->>Room: DELETE FROM offline_events WHERE id = :id
-    end
-    App-->>Driver: Banner clears (0 pending events)
-```
-
----
-
-## ⚡ Quick Start & Development Setup
+## 🚀 Quick Start & Development Setup
 
 ### 1. Prerequisites
-* **Node.js**: v22.5.0+ or v24+ (Node 24 recommended)
-* **Java Development Kit**: JDK 17 (Microsoft OpenJDK 17 or Eclipse Temurin 17)
-* **Android SDK**: Android SDK 34 platform & build tools (optional, for compiling Android APK)
+- **Node.js**: v22.5.0+ or v24+ (Node 24 LTS recommended)
+- **Git**: Standard CLI
+- **JDK 17 & Android SDK 34** *(Required only for compiling the Android client)*
 
-### 2. Clone & Install Workspace Dependencies
+### 2. Installation & Database Setup
 ```bash
+# Clone the repository
 git clone https://github.com/Nixxzzzzz/truck_tracker.git
 cd truck_tracker
 
-# Install server dependencies
-cd server && npm install
+# Install all workspace dependencies
+npm run install:all
 
-# Install web dependencies
-cd ../web && npm install
-cd ..
-```
-
-### 3. Initialize & Seed Authoritative Database
-```bash
+# Execute database migrations
 cd server
-npx tsx src/seed.ts
+npm run migrate
+
+# (Optional) Seed demonstration fleet, drivers, and trips
+npm run seed
 cd ..
 ```
 
-### 4. Start Development Services
+### 3. Launch Development Servers
 ```bash
-# Terminal 1: Authoritative Backend Server (Port 5000)
+# Terminal 1: Backend API Engine (Port 5000)
 cd server
 npm run dev
 
-# Terminal 2: Web Manager Command Center (Port 5173)
+# Terminal 2: Web Dispatch Command Center (Port 5173)
 cd web
 npm run dev
 ```
 
-* Open Manager Command Center: **`http://localhost:5173`**
-* Backend API Health Check: **`http://localhost:5000/api/health`** or **`http://192.168.1.5:5000/api/health`**
+- **Web Dispatch Console**: `http://localhost:5173`
+- **Backend API Health**: `http://localhost:5000/api/health`
 
----
-
-## 📲 Android Build & Physical Device Testing
-
-### Compiling the APK
-From the root repository directory:
-```powershell
-cd android
-.\gradlew.bat assembleDebug testDebugUnitTest
-```
-* **APK Output:** `android/app/build/outputs/apk/debug/TruckTracker-v1.0.0.apk`
-* **Unit Tests:** 6/6 unit tests executed and passed.
-
-### Installing onto a Physical Android Phone
-1. Enable **Developer Options** on the Android device (tap **Build Number** 7 times under **Settings → About Phone**).
-2. Enable **USB Debugging** in **Settings → Developer Options**.
-3. Connect the phone via USB and verify ADB detection:
-   ```powershell
-   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" devices -l
-   ```
-4. Install the APK:
-   ```powershell
-   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" install -r "android/app/build/outputs/apk/debug/TruckTracker-v1.0.0.apk"
-   ```
-5. Launch the app:
-   ```powershell
-   & "C:\Users\MSI\AppData\Local\Android\Sdk\platform-tools\adb.exe" shell am start -n com.company.trucktracker.debug/com.company.trucktracker.MainActivity
-   ```
-6. On the Sign In screen, tap **Configure** and enter your computer's Wi-Fi LAN address (`http://192.168.1.5:5000/`), then sign in with `rahul@company.com` / `driver123`.
-
----
-
-## 🔑 Pre-Seeded Demonstration Accounts
+### 4. Pre-Seeded Demonstration Credentials
 
 | Role | Email | Password | Primary Interface |
 |---|---|---|---|
-| **Logistics Manager** | `manager@company.com` | `manager123` | Desktop / Tablet Web Command Center |
-| **Field Driver (Rahul)** | `rahul@company.com` | `driver123` | Native Android Driver Application |
-| **Field Driver (Amit)** | `amit@company.com` | `driver123` | Native Android Driver Application |
-| **Field Driver (Test)** | `driver@company.com` | `driver123` | Native Android Driver Application |
+| **Dispatch Operations Manager** | `manager@company.com` | `manager123` | Desktop / Tablet Command Center |
+| **Field Route Driver (Rahul)** | `rahul@company.com` | `driver123` | Android App / Driver Portal |
+| **Field Route Driver (Amit)** | `amit@company.com` | `driver123` | Android App / Driver Portal |
 
 ---
 
-## 🧪 Comprehensive Automated Test Suites
+## 🧪 Verification & Automated Testing
 
-### 1. Backend Production Scenarios Suite (20 Tests)
-```powershell
+TruckTracker includes automated regression, integrity, and operational test suites:
+
+```bash
+# Run database schema and business invariant integrity tests (29 tests)
+npm test
+
+# Run real-world production edge case scenarios (20 tests)
 cd server
 npx tsx src/testProductionScenarios.ts
-```
-* **Result:** **20 PASSED, 0 FAILED**
-* Tests single/multi-stop lifecycles, delay tracking, photo enforcement, GPS unavailable handling, offline event deduplication, state machine guard violations, and cross-driver trip authorization isolation (HTTP 404/403).
 
-### 2. Backend Workflow Lifecycle Suite (20 Tests)
-```powershell
+# Run end-to-end trip workflow validation (20 tests)
 cd server
 npx tsx src/testWorkflow.ts
-```
-* **Result:** **20 PASSED, 0 FAILED**
-* End-to-end multi-stop trip dispatch, geofencing, arrival/departure events, delay resolution, return journey, base arrival, trip completion, and CSV export generation.
 
-### 3. Android Unit Test Suite (6 Tests)
-```powershell
-cd android
-.\gradlew.bat testDebugUnitTest
-```
-* **Result:** **6 PASSED, 0 FAILED**
-* Verifies `LocationUtils` Haversine distance, geofence radius checks, GPS accuracy threshold gating, and UUID v4 idempotency generation.
-
-### 4. Web Production Compilation
-```powershell
-cd web
-npm run build
-```
-* **Result:** **PASS** (Zero TypeScript errors, production bundle compiled in 5.94s).
-
----
-
-## 📊 Google Sheets Live Synchronization
-
-TruckTracker maintains an asynchronous 8-tab operational sync engine:
-* **`Trips`**: Master trip status, driver, vehicle, start, base arrival, completion, delays, distance.
-* **`Stops`**: Stop ID, destination, sequence number, arrival, departure, activity status.
-* **`Events`**: Immutable chronological event log with server timestamps and GPS coordinates.
-* **`Delays`**: Delay reasons, start/end timestamps, and duration minutes.
-* **`Activities`**: Cargo deliveries/pickups, quantities, reference numbers, signoffs.
-* **`Photos`**: Uploaded photo proofs, category, storage URL, timestamp, GPS.
-* **`Drivers`**: Active drivers, contact details, employee IDs, status.
-* **`Vehicles`**: Fleet vehicles, license plates, models, assignment status.
-
-### Configuring Live Google Sheets:
-Place your Google Cloud Service Account credentials at:
-```text
-server/google_sheets_credentials.json
-```
-And add to `server/.env`:
-```env
-GOOGLE_SPREADSHEET_ID=your_spreadsheet_id_here
-```
-*When credentials are not supplied, TruckTracker runs in Local Queue Mode, maintaining sync status logs with complete retry capability without interrupting fleet operations.*
-
----
-
-## 💾 Database Backup & Disaster Recovery
-
-TruckTracker utilizes SQLite in WAL mode with native hot backup support:
-
-### Create Live Backup Snapshot:
-```bash
-cd server
-npx tsx src/backup.ts backup
-```
-Produces an integrity-verified snapshot in `server/data/backups/truck_tracker_backup_<timestamp>.sqlite`.
-
-### Restore Backup Snapshot:
-```bash
-cd server
-npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestamp>.sqlite
+# Execute full production build for both frontend and backend
+npm run build:all
 ```
 
 ---
 
-## 🌐 Cloud & Production Deployment (Render Unified Project)
+## 🌐 Production Deployment (Render Unified Service)
 
-TruckTracker is configured for automated continuous deployment on **Render** organized within a dedicated **Render Project**:
+TruckTracker is configured as an **All-in-One** single-origin web service on [Render](https://render.com). The Express engine serves the REST API (`/api/*`), uploads (`/uploads/*`), and the compiled React 19 Single Page Application (`/`) from a single origin.
 
-### 🎯 Render All-in-One Deployment (`TruckTracker` Project)
-* **Live Web App & REST API**: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
-* **Live API Health Check**: [`https://truck-tracker-api-9yhq.onrender.com/api/health`](https://truck-tracker-api-9yhq.onrender.com/api/health)
-* **Render Project Name**: `TruckTracker`
-* **Environment**: `Production`
-* **Service Name**: `truck-tracker-api`
-* **Architecture**: **Single Origin All-in-One**
-  * Express server REST API (`/api/*`), driver proof photos (`/uploads/*`), aur compiled React 19 web app (`/`) sab ek saath serve karta hai.
-  * Kisi Vercel ya external frontend proxy ki zaroorat nahi hai.
-  * Cross-origin CORS errors bilkul khatam ho jaate hain aur driver ki photos bina kisi latency ke load hoti hain.
-* **Runtime**: Node.js v22.12.0 with `--experimental-sqlite`
-* **Database**: Embedded SQLite WAL with automated seed initialization on fresh containers (`seed.ts`)
-* **Build Command**: `npm ci --include=dev && npm run build:all`
-* **Start Command**: `npm run start` (executes `node --experimental-sqlite dist/index.js`)
-* **Health Check Path**: `/api/health`
-* **Auto-Deploy**: Enabled on git push to `main`
+- **Live URL**: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
+- **Health Check Probe**: `/api/health`
+- **Build Command**: `npm ci --include=dev && npm run build:all`
+- **Start Command**: `npm run start` (Runs `node --experimental-sqlite dist/index.js`)
 
-### 🛠️ Step-by-Step: Render Par Deploy Kaise Karein (Blueprint Deployment)
-1. **Repository Connect Karein**: Render dashboard me apna GitHub repo `Nixxzzzzz/truck_tracker` connect karein.
-2. **Blueprint Select Karein**: Click **New +** → **Blueprint** → Select `truck_tracker`.
-3. **Automatic Configuration**: Render `render.yaml` file ko padh kar saare build commands aur environment variables automatically set kar dega.
-4. **Project Organization**: Service ko `TruckTracker` Project aur `Production` Environment ke andar group karein.
-5. **Instant Live**: 50 seconds ke andar aapka service green status ke saath live ho jayega!
+> [!IMPORTANT]
+> **Storage Durability Notice**:
+> Render Free Web Services utilize ephemeral container storage. Database modifications persist during normal operation but reset if the free container sleeps or is restarted. For permanent production durability, attach a **Render Persistent Disk** or configure PostgreSQL using the database abstraction guide.
 
 ---
 
-## 📖 Complete Documentation Index
+## 📚 Technical Documentation Directory
 
-| Manual | Description |
-|---|---|
-| [**Architecture Manual**](file:///u:/tracktracker/documentation/architecture.md) | Multi-client system architecture, data flow, and database schema |
-| [**Android Manual**](file:///u:/tracktracker/documentation/android.md) | Native Android architecture, CameraX, Room queue, and 20 screens |
-| [**Web Manual**](file:///u:/tracktracker/documentation/web.md) | Dispatch Command Center, map visualization, and stop editor |
-| [**API Specification**](file:///u:/tracktracker/documentation/api.md) | Complete REST API endpoint reference and event schemas |
-| [**Deployment Guide**](file:///u:/tracktracker/documentation/deployment.md) | LAN Wi-Fi staging, Nginx/Caddy HTTPS reverse proxy, and systemd |
-| [**Testing Protocols**](file:///u:/tracktracker/documentation/testing.md) | Full 46-test automated matrix, test scenarios, and edge case checklist |
-| [**Operations Manual**](file:///u:/tracktracker/documentation/operations-manual.md) | Standard operating procedures for dispatchers and field drivers |
+Comprehensive engineering specifications, operational SOPs, and architectural guides are organized in the [`docs/`](file:///u:/tracktracker/docs/) directory:
+
+- [**Dependency & Data-Model Map**](file:///u:/tracktracker/docs/architecture/dependency-and-data-model-map.md): Full-stack architectural inventory and compatibility analysis.
+- [**Database Schema Specification**](file:///u:/tracktracker/docs/database/schema.md): Complete data dictionary and constraints for all 16 tables.
+- [**Database Entity-Relationship Diagram**](file:///u:/tracktracker/docs/database/erd.md): Visual Mermaid ERD with relationships and cardinalities.
+- [**Database Migration Strategy**](file:///u:/tracktracker/docs/database/migrations.md): Migration runner specifications and upgrade protocols.
+- [**REST API Endpoints Specification**](file:///u:/tracktracker/docs/api/endpoints.md): Request/response contracts for all endpoints.
+- [**Error Handling Protocols**](file:///u:/tracktracker/docs/api/error-handling.md): Canonical error envelopes and HTTP status taxonomy.
+- [**Fleet Management SOP**](file:///u:/tracktracker/docs/operations/fleet-management.md): Vehicle onboarding, document renewals, and servicing.
+- [**Dispatch Operations Manual**](file:///u:/tracktracker/docs/operations/dispatch.md): Manifest planning, execution, and delay resolution.
+- [**Exceptions & Escalation Matrix**](file:///u:/tracktracker/docs/operations/exceptions.md): Incident triage and acknowledgment workflows.
+- [**Local Setup & Onboarding Guide**](file:///u:/tracktracker/docs/development/local-setup.md): Complete development workstation configuration.
+- [**Testing & Quality Assurance**](file:///u:/tracktracker/docs/development/testing.md): Automated verification guidelines.
 
 ---
 
-## 📄 License
-Internal Company Logistics Proprietary Software. All rights reserved.
+## 📄 License & Ownership
+Proprietary Internal Logistics Platform. All rights reserved.

@@ -115,14 +115,31 @@ router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
 
   const totalTrips = trips.length;
   const completedTrips = trips.filter((t) => t.status === 'COMPLETED').length;
+  const activeTrips = trips.filter((t) =>
+    ['IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'].includes(t.status)
+  ).length;
   const delayedTrips = trips.filter((t) => (t.total_delay_minutes || 0) > 0).length;
+  const cancelledTrips = trips.filter((t) => t.status === 'CANCELLED').length;
   const totalDelayMinutes = trips.reduce((acc, t) => acc + (t.total_delay_minutes || 0), 0);
   const avgDelayMinutes = totalTrips > 0 ? Math.round(totalDelayMinutes / totalTrips) : 0;
-
   const totalDistance = trips.reduce((acc, t) => acc + (t.calculated_distance_km || 0), 0);
 
-  const delayDistribution = db.prepare(`
-    SELECT d.reason, COUNT(*) as count, SUM(d.duration_minutes) as minutes
+  // Stops and On-time calculation for period
+  const stops = db.prepare(`
+    SELECT ts.* 
+    FROM trip_stops ts
+    JOIN trips t ON ts.trip_id = t.id
+    WHERE t.date >= date('now', '-' || ? || ' days')
+  `).all(days) as any[];
+
+  const totalDestinations = stops.length;
+  const completedStops = stops.filter((s) => s.status === 'COMPLETED');
+  const onTimeStops = completedStops.filter((s) => s.arrival_status === 'ON_TIME' || s.arrival_status === 'EARLY').length;
+  const onTimePercentage = completedStops.length > 0 ? Math.round((onTimeStops / completedStops.length) * 100) : 100;
+
+  // Delay reason breakdown
+  const delayReasons = db.prepare(`
+    SELECT d.reason, COUNT(*) as count, SUM(d.duration_minutes) as total_minutes
     FROM delays d
     JOIN trips t ON d.trip_id = t.id
     WHERE t.date >= date('now', '-' || ? || ' days')
@@ -130,9 +147,41 @@ router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
     ORDER BY count DESC
   `).all(days);
 
+  // Driver performance summary
+  const driverSummary = db.prepare(`
+    SELECT u.name as driver_name, COUNT(t.id) as trip_count, 
+           SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count,
+           SUM(t.total_delay_minutes) as total_delay
+    FROM trips t
+    JOIN users u ON t.driver_id = u.id
+    WHERE t.date >= date('now', '-' || ? || ' days')
+    GROUP BY t.driver_id
+  `).all(days);
+
+  // Vehicle utilization summary
+  const vehicleSummary = db.prepare(`
+    SELECT v.vehicle_number, v.model, COUNT(t.id) as trip_count,
+           SUM(t.calculated_distance_km) as total_distance_km
+    FROM trips t
+    JOIN vehicles v ON t.vehicle_id = v.id
+    WHERE t.date >= date('now', '-' || ? || ' days')
+    GROUP BY t.vehicle_id
+  `).all(days);
+
   return res.json({
     period,
     daysAnalyzed: days,
+    overview: {
+      totalTrips,
+      completedTrips,
+      activeTrips,
+      delayedTrips,
+      cancelledTrips,
+      totalDestinations,
+      totalDelayMinutes,
+      totalDelayFormatted: `${Math.floor(totalDelayMinutes / 60)}h ${totalDelayMinutes % 60}m`,
+      onTimePercentage
+    },
     metrics: {
       totalTrips,
       completedTrips,
@@ -141,7 +190,11 @@ router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
       avgDelayMinutes,
       totalDistanceKm: Math.round(totalDistance * 10) / 10
     },
-    delayDistribution,
+    trips,
+    delayReasons,
+    delayDistribution: delayReasons,
+    driverSummary,
+    vehicleSummary,
     recentTrips: trips.slice(0, 50)
   });
 });

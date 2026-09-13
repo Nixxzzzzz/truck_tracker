@@ -1,0 +1,61 @@
+# TruckTracker — System Architecture Overview
+
+## 1. System Mission & Operational Scope
+TruckTracker is an enterprise-grade fleet operations and dispatch logistics system designed for medium-to-large road freight operations. It coordinates dispatch manifests, driver turn-by-turn checkpoint confirmations, tamper-evident Proof of Delivery (POD) photo capture, corridor delay reporting, and executive SLA compliance audits across regional distribution corridors.
+
+---
+
+## 2. High-Level Component Topology
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User Client Surface                      │
+│   ┌───────────────────────────┐ ┌─────────────────────────┐ │
+│   │ Manager Operations Web UI │ │ Driver Mobile Web/App   │ │
+│   │ (React 18 + TypeScript)   │ │ (PWA + Camera/GPS API)  │ │
+│   └─────────────┬─────────────┘ └────────────┬────────────┘ │
+└─────────────────┼────────────────────────────┼──────────────┘
+                  │ HTTPS / JSON / Bearer JWT  │
+                  ▼                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Unified Node.js / Express Server               │
+│               (Render All-in-One Container)                 │
+│                                                             │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │ Middleware: Auth / RBAC, CORS, Request Validation   │   │
+│   └──────────────────────────┬──────────────────────────┘   │
+│                              │                              │
+│   ┌──────────────────────────┴──────────────────────────┐   │
+│   │ Route Controllers                                   │   │
+│   │ ├── /api/auth       (Credentials & JWT Verification)│   │
+│   │ ├── /api/trips      (Manifests, Stops, Attention)   │   │
+│   │ ├── /api/driver     (Driver Telematics & Geofences) │   │
+│   │ ├── /api/fleet      (Vehicles, Drivers, Documents)  │   │
+│   │ ├── /api/reports    (Daily & Periodic SLA Metrics)  │   │
+│   │ ├── /api/photos     (Multer POD File Storage)       │   │
+│   │ └── /api/health     (Uptime Probe)                  │   │
+│   └──────────────────────────┬──────────────────────────┘   │
+│                              │                              │
+│   ┌──────────────────────────┴──────────────────────────┐   │
+│   │ Service Layer                                       │   │
+│   │ ├── Geo Service     (Haversine geofence detection)  │   │
+│   │ ├── Migration Engine(Versioned ordered migrations)  │   │
+│   │ └── Sheets Service  (Outbound spreadsheet sync)     │   │
+│   └──────────────────────────┬──────────────────────────┘   │
+│                              │                              │
+│   ┌──────────────────────────┴──────────────────────────┐   │
+│   │ Persistence Layer                                   │   │
+│   │ Node 22 native SQLite DatabaseSync (WAL mode)       │   │
+│   │ 16 Relational Tables with Foreign Key Enforcement   │   │
+│   └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Technology Stack & Runtime Decisions
+- **Backend Runtime**: Node.js `22.12.0+` with native `node:sqlite` enabled via `--experimental-sqlite`. Eliminates external native C++ binding compilation errors (`node-gyp`) during container builds.
+- **Backend Framework**: Express `4.21.2` with TypeScript `5.7.3`, providing end-to-end typed request/response contracts.
+- **Frontend Architecture**: React 18, Vite 6, Leaflet Maps for spatial geofence visualization, and Lucide React icons.
+- **Persistence Engine**: SQLite in WAL (`PRAGMA journal_mode = WAL;`) and Foreign Key (`PRAGMA foreign_keys = ON;`) mode.
+- **Authentication**: Stateless HMAC-SHA256 signed JSON Web Tokens (JWT) with 24-hour expiration. Passwords hashed using `bcryptjs` (work factor 10).

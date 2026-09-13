@@ -16,7 +16,9 @@
     "build:web": "npm run build --workspace=web",
     "build:server": "npm run build --workspace=server",
     "build:all": "npm run build --workspace=web && npm run build --workspace=server",
+    "migrate": "npm run migrate --workspace=server",
     "seed": "npm run seed --workspace=server",
+    "test": "npm run test:integrity --workspace=server",
     "start": "npm run start --workspace=server"
   },
   "engines": {

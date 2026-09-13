@@ -8,6 +8,10 @@ export async function seed() {
 
   // Clear existing records
   db.exec(`
+    DELETE FROM operational_exceptions;
+    DELETE FROM fuel_transactions;
+    DELETE FROM maintenance_records;
+    DELETE FROM vehicle_documents;
     DELETE FROM google_sheet_sync;
     DELETE FROM audit_logs;
     DELETE FROM trip_events;
@@ -471,6 +475,90 @@ export async function seed() {
     uuidv4(), trip3Id, destConnaughtPlaceId,
     uuidv4(), trip3Id, destMayurViharId,
     uuidv4(), trip3Id, destNoida62Id
+  );
+
+  // 6. Vehicle Compliance Documents
+  const insertDoc = db.prepare(`
+    INSERT INTO vehicle_documents (
+      id, vehicle_id, document_type, title, document_number, issue_date, expiry_date, issuing_authority, status, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertDoc.run(uuidv4(), v1Id, 'REGISTRATION_CERTIFICATE', 'Vehicle Registration Certificate (RC)', 'DL-01-2021-987654', '2021-04-10', '2036-04-09', 'Transport Department Govt of NCT Delhi', 'VALID', 'Commercial Goods Carriage Category N2');
+  insertDoc.run(uuidv4(), v1Id, 'INSURANCE_POLICY', 'Commercial Goods Vehicle Comprehensive Policy', 'HDFC-ERGO-CV-992144', '2025-05-15', '2026-05-14', 'HDFC ERGO General Insurance', 'VALID', 'Zero depreciation with third-party cargo liability');
+  insertDoc.run(uuidv4(), v1Id, 'FITNESS_CERTIFICATE', 'Commercial Vehicle Mandatory Fitness Certificate', 'FIT-DL01-2024-8871', '2024-09-01', '2026-08-31', 'RTO Burari Testing Center', 'VALID', 'Passed mechanical and brake bench testing');
+  insertDoc.run(uuidv4(), v1Id, 'POLLUTION_UNDER_CONTROL', 'Pollution Under Control Certificate (PUC)', 'PUC-DL-2025-44120', '2025-06-01', '2026-12-31', 'Delhi Transport Authorized Center', 'VALID', 'BS-VI diesel smoke density within norms');
+
+  insertDoc.run(uuidv4(), v2Id, 'REGISTRATION_CERTIFICATE', 'Commercial Freight Registration', 'UP-16-2020-112233', '2020-08-20', '2035-08-19', 'RTO Sector 32 Gautam Buddha Nagar Noida', 'VALID', 'Medium Freight Carriage');
+  insertDoc.run(uuidv4(), v2Id, 'NATIONAL_PERMIT', 'All India Inter-State Commercial Permit', 'NP-UP-2023-99011', '2023-01-01', '2028-12-31', 'Ministry of Road Transport & Highways', 'VALID', 'Authorized for NCR & Northern corridor');
+
+  insertDoc.run(uuidv4(), v4Id, 'REGISTRATION_CERTIFICATE', 'Commercial Goods Vehicle RC', 'UP-14-2022-889900', '2022-02-14', '2037-02-13', 'RTO Ghaziabad Uttar Pradesh', 'VALID', 'Primary city freight box');
+  insertDoc.run(uuidv4(), v4Id, 'POLLUTION_UNDER_CONTROL', 'Pollution Certificate (Expiring Soon)', 'PUC-UP14-2025-0012', '2025-03-25', '2026-09-25', 'Ghaziabad RTO Center', 'EXPIRING_SOON', 'Renewal required before month end');
+
+  // 7. Vehicle Maintenance Records
+  const insertMaint = db.prepare(`
+    INSERT INTO maintenance_records (
+      id, vehicle_id, service_date, odometer_km, maintenance_type, description, service_center,
+      cost_amount, currency, invoice_reference, status, performed_by, next_service_due_km, next_service_due_date
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertMaint.run(
+    uuidv4(), v1Id, '2026-08-15', 46500, 'PREVENTIVE',
+    'Periodic 45,000 KM service: synthetic engine oil, oil filter, air filter, and brake pad inspection',
+    'Tata Motors Commercial Workshop, Okhla Phase-II',
+    12450.0, 'INR', 'INV-TATA-2026-4491', 'COMPLETED', 'Chief Technician Virendra', 55000, '2027-02-15'
+  );
+  insertMaint.run(
+    uuidv4(), v4Id, '2026-09-10', 38200, 'CORRECTIVE',
+    'Front brake rotor replacement, hydraulic fluid bleed, and ABS sensor recalibration',
+    'Mahindra Heavy Commercial Hub, Ghaziabad',
+    18900.0, 'INR', 'INV-MH-2026-8812', 'COMPLETED', 'Lead Tech Manoj Kumar', 48000, '2027-03-10'
+  );
+
+  // 8. Commercial Fuel Transactions
+  const insertFuel = db.prepare(`
+    INSERT INTO fuel_transactions (
+      id, vehicle_id, driver_id, trip_id, fueling_date, quantity_liters, rate_per_liter,
+      total_cost, odometer_km, fuel_station, payment_mode, receipt_reference, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertFuel.run(
+    uuidv4(), v1Id, driver1UserId, trip1Id, '2026-09-12',
+    65.0, 89.62, 5825.30, 48150,
+    'Indian Oil COCO Fuel Hub, Mathura Road, Badarpur',
+    'FLEET_CARD', 'IOCL-BDR-9921', 'Full tank before intercity morning dispatch'
+  );
+  insertFuel.run(
+    uuidv4(), v2Id, driver2UserId, trip2Id, '2026-09-11',
+    80.0, 89.75, 7180.00, 62400,
+    'Bharat Petroleum Depot, Sector 63, Noida',
+    'FLEET_CARD', 'BPCL-NOI-1142', 'Transit diesel fill for warehouse restocking'
+  );
+
+  // 9. Operational Exceptions & Alerts
+  const insertExc = db.prepare(`
+    INSERT INTO operational_exceptions (
+      id, severity, category, title, description, vehicle_id, driver_id, trip_id,
+      location_context, is_acknowledged, resolution_status, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertExc.run(
+    uuidv4(), 'HIGH', 'DELIVERY_DELAY',
+    'Interstate Border Queue Bottleneck',
+    'Commercial goods tax and checkpoint queue caused +22 minutes delay approaching Ghazipur border depot.',
+    v1Id, driver1UserId, trip1Id, 'Delhi-UP Border Highway Junction, Ghazipur',
+    0, 'OPEN', '2026-09-13T10:45:00.000Z'
+  );
+
+  insertExc.run(
+    uuidv4(), 'MEDIUM', 'DOCUMENT_EXPIRING',
+    'Statutory PUC Expiration Warning',
+    'Pollution Under Control certificate for vehicle UP14 EX 7621 expires within 12 days. RTO testing inspection booking required.',
+    v4Id, null, null, 'Okhla Central Fleet Yard',
+    1, 'ACKNOWLEDGED', '2026-09-12T08:00:00.000Z'
   );
 
   console.log('✅ Database seeded with Delhi-Noida demo data successfully!');

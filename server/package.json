@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "migrate": "tsx src/migrations/runner.ts",
     "seed": "tsx src/seed.ts",
+    "test:integrity": "tsx src/testIntegrity.ts",
+    "test": "tsx src/testIntegrity.ts",
+    "test:workflow": "tsx src/testWorkflow.ts",
     "start": "node --experimental-sqlite dist/index.js"
   },
   "dependencies": {

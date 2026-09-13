@@ -83,6 +83,8 @@ router.get('/vehicles/:id/history', requireAuth, (req, res) => {
   const trips = db.prepare(`
     SELECT t.*, u.name as driver_name,
            (SELECT COUNT(*) FROM trip_stops WHERE trip_id = t.id) as total_stops
+    FROM trips t
+    LEFT JOIN users u ON t.driver_id = u.id
     WHERE t.vehicle_id = ?
     ORDER BY t.date DESC, t.planned_departure_time DESC
   `).all(id);
@@ -361,6 +363,267 @@ router.delete('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: Au
   });
 
   return res.json({ message: `Destination '${destination.name}' has been deactivated. Historical trip records are preserved.` });
+});
+
+// ==========================================
+// VEHICLE COMPLIANCE DOCUMENTS
+// ==========================================
+
+router.get('/vehicles/:id/documents', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const documents = db.prepare(`
+    SELECT * FROM vehicle_documents
+    WHERE vehicle_id = ?
+    ORDER BY expiry_date ASC
+  `).all(id);
+
+  return res.json({ documents });
+});
+
+router.post('/vehicles/:id/documents', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { document_type, title, document_number, issue_date, expiry_date, issuing_authority, notes } = req.body;
+
+  if (!document_type || !title || !document_number || !expiry_date) {
+    return res.status(400).json({ error: 'Document type, title, number, and expiry date are required' });
+  }
+
+  const docId = uuidv4();
+  const now = new Date();
+  const exp = new Date(expiry_date);
+  const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 3600 * 24));
+  const status = diffDays < 0 ? 'EXPIRED' : diffDays <= 30 ? 'EXPIRING_SOON' : 'VALID';
+
+  try {
+    db.prepare(`
+      INSERT INTO vehicle_documents (
+        id, vehicle_id, document_type, title, document_number, issue_date, expiry_date, issuing_authority, status, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      docId,
+      id,
+      document_type,
+      title,
+      document_number,
+      issue_date || null,
+      expiry_date,
+      issuing_authority || null,
+      status,
+      notes || null
+    );
+
+    logAudit({
+      action: 'VEHICLE_DOCUMENT_RECORDED',
+      newValue: `${title} (${document_number}) added for vehicle ${id}`,
+      changedBy: req.user!.id
+    });
+
+    return res.status(201).json({ message: 'Vehicle document recorded', id: docId });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// VEHICLE MAINTENANCE RECORDS
+// ==========================================
+
+router.get('/vehicles/:id/maintenance', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const maintenanceRecords = db.prepare(`
+    SELECT * FROM maintenance_records
+    WHERE vehicle_id = ?
+    ORDER BY service_date DESC
+  `).all(id);
+
+  return res.json({ maintenanceRecords });
+});
+
+router.post('/vehicles/:id/maintenance', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const {
+    service_date,
+    odometer_km,
+    maintenance_type = 'PREVENTIVE',
+    description,
+    service_center,
+    cost_amount,
+    currency = 'INR',
+    invoice_reference,
+    status = 'COMPLETED',
+    performed_by,
+    next_service_due_km,
+    next_service_due_date
+  } = req.body;
+
+  if (!service_date || odometer_km === undefined || !description || !service_center || cost_amount === undefined) {
+    return res.status(400).json({ error: 'Service date, odometer, description, service center, and cost amount are required' });
+  }
+
+  const recordId = uuidv4();
+  try {
+    db.prepare(`
+      INSERT INTO maintenance_records (
+        id, vehicle_id, service_date, odometer_km, maintenance_type, description, service_center,
+        cost_amount, currency, invoice_reference, status, performed_by, next_service_due_km, next_service_due_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      recordId,
+      id,
+      service_date,
+      odometer_km,
+      maintenance_type,
+      description,
+      service_center,
+      cost_amount,
+      currency,
+      invoice_reference || null,
+      status,
+      performed_by || null,
+      next_service_due_km ?? null,
+      next_service_due_date || null
+    );
+
+    logAudit({
+      action: 'VEHICLE_MAINTENANCE_LOGGED',
+      newValue: `Maintenance: ${description} (INR ${cost_amount}) for vehicle ${id}`,
+      changedBy: req.user!.id
+    });
+
+    return res.status(201).json({ message: 'Maintenance record logged', id: recordId });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// VEHICLE FUEL TRANSACTIONS
+// ==========================================
+
+router.get('/vehicles/:id/fuel', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const fuelTransactions = db.prepare(`
+    SELECT f.*, u.name as driver_name
+    FROM fuel_transactions f
+    LEFT JOIN users u ON f.driver_id = u.id
+    WHERE f.vehicle_id = ?
+    ORDER BY f.fueling_date DESC
+  `).all(id);
+
+  return res.json({ fuelTransactions });
+});
+
+router.post('/vehicles/:id/fuel', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const {
+    driver_id,
+    trip_id,
+    fueling_date,
+    quantity_liters,
+    rate_per_liter,
+    total_cost,
+    odometer_km,
+    fuel_station,
+    payment_mode = 'FLEET_CARD',
+    receipt_reference,
+    notes
+  } = req.body;
+
+  if (!fueling_date || !quantity_liters || !rate_per_liter || !odometer_km || !fuel_station) {
+    return res.status(400).json({ error: 'Fueling date, quantity, rate, odometer, and fuel station are required' });
+  }
+
+  const calculatedCost = total_cost ?? Math.round(quantity_liters * rate_per_liter * 100) / 100;
+  const fuelId = uuidv4();
+
+  try {
+    db.prepare(`
+      INSERT INTO fuel_transactions (
+        id, vehicle_id, driver_id, trip_id, fueling_date, quantity_liters, rate_per_liter,
+        total_cost, odometer_km, fuel_station, payment_mode, receipt_reference, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      fuelId,
+      id,
+      driver_id || null,
+      trip_id || null,
+      fueling_date,
+      quantity_liters,
+      rate_per_liter,
+      calculatedCost,
+      odometer_km,
+      fuel_station,
+      payment_mode,
+      receipt_reference || null,
+      notes || null
+    );
+
+    return res.status(201).json({ message: 'Fuel transaction logged', id: fuelId });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// OPERATIONAL EXCEPTIONS & ALERTS
+// ==========================================
+
+router.get('/exceptions', requireAuth, (req, res) => {
+  const { status = 'OPEN', severity, limit = 50 } = req.query;
+
+  let query = `
+    SELECT e.*, v.vehicle_number, u.name as driver_name, t.reference_number as trip_ref
+    FROM operational_exceptions e
+    LEFT JOIN vehicles v ON e.vehicle_id = v.id
+    LEFT JOIN users u ON e.driver_id = u.id
+    LEFT JOIN trips t ON e.trip_id = t.id
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+
+  if (status && status !== 'ALL') {
+    query += ` AND e.resolution_status = ?`;
+    params.push(status);
+  }
+  if (severity) {
+    query += ` AND e.severity = ?`;
+    params.push(severity);
+  }
+
+  query += ` ORDER BY e.created_at DESC LIMIT ?`;
+  params.push(parseInt(limit as string, 10) || 50);
+
+  const exceptions = db.prepare(query).all(...params);
+  return res.json({ exceptions });
+});
+
+router.post('/exceptions/:id/acknowledge', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { resolution_notes } = req.body;
+  const userId = req.user!.id;
+  const now = new Date().toISOString();
+
+  try {
+    db.prepare(`
+      UPDATE operational_exceptions
+      SET resolution_status = 'ACKNOWLEDGED',
+          is_acknowledged = 1,
+          acknowledged_by = ?,
+          acknowledged_at = ?,
+          resolution_notes = COALESCE(?, resolution_notes)
+      WHERE id = ?
+    `).run(userId, now, resolution_notes || null, id);
+
+    logAudit({
+      action: 'EXCEPTION_ACKNOWLEDGED',
+      newValue: `Exception ${id} acknowledged by manager`,
+      changedBy: userId
+    });
+
+    return res.json({ message: 'Exception acknowledged successfully' });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
 });
 
 export default router;
