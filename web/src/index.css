@@ -1301,26 +1301,36 @@ video.camera-viewfinder {
    ========================================================================== */
 
 .driver-theme-root {
-  --driver-primary: #008F72;
-  --driver-primary-hover: #00765E;
-  --driver-primary-light: #E6F5F1;
-  --driver-primary-border: #A3D9CE;
-  --driver-secondary: #00A884;
-  --driver-bg: #F5F7F8;
+  --driver-brand-primary: #1764A8;
+  --driver-brand-dark: #0E477A;
+  --driver-brand-light: #EAF3FA;
+  --driver-brand-border: #BCD7EE;
+
+  --driver-primary: #1764A8;
+  --driver-primary-hover: #12528C;
+  --driver-primary-light: #EAF3FA;
+  --driver-primary-border: #BCD7EE;
+  --driver-secondary: #008F72;
+
+  --driver-bg: #F4F7FA;
   --driver-card-bg: #FFFFFF;
-  --driver-card-border: #E4E7EC;
-  --driver-text-primary: #101828;
-  --driver-text-secondary: #667085;
-  --driver-text-muted: #98A2B3;
-  --driver-warning: #F79009;
-  --driver-warning-bg: #FFFAEB;
-  --driver-warning-border: #FEDF89;
+  --driver-card-border: #D9E1E8;
+  --driver-text-primary: #12202F;
+  --driver-text-secondary: #475467;
+  --driver-text-muted: #667085;
+
+  --driver-warning: #D97706;
+  --driver-warning-bg: #FFFBEB;
+  --driver-warning-border: #FDE68A;
+
   --driver-danger: #D92D20;
   --driver-danger-bg: #FEF3F2;
   --driver-danger-border: #FECDCA;
-  --driver-success: #039855;
-  --driver-success-bg: #ECFDF3;
-  --driver-success-border: #A6F4C5;
+
+  --driver-success: #12A66A;
+  --driver-success-bg: #E8F8F0;
+  --driver-success-border: #A3E5C7;
+
   --driver-radius-card: 16px;
   --driver-radius-btn: 12px;
   --driver-shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05), 0 1px 2px rgba(16, 24, 40, 0.03);
@@ -1333,22 +1343,22 @@ video.camera-viewfinder {
 }
 
 [data-theme="dark"] .driver-theme-root {
-  --driver-bg: #0C111D;
-  --driver-card-bg: #161B26;
-  --driver-card-border: #2B3444;
-  --driver-text-primary: #F5F7F8;
-  --driver-text-secondary: #98A2B3;
-  --driver-text-muted: #667085;
-  --driver-primary-light: rgba(0, 143, 114, 0.16);
-  --driver-primary-border: rgba(0, 143, 114, 0.4);
-  --driver-warning-bg: rgba(247, 144, 9, 0.12);
-  --driver-warning-border: rgba(247, 144, 9, 0.3);
-  --driver-danger-bg: rgba(217, 45, 32, 0.14);
-  --driver-danger-border: rgba(217, 45, 32, 0.3);
-  --driver-success-bg: rgba(3, 152, 85, 0.14);
-  --driver-success-border: rgba(3, 152, 85, 0.3);
-  --driver-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.25);
-  --driver-shadow-float: 0 12px 28px rgba(0, 0, 0, 0.45);
+  --driver-bg: #0A1118;
+  --driver-card-bg: #121E2A;
+  --driver-card-border: #1E3347;
+  --driver-text-primary: #F0F4F8;
+  --driver-text-secondary: #94A3B8;
+  --driver-text-muted: #64748B;
+  --driver-primary-light: rgba(23, 100, 168, 0.22);
+  --driver-primary-border: rgba(23, 100, 168, 0.5);
+  --driver-warning-bg: rgba(217, 119, 6, 0.14);
+  --driver-warning-border: rgba(217, 119, 6, 0.35);
+  --driver-danger-bg: rgba(217, 45, 32, 0.16);
+  --driver-danger-border: rgba(217, 45, 32, 0.35);
+  --driver-success-bg: rgba(18, 166, 106, 0.16);
+  --driver-success-border: rgba(18, 166, 106, 0.35);
+  --driver-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --driver-shadow-float: 0 12px 28px rgba(0, 0, 0, 0.5);
 }
 
 /* Touch targets and clickable items */
@@ -1378,7 +1388,7 @@ video.camera-viewfinder {
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 143, 114, 0.25);
+  box-shadow: 0 4px 14px rgba(23, 100, 168, 0.28);
   transition: background-color 0.18s ease, transform 0.12s ease;
   touch-action: manipulation;
 }
@@ -1433,13 +1443,13 @@ video.camera-viewfinder {
   box-sizing: border-box;
 }
 
-/* Hero Green Trip Card */
+/* Hero Blue Trip Card (HoseXperts Corporate Identity) */
 .driver-hero-trip {
-  background: linear-gradient(135deg, #008F72 0%, #006F58 100%);
+  background: linear-gradient(135deg, #1764A8 0%, #0E477A 100%);
   color: #FFFFFF;
   border-radius: var(--driver-radius-card);
   padding: 20px 18px;
-  box-shadow: 0 8px 24px rgba(0, 143, 114, 0.28);
+  box-shadow: 0 8px 24px rgba(23, 100, 168, 0.32);
   position: relative;
   overflow: hidden;
 }
@@ -1452,7 +1462,7 @@ video.camera-viewfinder {
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 70%);
   pointer-events: none;
 }
 

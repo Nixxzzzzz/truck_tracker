@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, Bell, Sun, Moon, RefreshCw } from 'lucide-react';
 import { User } from '../../types';
+import { HoseXpertsLogo } from '../common/HoseXpertsLogo';
 
 interface Props {
   currentUser: User;
@@ -41,21 +42,109 @@ export const DriverHeader: React.FC<Props> = ({
         .slice(0, 2)
         .join('')
         .toUpperCase()
-    : 'DR';
+    : 'RS';
 
   return (
-    <header
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px 4px 10px',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}
-    >
-      {/* Left Profile Snippet */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px', boxSizing: 'border-box' }}>
+      {/* Top Brand Bar with Compact Logo & Notification */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 2px 0'
+        }}
+      >
+        <HoseXpertsLogo variant="compact" height={32} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* GPS indicator - only show operational status, not raw technical numbers */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              color: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)',
+              backgroundColor: gpsAccuracy !== null ? 'var(--driver-success-bg)' : 'var(--driver-warning-bg)',
+              border: `1px solid ${gpsAccuracy !== null ? 'var(--driver-success-border)' : 'var(--driver-warning-border)'}`,
+              padding: '3px 8px',
+              borderRadius: '9999px'
+            }}
+          >
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)'
+              }}
+            />
+            <span>{gpsAccuracy !== null ? 'GPS Connected' : 'Acquiring GPS'}</span>
+          </div>
+
+          {/* Theme Toggle */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              aria-label="Toggle dark/light mode"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--driver-text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '4px'
+              }}
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+          )}
+
+          {/* Notification Bell */}
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            aria-label="Notifications"
+            style={{
+              position: 'relative',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--driver-text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px'
+            }}
+          >
+            <Bell size={19} />
+            <span
+              style={{
+                position: 'absolute',
+                top: '2px',
+                right: '2px',
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: '#D92D20'
+              }}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Driver Profile Greeting Banner */}
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '0 2px'
+        }}
+      >
         <div
           style={{
             width: '46px',
@@ -69,7 +158,7 @@ export const DriverHeader: React.FC<Props> = ({
             fontWeight: 800,
             fontSize: '1.05rem',
             letterSpacing: '0.5px',
-            boxShadow: '0 2px 8px rgba(0, 143, 114, 0.25)',
+            boxShadow: '0 2px 8px rgba(23, 100, 168, 0.25)',
             flexShrink: 0
           }}
         >
@@ -89,7 +178,7 @@ export const DriverHeader: React.FC<Props> = ({
           </div>
           <h1
             style={{
-              fontSize: '1.15rem',
+              fontSize: '1.18rem',
               fontWeight: 800,
               color: 'var(--driver-text-primary)',
               margin: '2px 0 0',
@@ -110,98 +199,7 @@ export const DriverHeader: React.FC<Props> = ({
             Driver • {vehicleNumber}
           </div>
         </div>
-      </div>
-
-      {/* Right Action Icons: GPS status, Theme, Notifications */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {/* GPS status pill */}
-        {gpsAccuracy !== undefined && (
-          <button
-            type="button"
-            onClick={onRefreshGps}
-            title={
-              gpsAccuracy !== null
-                ? `Live GPS active: ±${gpsAccuracy}m accuracy. Click to refresh.`
-                : 'Acquiring GPS fix. Click to refresh.'
-            }
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: gpsAccuracy !== null ? 'var(--driver-success-bg)' : 'var(--driver-card-bg)',
-              color: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-text-muted)',
-              border: `1px solid ${gpsAccuracy !== null ? 'var(--driver-success-border)' : 'var(--driver-card-border)'}`,
-              padding: '6px 10px',
-              borderRadius: '9999px',
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            <MapPin size={12} className={isRefreshingGps ? 'spin-animation' : ''} />
-            <span>{gpsAccuracy !== null ? `±${gpsAccuracy}m` : 'GPS'}</span>
-            {onRefreshGps && (
-              <RefreshCw
-                size={10}
-                style={{ marginLeft: 2, opacity: 0.7 }}
-                className={isRefreshingGps ? 'spin-animation' : ''}
-              />
-            )}
-          </button>
-        )}
-
-        {/* Theme Toggle */}
-        {onToggleTheme && (
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            aria-label="Toggle dark/light mode"
-            className="driver-tap-target"
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--driver-card-bg)',
-              border: '1px solid var(--driver-card-border)',
-              color: 'var(--driver-text-secondary)',
-              padding: 0
-            }}
-          >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
-        )}
-
-        {/* Notification Bell */}
-        <button
-          type="button"
-          onClick={onOpenNotifications}
-          aria-label="Notifications"
-          className="driver-tap-target"
-          style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--driver-card-bg)',
-            border: '1px solid var(--driver-card-border)',
-            color: 'var(--driver-text-secondary)',
-            padding: 0,
-            position: 'relative'
-          }}
-        >
-          <Bell size={17} />
-          <span
-            style={{
-              position: 'absolute',
-              top: '8px',
-              right: '9px',
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--driver-primary)'
-            }}
-          />
-        </button>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 };

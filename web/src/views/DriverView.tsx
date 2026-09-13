@@ -45,6 +45,8 @@ import { FloatingNavigationCard } from '../components/driver/FloatingNavigationC
 import { EmergencyScreen } from '../components/driver/EmergencyScreen';
 import { MoreScreen } from '../components/driver/MoreScreen';
 import { DesktopSidebar } from '../components/driver/DesktopSidebar';
+import { TopBar } from '../components/driver/TopBar';
+import { DesktopControlTower } from '../components/driver/DesktopControlTower';
 
 interface Props {
   currentUser: User;
@@ -81,6 +83,19 @@ export const DriverView: React.FC<Props> = ({
 }) => {
   // Navigation tab state: 'home' | 'trip' | 'map' | 'emergency' | 'more'
   const [activeTab, setActiveTab] = useState<DriverTab>('home');
+
+  // Track responsive desktop breakpoint (>=1024px) for full Operations Control Tower
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Selected stop for progressive workflow (null = show timeline list)
   const [selectedStopForWorkflow, setSelectedStopForWorkflow] = useState<TripStop | null>(null);
@@ -348,8 +363,27 @@ export const DriverView: React.FC<Props> = ({
   };
 
   const handleMarkDeliveredProgressive = async () => {
-    await handleCompleteActivity();
-    await handleDepartStop();
+    const targetStop = selectedStopForWorkflow || currentStop;
+    if (!activeTrip || !targetStop) return;
+    setActionLoading(true);
+    try {
+      // Step 1: Complete activity and POD record on backend
+      await api.driver.completeActivity(activeTrip.id, targetStop.id, {
+        activity_type: 'Delivery',
+        status: 'COMPLETED',
+        notes: 'Standard POD delivery completed'
+      });
+      // Step 2: Record departure safely after activity completion confirms
+      const coords = await getCurrentGpsPosition();
+      await api.driver.departStop(activeTrip.id, targetStop.id, coords);
+      setGeofenceFeedback(null);
+      await loadTripDetails(activeTrip.id);
+      setSelectedStopForWorkflow(null); // return to timeline after departing
+    } catch (err: any) {
+      alert(err.message || 'Failed to complete stop delivery. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleResolveDelay = async () => {
@@ -441,45 +475,77 @@ export const DriverView: React.FC<Props> = ({
             onLogout={onLogout}
             isOnline={isOnline}
             offlineCount={offlineCount}
+            onOpenDocuments={() => setIsVehiclePapersOpen(true)}
+            onOpenAlerts={() => setIsDelayOpen(true)}
           />
         </div>
 
-        {/* Main Content Workspace */}
-        <main
-          style={{
-            flex: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            padding: activeTab === 'map' ? '0' : '12px 14px 90px',
-            width: '100%',
-            height: activeTab === 'map' ? '100%' : 'auto',
-            boxSizing: 'border-box'
-          }}
-        >
-          <div
+        {/* Main Workspace Column */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {/* Top Bar for Desktop Operations Mode */}
+          {isDesktop && (
+            <TopBar
+              currentUser={currentUser}
+              theme={theme}
+              onToggleTheme={onToggleTheme}
+              onOpenNotifications={() => setIsNotificationToastOpen(true)}
+            />
+          )}
+
+          {/* Main Content Workspace */}
+          <main
             style={{
-              maxWidth: activeTab === 'map' ? '100%' : '520px',
+              flex: 1,
+              display: 'flex',
+              justifyContent: 'center',
+              padding: activeTab === 'map' ? '0' : isDesktop ? '24px 28px 40px' : '12px 14px 90px',
               width: '100%',
               height: activeTab === 'map' ? '100%' : 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: activeTab === 'map' ? '0' : '14px'
+              boxSizing: 'border-box'
             }}
           >
-            {/* TAB 1: HOME SCREEN */}
-            {activeTab === 'home' && (
-              <>
-                <DriverHeader
-                  currentUser={currentUser}
-                  vehicleNumber={activeTrip?.vehicle_number}
-                  gpsAccuracy={gpsAccuracy}
-                  isRealGps={isRealGps}
-                  isRefreshingGps={isRefreshingGps}
-                  onRefreshGps={handleRefreshGps}
-                  theme={theme}
-                  onToggleTheme={onToggleTheme}
-                  onOpenNotifications={() => setIsNotificationToastOpen(true)}
-                />
+            <div
+              style={{
+                maxWidth: activeTab === 'map' ? '100%' : isDesktop ? '1440px' : '520px',
+                width: '100%',
+                height: activeTab === 'map' ? '100%' : 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: activeTab === 'map' ? '0' : '16px'
+              }}
+            >
+              {/* TAB 1: HOME SCREEN (Desktop Control Tower on >=1024px, Mobile Driver Home on <1024px) */}
+              {activeTab === 'home' && (
+                isDesktop ? (
+                  <DesktopControlTower
+                    currentUser={currentUser}
+                    activeTrip={activeTrip}
+                    trips={trips}
+                    driverCoords={driverCoords}
+                    gpsAccuracy={gpsAccuracy}
+                    theme={theme}
+                    onSelectStop={(stop) => {
+                      setSelectedStopForWorkflow(stop);
+                      setActiveTab('trip');
+                    }}
+                    onViewTripDetails={() => setActiveTab('trip')}
+                    onOpenLiveMap={() => setActiveTab('map')}
+                    getStopAreaCode={getStopAreaCode}
+                    calculateDistanceKm={calculateDistanceKm}
+                  />
+                ) : (
+                  <>
+                    <DriverHeader
+                      currentUser={currentUser}
+                      vehicleNumber={activeTrip?.vehicle_number}
+                      gpsAccuracy={gpsAccuracy}
+                      isRealGps={isRealGps}
+                      isRefreshingGps={isRefreshingGps}
+                      onRefreshGps={handleRefreshGps}
+                      theme={theme}
+                      onToggleTheme={onToggleTheme}
+                      onOpenNotifications={() => setIsNotificationToastOpen(true)}
+                    />
 
                 {/* Status Alert Banner */}
                 <StatusBanner
@@ -580,7 +646,8 @@ export const DriverView: React.FC<Props> = ({
                   </div>
                 )}
               </>
-            )}
+                )
+              )}
 
             {/* TAB 2: TRIP SCREEN */}
             {activeTab === 'trip' && (
@@ -610,6 +677,7 @@ export const DriverView: React.FC<Props> = ({
                     onMarkDelivered={handleMarkDeliveredProgressive}
                     onReportDelay={() => setIsDelayOpen(true)}
                     onAddCustomStop={() => setIsCustomStopOpen(true)}
+                    onOpenDocuments={() => setIsVehiclePapersOpen(true)}
                     onBack={() => setSelectedStopForWorkflow(null)}
                   />
                 ) : activeTrip ? (
@@ -704,6 +772,7 @@ export const DriverView: React.FC<Props> = ({
           </div>
         </main>
       </div>
+    </div>
 
       {/* Sticky Mobile Bottom Navigation (Home | Trip | Map | More) */}
       <BottomNavigation

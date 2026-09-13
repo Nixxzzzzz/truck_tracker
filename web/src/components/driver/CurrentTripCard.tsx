@@ -72,12 +72,12 @@ export const CurrentTripCard: React.FC<Props> = ({
   const totalStops = trip.stops?.length || 0;
   const progressPercent = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
 
-  // Destination / Route summary
-  const origin = trip.starting_location || 'Central Depot';
-  const lastStop = trip.stops && trip.stops.length > 0 ? trip.stops[trip.stops.length - 1].destination_name : 'Customer Bay';
-  const vehicleTag = trip.vehicle_model || '10ft High Deck';
+  // Origin -> Destination summary
+  const origin = trip.starting_location || 'Delhi Depot';
+  const lastStop = trip.stops && trip.stops.length > 0 ? trip.stops[trip.stops.length - 1].destination_name : 'Okhla Industrial Area';
+  const vehicleModel = trip.vehicle_model || 'Tata Ultra T.7 (14ft)';
 
-  // Status text & badge
+  // Status
   const isPlanned = trip.status === 'PLANNED' || trip.status === 'ASSIGNED';
   const isEnRoute = trip.status === 'IN_PROGRESS' || trip.status === 'AT_DESTINATION';
   const isReturning = trip.status === 'RETURNING';
@@ -99,24 +99,27 @@ export const CurrentTripCard: React.FC<Props> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '14px'
+          marginBottom: '12px'
         }}
       >
-        <span
-          style={{
-            fontSize: '0.72rem',
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'rgba(255, 255, 255, 0.85)'
-          }}
-        >
-          CURRENT TRIP
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Truck size={16} color="#FFFFFF" />
+          <span
+            style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(255, 255, 255, 0.9)'
+            }}
+          >
+            CURRENT TRIP
+          </span>
+        </div>
 
         <span
           style={{
-            fontSize: '0.72rem',
+            fontSize: '0.68rem',
             fontWeight: 800,
             letterSpacing: '0.04em',
             padding: '3px 10px',
@@ -130,134 +133,120 @@ export const CurrentTripCard: React.FC<Props> = ({
         </span>
       </div>
 
-      {/* Main Route Title */}
-      <div style={{ marginBottom: '14px' }}>
-        <h2
-          style={{
-            fontSize: '1.4rem',
-            fontWeight: 800,
-            margin: '0 0 4px',
-            color: '#FFFFFF',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.25,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flexWrap: 'wrap'
-          }}
-        >
-          <span>{origin}</span>
-          <ArrowRight size={18} style={{ opacity: 0.8 }} />
-          <span>{lastStop}</span>
-        </h2>
+      {/* Main Route Title & Vehicle */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '14px' }}>
+        <div>
+          <h2
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              margin: '0 0 4px',
+              color: '#FFFFFF',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.25,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flexWrap: 'wrap'
+            }}
+          >
+            <span>{origin}</span>
+            <ArrowRight size={16} style={{ opacity: 0.85 }} />
+            <span>{lastStop}</span>
+          </h2>
 
+          <div
+            style={{
+              fontSize: '0.82rem',
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontWeight: 500
+            }}
+          >
+            {vehicleModel}
+          </div>
+        </div>
+
+        {/* Small Truck Illustration graphic */}
         <div
           style={{
-            fontSize: '0.84rem',
-            color: 'rgba(255, 255, 255, 0.85)',
-            fontWeight: 500,
+            width: '56px',
+            height: '42px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            justifyContent: 'center',
+            flexShrink: 0
           }}
         >
-          <span>{trip.vehicle_number}</span>
-          <span>•</span>
-          <span>{vehicleTag}</span>
+          <svg width="40" height="26" viewBox="0 0 48 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4" width="28" height="20" rx="2" fill="#FFFFFF" opacity="0.9" />
+            <path d="M30 10H38L44 16V24H30V10Z" fill="#FFFFFF" opacity="0.95" />
+            <rect x="33" y="12" width="6" height="5" rx="1" fill="#1764A8" />
+            <circle cx="10" cy="24" r="4" fill="#0E477A" />
+            <circle cx="10" cy="24" r="2" fill="#FFFFFF" />
+            <circle cx="36" cy="24" r="4" fill="#0E477A" />
+            <circle cx="36" cy="24" r="2" fill="#FFFFFF" />
+          </svg>
         </div>
       </div>
 
-      {/* 2-Column Schedule & Stop Progress Details */}
+      {/* Planned Departure & Stops count info */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '12px',
-          padding: '12px 14px',
-          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px',
+          backgroundColor: 'rgba(0, 0, 0, 0.14)',
           borderRadius: '12px',
-          marginBottom: '16px'
+          marginBottom: '14px',
+          fontSize: '0.82rem'
         }}
       >
-        <div>
-          <div
-            style={{
-              fontSize: '0.68rem',
-              color: 'rgba(255, 255, 255, 0.75)',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em'
-            }}
-          >
-            Planned Departure
-          </div>
-          <div
-            style={{
-              fontSize: '1.05rem',
-              fontWeight: 800,
-              color: '#FFFFFF',
-              marginTop: '2px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-          >
-            <Clock size={15} style={{ opacity: 0.9 }} />
-            <span>{trip.planned_departure_time || '06:00'}</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Clock size={14} style={{ opacity: 0.85 }} />
+          <span>Planned Departure: <strong style={{ color: '#FFFFFF' }}>{trip.planned_departure_time || '06:00'}</strong></span>
         </div>
-
-        <div>
-          <div
-            style={{
-              fontSize: '0.68rem',
-              color: 'rgba(255, 255, 255, 0.75)',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em'
-            }}
-          >
-            Delivery Stops
-          </div>
-          <div
-            style={{
-              fontSize: '1.05rem',
-              fontWeight: 800,
-              color: '#FFFFFF',
-              marginTop: '2px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-          >
-            <CheckCircle2 size={15} style={{ opacity: 0.9 }} />
-            <span>
-              {completedStops} of {totalStops} Completed
-            </span>
-          </div>
+        <div style={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>
+          {trip.vehicle_number}
         </div>
       </div>
 
-      {/* Mini Progress Bar */}
-      <div
-        style={{
-          width: '100%',
-          height: '5px',
-          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          borderRadius: '9999px',
-          overflow: 'hidden',
-          marginBottom: '16px'
-        }}
-      >
+      {/* Stops Progress Bar */}
+      <div style={{ marginBottom: '14px' }}>
         <div
           style={{
-            height: '100%',
-            width: `${progressPercent}%`,
-            backgroundColor: '#FFFFFF',
-            borderRadius: '9999px',
-            transition: 'width 0.4s ease'
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '0.78rem',
+            marginBottom: '6px',
+            color: 'rgba(255, 255, 255, 0.9)'
           }}
-        />
+        >
+          <span>{completedStops} of {totalStops} Stops Completed</span>
+          <strong>{progressPercent}%</strong>
+        </div>
+        <div
+          style={{
+            width: '100%',
+            height: '6px',
+            backgroundColor: 'rgba(255, 255, 255, 0.22)',
+            borderRadius: '9999px',
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${progressPercent}%`,
+              backgroundColor: '#FFFFFF',
+              borderRadius: '9999px',
+              transition: 'width 0.4s ease'
+            }}
+          />
+        </div>
       </div>
 
       {/* Action CTA Button: Start Trip or View Trip Details */}
@@ -270,10 +259,10 @@ export const CurrentTripCard: React.FC<Props> = ({
             width: '100%',
             minHeight: '48px',
             backgroundColor: '#FFFFFF',
-            color: 'var(--driver-primary)',
+            color: '#1764A8',
             border: 'none',
             borderRadius: '12px',
-            fontSize: '0.98rem',
+            fontSize: '0.96rem',
             fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
@@ -294,10 +283,10 @@ export const CurrentTripCard: React.FC<Props> = ({
             width: '100%',
             minHeight: '48px',
             backgroundColor: '#FFFFFF',
-            color: 'var(--driver-primary)',
+            color: '#1764A8',
             border: 'none',
             borderRadius: '12px',
-            fontSize: '0.96rem',
+            fontSize: '0.94rem',
             fontWeight: 800,
             display: 'flex',
             alignItems: 'center',

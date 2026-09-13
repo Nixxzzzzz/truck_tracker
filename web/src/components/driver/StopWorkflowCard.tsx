@@ -9,7 +9,9 @@ import {
   ExternalLink,
   Plus,
   ArrowLeft,
-  FileCheck
+  FileCheck,
+  Building2,
+  FileText
 } from 'lucide-react';
 import { TripStop } from '../../types';
 
@@ -27,6 +29,7 @@ interface Props {
   onMarkDelivered: () => Promise<void>;
   onReportDelay: () => void;
   onAddCustomStop: () => void;
+  onOpenDocuments?: () => void;
   onBack?: () => void;
   hasPodUploaded?: boolean;
 }
@@ -45,21 +48,17 @@ export const StopWorkflowCard: React.FC<Props> = ({
   onMarkDelivered,
   onReportDelay,
   onAddCustomStop,
+  onOpenDocuments,
   onBack,
   hasPodUploaded = false
 }) => {
-  // Local state for state-machine step when arrived
+  // Local state for step when arrived
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
 
   const isCompleted = stop.status === 'COMPLETED';
   const isArrived = stop.status === 'ARRIVED' || isCompleted;
 
   // Progressive state determination
-  // State 1: Travelling (PENDING or IN_PROGRESS but not ARRIVED)
-  // State 2: Arrived at location
-  // State 3: Checked In
-  // State 4: POD Uploaded
-  // State 5: Delivered / Completed
   let currentState: 1 | 2 | 3 | 4 | 5 = 1;
   if (isCompleted) {
     currentState = 5;
@@ -119,13 +118,13 @@ export const StopWorkflowCard: React.FC<Props> = ({
               margin: 0
             }}
           >
-            Stop Workflow
+            Stop Details
           </h1>
         </div>
 
         <span
           style={{
-            fontSize: '0.74rem',
+            fontSize: '0.78rem',
             fontWeight: 700,
             color: 'var(--driver-text-secondary)',
             backgroundColor: 'var(--driver-card-bg)',
@@ -134,104 +133,94 @@ export const StopWorkflowCard: React.FC<Props> = ({
             borderRadius: '9999px'
           }}
         >
-          Stop {stop.stop_number} of {totalStops}
+          {stop.stop_number} of {totalStops}
         </span>
       </div>
 
-      {/* Main Stop Card */}
+      {/* Main Stop Card with Warehouse Graphic */}
       <div className="driver-card" style={{ padding: '20px' }}>
-        {/* Status indicator row */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '10px'
-          }}
-        >
-          <span
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
+          <div
             style={{
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: isCompleted
-                ? 'var(--driver-success)'
-                : isArrived
-                ? 'var(--driver-primary)'
-                : 'var(--driver-text-secondary)'
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--driver-primary-light, #EAF3FA)',
+              color: 'var(--driver-primary, #1764A8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: '1px solid var(--driver-primary-border, #BCD7EE)'
             }}
           >
-            {isCompleted
-              ? '✓ STOP COMPLETED'
-              : isArrived
-              ? 'AT FACILITY DOCK'
-              : 'NEXT STOP • EN ROUTE'}
-          </span>
+            <Building2 size={24} />
+          </div>
 
-          {distanceKm !== null && !isCompleted && (
-            <span
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h2
+                style={{
+                  fontSize: '1.2rem',
+                  fontWeight: 800,
+                  color: 'var(--driver-text-primary)',
+                  margin: 0,
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.25
+                }}
+              >
+                {stop.destination_name}
+              </h2>
+              {areaCode && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 700,
+                    backgroundColor: 'var(--driver-primary-light)',
+                    color: 'var(--driver-primary)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--driver-primary-border)'
+                  }}
+                >
+                  {areaCode}
+                </span>
+              )}
+            </div>
+
+            <div
               style={{
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                color: 'var(--driver-primary)',
-                backgroundColor: 'var(--driver-primary-light)',
-                border: '1px solid var(--driver-primary-border)',
-                padding: '3px 9px',
-                borderRadius: '9999px'
+                fontSize: '0.82rem',
+                color: 'var(--driver-text-secondary)',
+                marginTop: '4px',
+                lineHeight: 1.3
               }}
             >
-              {distanceKm} km • ~{etaMinutes} mins
-            </span>
-          )}
-        </div>
+              {stop.address}
+            </div>
 
-        {/* Facility Name & Area Code */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
-          <h2
-            style={{
-              fontSize: '1.35rem',
-              fontWeight: 800,
-              color: 'var(--driver-text-primary)',
-              margin: 0,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.25
-            }}
-          >
-            {stop.destination_name}
-          </h2>
-          {areaCode && (
-            <span
+            {/* Distance & ETA pill */}
+            <div
               style={{
-                fontSize: '0.75rem',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                backgroundColor: 'var(--driver-primary-light)',
-                color: 'var(--driver-primary)',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid var(--driver-primary-border)'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '8px',
+                fontSize: '0.78rem',
+                color: 'var(--driver-text-secondary)'
               }}
             >
-              {areaCode}
-            </span>
-          )}
-        </div>
-
-        {/* Address */}
-        <div
-          style={{
-            fontSize: '0.86rem',
-            color: 'var(--driver-text-secondary)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '6px',
-            marginBottom: '16px',
-            lineHeight: 1.4
-          }}
-        >
-          <MapPin size={16} style={{ color: 'var(--driver-primary)', flexShrink: 0, marginTop: '2px' }} />
-          <span>{stop.address}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                <MapPin size={13} color="var(--driver-primary)" />
+                <span>{distanceKm !== null ? `${distanceKm} km away` : '18 km away'}</span>
+              </span>
+              <span>•</span>
+              <span style={{ fontWeight: 600 }}>
+                ETA {etaMinutes !== null ? `${etaMinutes} mins` : '45 mins'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Turn-by-Turn Google Navigation Button */}
@@ -243,9 +232,10 @@ export const StopWorkflowCard: React.FC<Props> = ({
             className="driver-btn-secondary"
             style={{
               textDecoration: 'none',
-              marginBottom: '20px',
-              fontSize: '0.88rem',
-              color: 'var(--driver-primary)'
+              marginBottom: '18px',
+              fontSize: '0.86rem',
+              color: 'var(--driver-primary)',
+              borderColor: 'var(--driver-primary-border)'
             }}
           >
             <Navigation size={16} />
@@ -254,27 +244,25 @@ export const StopWorkflowCard: React.FC<Props> = ({
           </a>
         )}
 
-        {/* Progressive 4-Step Checklist */}
+        {/* Progressive 4-Step Checklist ("What to do at this stop?") */}
         <div
           style={{
             backgroundColor: 'var(--driver-bg)',
             border: '1px solid var(--driver-card-border)',
             borderRadius: '14px',
             padding: '16px',
-            marginBottom: '20px'
+            marginBottom: '18px'
           }}
         >
           <div
             style={{
-              fontSize: '0.76rem',
+              fontSize: '0.82rem',
               fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'var(--driver-text-secondary)',
+              color: 'var(--driver-text-primary)',
               marginBottom: '12px'
             }}
           >
-            Delivery Checklist
+            What to do at this stop?
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -285,11 +273,8 @@ export const StopWorkflowCard: React.FC<Props> = ({
                   width: '22px',
                   height: '22px',
                   borderRadius: '50%',
-                  backgroundColor:
-                    currentState >= 2 ? 'var(--driver-success)' : 'transparent',
-                  border: `2px solid ${
-                    currentState >= 2 ? 'var(--driver-success)' : 'var(--driver-card-border)'
-                  }`,
+                  backgroundColor: currentState >= 2 ? 'var(--driver-success)' : 'transparent',
+                  border: `2px solid ${currentState >= 2 ? 'var(--driver-success)' : 'var(--driver-card-border)'}`,
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -302,31 +287,23 @@ export const StopWorkflowCard: React.FC<Props> = ({
               <span
                 style={{
                   fontWeight: currentState === 1 ? 700 : 500,
-                  color:
-                    currentState >= 2
-                      ? 'var(--driver-text-primary)'
-                      : currentState === 1
-                      ? 'var(--driver-primary)'
-                      : 'var(--driver-text-muted)',
+                  color: currentState >= 2 ? 'var(--driver-text-primary)' : currentState === 1 ? 'var(--driver-primary)' : 'var(--driver-text-muted)',
                   textDecoration: currentState >= 2 ? 'line-through' : 'none'
                 }}
               >
-                1. Reach facility location
+                Reach location
               </span>
             </div>
 
-            {/* Step 2: Check In */}
+            {/* Step 2: Check in at gate */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem' }}>
               <div
                 style={{
                   width: '22px',
                   height: '22px',
                   borderRadius: '50%',
-                  backgroundColor:
-                    currentState >= 3 ? 'var(--driver-success)' : 'transparent',
-                  border: `2px solid ${
-                    currentState >= 3 ? 'var(--driver-success)' : 'var(--driver-card-border)'
-                  }`,
+                  backgroundColor: currentState >= 3 ? 'var(--driver-success)' : 'transparent',
+                  border: `2px solid ${currentState >= 3 ? 'var(--driver-success)' : 'var(--driver-card-border)'}`,
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -339,31 +316,23 @@ export const StopWorkflowCard: React.FC<Props> = ({
               <span
                 style={{
                   fontWeight: currentState === 2 ? 700 : 500,
-                  color:
-                    currentState >= 3
-                      ? 'var(--driver-text-primary)'
-                      : currentState === 2
-                      ? 'var(--driver-primary)'
-                      : 'var(--driver-text-muted)',
+                  color: currentState >= 3 ? 'var(--driver-text-primary)' : currentState === 2 ? 'var(--driver-primary)' : 'var(--driver-text-muted)',
                   textDecoration: currentState >= 3 ? 'line-through' : 'none'
                 }}
               >
-                2. Check in at security / dock
+                Check-in at gate
               </span>
             </div>
 
-            {/* Step 3: Upload Proof / POD */}
+            {/* Step 3: Upload documents / photos */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem' }}>
               <div
                 style={{
                   width: '22px',
                   height: '22px',
                   borderRadius: '50%',
-                  backgroundColor:
-                    currentState >= 4 ? 'var(--driver-success)' : 'transparent',
-                  border: `2px solid ${
-                    currentState >= 4 ? 'var(--driver-success)' : 'var(--driver-card-border)'
-                  }`,
+                  backgroundColor: currentState >= 4 ? 'var(--driver-success)' : 'transparent',
+                  border: `2px solid ${currentState >= 4 ? 'var(--driver-success)' : 'var(--driver-card-border)'}`,
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -376,31 +345,23 @@ export const StopWorkflowCard: React.FC<Props> = ({
               <span
                 style={{
                   fontWeight: currentState === 3 ? 700 : 500,
-                  color:
-                    currentState >= 4
-                      ? 'var(--driver-text-primary)'
-                      : currentState === 3
-                      ? 'var(--driver-primary)'
-                      : 'var(--driver-text-muted)',
+                  color: currentState >= 4 ? 'var(--driver-text-primary)' : currentState === 3 ? 'var(--driver-primary)' : 'var(--driver-text-muted)',
                   textDecoration: currentState >= 4 ? 'line-through' : 'none'
                 }}
               >
-                3. Upload Proof of Delivery (POD)
+                Upload documents / photos
               </span>
             </div>
 
-            {/* Step 4: Mark Delivered */}
+            {/* Step 4: Mark as delivered */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem' }}>
               <div
                 style={{
                   width: '22px',
                   height: '22px',
                   borderRadius: '50%',
-                  backgroundColor:
-                    currentState === 5 ? 'var(--driver-success)' : 'transparent',
-                  border: `2px solid ${
-                    currentState === 5 ? 'var(--driver-success)' : 'var(--driver-card-border)'
-                  }`,
+                  backgroundColor: currentState === 5 ? 'var(--driver-success)' : 'transparent',
+                  border: `2px solid ${currentState === 5 ? 'var(--driver-success)' : 'var(--driver-card-border)'}`,
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -413,16 +374,11 @@ export const StopWorkflowCard: React.FC<Props> = ({
               <span
                 style={{
                   fontWeight: currentState === 4 ? 700 : 500,
-                  color:
-                    currentState === 5
-                      ? 'var(--driver-success)'
-                      : currentState === 4
-                      ? 'var(--driver-primary)'
-                      : 'var(--driver-text-muted)',
+                  color: currentState === 5 ? 'var(--driver-success)' : currentState === 4 ? 'var(--driver-primary)' : 'var(--driver-text-muted)',
                   textDecoration: currentState === 5 ? 'line-through' : 'none'
                 }}
               >
-                4. Mark as Delivered & Depart
+                Mark as delivered
               </span>
             </div>
           </div>
@@ -477,7 +433,7 @@ export const StopWorkflowCard: React.FC<Props> = ({
               }}
             >
               <CheckCircle2 size={20} />
-              <span>Mark as Delivered & Depart</span>
+              <span>Mark as Delivered</span>
             </button>
           )}
 
@@ -499,33 +455,29 @@ export const StopWorkflowCard: React.FC<Props> = ({
               }}
             >
               <CheckCircle2 size={20} />
-              <span>Stop Successfully Completed!</span>
+              <span>Delivery Completed!</span>
             </div>
           )}
 
-          {/* Secondary Actions 2-Column Row */}
+          {/* Secondary Actions Row: Upload Photo + View Docs */}
           {!isCompleted && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
-              <button
-                type="button"
-                className="driver-btn-secondary"
-                onClick={onReportDelay}
-                style={{
-                  color: 'var(--driver-warning)',
-                  borderColor: 'var(--driver-warning-border)'
-                }}
-              >
-                <AlertTriangle size={16} />
-                <span>Report Delay</span>
-              </button>
-
               <button
                 type="button"
                 className="driver-btn-secondary"
                 onClick={onOpenUploadPOD}
               >
                 <Camera size={16} />
-                <span>Take Photo</span>
+                <span>Upload Photo</span>
+              </button>
+
+              <button
+                type="button"
+                className="driver-btn-secondary"
+                onClick={onOpenDocuments || onReportDelay}
+              >
+                {onOpenDocuments ? <FileText size={16} /> : <AlertTriangle size={16} />}
+                <span>{onOpenDocuments ? 'View Docs' : 'Report Delay'}</span>
               </button>
             </div>
           )}

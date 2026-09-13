@@ -1,20 +1,24 @@
 import React from 'react';
 import {
-  Home,
-  Route,
-  MapPin,
-  ShieldAlert,
-  MoreHorizontal,
-  LogOut,
+  LayoutDashboard,
+  Compass,
   Truck,
-  Sun,
-  Moon,
+  MapPin,
+  Users,
+  Car,
+  FileText,
+  Bell,
+  BarChart3,
+  Settings,
+  LogOut,
+  ChevronRight,
+  ShieldAlert,
   Wifi,
-  WifiOff,
-  User as UserIcon
+  WifiOff
 } from 'lucide-react';
 import { DriverTab } from './BottomNavigation';
 import { User, Trip } from '../../types';
+import { HoseXpertsLogo } from '../common/HoseXpertsLogo';
 
 interface Props {
   activeTab: DriverTab;
@@ -26,6 +30,8 @@ interface Props {
   onLogout: () => void;
   isOnline: boolean;
   offlineCount: number;
+  onOpenDocuments?: () => void;
+  onOpenAlerts?: () => void;
 }
 
 export const DesktopSidebar: React.FC<Props> = ({
@@ -37,7 +43,9 @@ export const DesktopSidebar: React.FC<Props> = ({
   onToggleTheme,
   onLogout,
   isOnline,
-  offlineCount
+  offlineCount,
+  onOpenDocuments,
+  onOpenAlerts
 }) => {
   const initials = currentUser.name
     ? currentUser.name
@@ -46,140 +54,121 @@ export const DesktopSidebar: React.FC<Props> = ({
         .slice(0, 2)
         .join('')
         .toUpperCase()
-    : 'DR';
+    : 'RS';
 
-  const navItems: { id: DriverTab; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { id: 'home', label: 'Home Dashboard', icon: <Home size={19} /> },
-    {
-      id: 'trip',
-      label: 'Trip & Stops',
-      icon: <Route size={19} />,
-      badge: activeTrip?.stops?.length ? `${activeTrip.stops.length}` : undefined
-    },
-    { id: 'map', label: 'Live Map Navigation', icon: <MapPin size={19} /> },
-    { id: 'emergency', label: 'Emergency & SOS', icon: <ShieldAlert size={19} /> },
-    {
-      id: 'more',
-      label: 'More Options',
-      icon: <MoreHorizontal size={19} />,
-      badge: offlineCount > 0 ? `${offlineCount}` : undefined
-    }
+  // 10 Desktop Navigation items aligned with HoseXperts Enterprise Operations UI
+  const navItems = [
+    { id: 'home', label: 'Overview', icon: <LayoutDashboard size={18} /> },
+    { id: 'map', label: 'Live Map', icon: <Compass size={18} /> },
+    { id: 'trip', label: 'Trips', icon: <Truck size={18} /> },
+    { id: 'stops', label: 'Stops', icon: <MapPin size={18} /> },
+    { id: 'drivers', label: 'Drivers', icon: <Users size={18} /> },
+    { id: 'vehicles', label: 'Vehicles', icon: <Car size={18} /> },
+    { id: 'documents', label: 'Documents', icon: <FileText size={18} /> },
+    { id: 'alerts', label: 'Alerts', icon: <Bell size={18} />, badge: '3', badgeColor: '#D92D20' },
+    { id: 'reports', label: 'Reports', icon: <BarChart3 size={18} /> },
+    { id: 'settings', label: 'Settings', icon: <Settings size={18} /> }
   ];
+
+  const handleItemClick = (id: string) => {
+    if (id === 'documents') {
+      if (onOpenDocuments) onOpenDocuments();
+      else onTabChange('more');
+    } else if (id === 'alerts') {
+      if (onOpenAlerts) onOpenAlerts();
+      else onTabChange('home');
+    } else if (id === 'stops') {
+      onTabChange('trip');
+    } else if (id === 'home' || id === 'trip' || id === 'map' || id === 'emergency' || id === 'more') {
+      onTabChange(id as DriverTab);
+    } else {
+      // For mock navigation items
+      onTabChange('home');
+    }
+  };
 
   return (
     <aside
       style={{
-        width: '260px',
-        backgroundColor: 'var(--driver-card-bg)',
-        borderRight: '1px solid var(--driver-card-border)',
+        width: '250px',
+        backgroundColor: '#1764A8',
+        color: '#FFFFFF',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '24px 16px',
+        padding: '24px 16px 20px',
         boxSizing: 'border-box',
         height: '100vh',
         position: 'sticky',
         top: 0,
-        flexShrink: 0
+        flexShrink: 0,
+        boxShadow: '2px 0 12px rgba(23, 100, 168, 0.15)',
+        zIndex: 100
       }}
     >
-      {/* Top Brand Logo & Fleet App Title */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px 24px' }}>
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              backgroundColor: 'var(--driver-primary)',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '1.1rem',
-              boxShadow: '0 3px 10px rgba(0, 143, 114, 0.3)'
-            }}
-          >
-            <Truck size={20} />
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: '1.05rem',
-                fontWeight: 800,
-                color: 'var(--driver-text-primary)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.2
-              }}
-            >
-              TruckTracker
-            </div>
-            <div
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                color: 'var(--driver-primary)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase'
-              }}
-            >
-              Driver Terminal
-            </div>
-          </div>
+        {/* Top HoseXperts Corporate Logo */}
+        <div style={{ padding: '4px 8px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}>
+          <HoseXpertsLogo variant="white" height={36} showTagline={true} />
         </div>
 
-        {/* Navigation Items */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {/* 10 Navigation Items */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '16px' }}>
           {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            const isEmergency = item.id === 'emergency';
+            const isActive =
+              (item.id === 'home' && activeTab === 'home') ||
+              (item.id === 'trip' && activeTab === 'trip') ||
+              (item.id === 'map' && activeTab === 'map');
 
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onTabChange(item.id)}
+                onClick={() => handleItemClick(item.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  backgroundColor: isActive
-                    ? isEmergency
-                      ? 'var(--driver-danger-bg)'
-                      : 'var(--driver-primary-light)'
-                    : 'transparent',
-                  color: isActive
-                    ? isEmergency
-                      ? 'var(--driver-danger)'
-                      : 'var(--driver-primary)'
-                    : isEmergency
-                    ? 'var(--driver-danger)'
-                    : 'var(--driver-text-secondary)',
-                  border: isActive
-                    ? `1px solid ${isEmergency ? 'var(--driver-danger-border)' : 'var(--driver-primary-border)'}`
-                    : '1px solid transparent',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  backgroundColor: isActive ? '#0E477A' : 'transparent',
+                  color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.82)',
+                  border: 'none',
                   fontWeight: isActive ? 700 : 500,
-                  fontSize: '0.92rem',
+                  fontSize: '0.88rem',
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease'
+                  transition: 'background-color 0.15s ease, color 0.15s ease',
+                  width: '100%',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.82)';
+                  }
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {item.icon}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ opacity: isActive ? 1 : 0.9 }}>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
+
                 {item.badge && (
                   <span
                     style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      backgroundColor: isActive ? 'var(--driver-primary)' : 'var(--driver-bg)',
-                      color: isActive ? '#FFFFFF' : 'var(--driver-text-secondary)',
-                      padding: '2px 8px',
-                      borderRadius: '9999px'
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      backgroundColor: item.badgeColor || '#D92D20',
+                      color: '#FFFFFF',
+                      padding: '2px 7px',
+                      borderRadius: '9999px',
+                      lineHeight: 1
                     }}
                   >
                     {item.badge}
@@ -191,60 +180,40 @@ export const DesktopSidebar: React.FC<Props> = ({
         </nav>
       </div>
 
-      {/* Bottom Profile, Theme Toggle & Logout */}
-      <div style={{ borderTop: '1px solid var(--driver-card-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Network status pill */}
+      {/* Bottom Profile and Logout Section */}
+      <div
+        style={{
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+          paddingTop: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}
+      >
+        {/* User Card */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '6px 10px',
-            backgroundColor: 'var(--driver-bg)',
-            borderRadius: '8px',
-            fontSize: '0.74rem'
+            padding: '8px 10px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(0, 0, 0, 0.12)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isOnline ? 'var(--driver-success)' : 'var(--driver-warning)' }}>
-            {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
-            <span style={{ fontWeight: 600 }}>{isOnline ? 'Online Synced' : 'Offline'}</span>
-          </div>
-
-          {onToggleTheme && (
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--driver-text-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '2px'
-              }}
-              title="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-          )}
-        </div>
-
-        {/* User Card */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
             <div
               style={{
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--driver-primary)',
-                color: '#FFFFFF',
+                backgroundColor: '#FFFFFF',
+                color: '#1764A8',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: '0.9rem',
+                fontWeight: 800,
+                fontSize: '0.88rem',
                 flexShrink: 0
               }}
             >
@@ -255,7 +224,7 @@ export const DesktopSidebar: React.FC<Props> = ({
                 style={{
                   fontSize: '0.86rem',
                   fontWeight: 700,
-                  color: 'var(--driver-text-primary)',
+                  color: '#FFFFFF',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
@@ -266,32 +235,50 @@ export const DesktopSidebar: React.FC<Props> = ({
               <div
                 style={{
                   fontSize: '0.72rem',
-                  color: 'var(--driver-text-muted)',
+                  color: 'rgba(255, 255, 255, 0.75)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
                 }}
               >
-                {activeTrip?.vehicle_number || 'DL01TA4920'}
+                {currentUser.role === 'DRIVER' ? `Driver • ${activeTrip?.vehicle_number || 'DL01TA4920'}` : 'Operations Manager'}
               </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onLogout}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--driver-text-muted)',
-              padding: '6px'
-            }}
-            title="Logout"
-          >
-            <LogOut size={16} />
-          </button>
+          <ChevronRight size={16} color="rgba(255, 255, 255, 0.7)" />
         </div>
+
+        {/* Logout Button */}
+        <button
+          type="button"
+          onClick={onLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+            padding: '6px 8px',
+            borderRadius: '8px',
+            transition: 'background-color 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+          }}
+        >
+          <LogOut size={16} />
+          <span>Logout</span>
+        </button>
       </div>
     </aside>
   );
