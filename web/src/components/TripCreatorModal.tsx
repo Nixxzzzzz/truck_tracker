@@ -533,7 +533,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Creating Trip...' : 'Create & Dispatch Trip'}
+              {submitting ? 'Creating Trip...' : 'Create & Schedule Trip'}
             </button>
           </div>
         </form>

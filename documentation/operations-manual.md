@@ -86,7 +86,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     PlanRoute[1. Manager Creates Trip<br/>Selects Driver & Vehicle] --> AddStops[2. Add 1..N Destination Stops<br/>Configure Cargo & Required Photos]
-    AddStops --> Dispatch[3. Click 'Dispatch Trip'<br/>Trip status becomes PLANNED]
+    AddStops --> Dispatch[3. Click 'Schedule Trip'<br/>Trip status becomes PLANNED]
     
     Dispatch --> MonitorFleet[4. Monitor Real-Time Fleet<br/>Command Center & Interactive Map]
     
