@@ -84,9 +84,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       label: 'Fleet & Resources',
       items: [
-        { id: 'drivers' as NavSection, label: 'Drivers', icon: <Users size={16} /> },
-        { id: 'vehicles' as NavSection, label: 'Vehicles', icon: <Truck size={16} /> },
-        { id: 'destinations' as NavSection, label: 'Stops & Facilities', icon: <MapPin size={16} /> },
+        { id: 'drivers' as NavSection, label: 'Drivers Master', icon: <Users size={16} /> },
+        { id: 'vehicles' as NavSection, label: 'Vehicles Master', icon: <Truck size={16} /> },
+        { id: 'destinations' as NavSection, label: 'Facilities Master', icon: <MapPin size={16} /> },
         { id: 'documents' as NavSection, label: 'Documents', icon: <FileCheck size={16} /> }
       ]
     },
