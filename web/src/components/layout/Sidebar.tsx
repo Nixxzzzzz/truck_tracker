@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'drivers' as NavSection, label: 'Drivers Master', icon: <Users size={16} /> },
         { id: 'vehicles' as NavSection, label: 'Vehicles Master', icon: <Truck size={16} /> },
-        { id: 'destinations' as NavSection, label: 'Facilities Master', icon: <MapPin size={16} /> },
+        { id: 'destinations' as NavSection, label: 'Locations Master', icon: <MapPin size={16} /> },
         { id: 'documents' as NavSection, label: 'Documents', icon: <FileCheck size={16} /> }
       ]
     },
@@ -366,4 +366,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
 
