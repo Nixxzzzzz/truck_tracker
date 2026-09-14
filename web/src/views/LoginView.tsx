@@ -13,6 +13,7 @@ interface Props {
 
 interface ProfilePreset {
   id: 'manager' | 'driver' | 'director';
+  label: string;
   title: string;
   roleBadge: string;
   email: string;
@@ -24,6 +25,7 @@ interface ProfilePreset {
 const PRESETS: ProfilePreset[] = [
   {
     id: 'manager',
+    label: 'My Shipments',
     title: 'Dispatch Manager',
     roleBadge: 'Fleet Command',
     email: 'manager@company.com',
@@ -33,6 +35,7 @@ const PRESETS: ProfilePreset[] = [
   },
   {
     id: 'driver',
+    label: 'Driver',
     title: 'Route Driver',
     roleBadge: 'Mobile Terminal',
     email: 'rahul@company.com',
@@ -42,6 +45,7 @@ const PRESETS: ProfilePreset[] = [
   },
   {
     id: 'director',
+    label: 'Admin',
     title: 'Executive Director',
     roleBadge: 'Operations Audit',
     email: 'director@company.com',
@@ -170,7 +174,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
                   }}
                 >
                   <Icon size={16} />
-                  <span>{preset.title.split(' ')[0]}</span>
+                  <span>{preset.label}</span>
                 </button>
               );
             })}
