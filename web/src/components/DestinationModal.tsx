@@ -14,7 +14,6 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
   const isEdit = Boolean(initialDestination);
   const [name, setName] = useState(initialDestination?.name || '');
   const [address, setAddress] = useState(initialDestination?.address || '');
-  const [areaCode, setAreaCode] = useState(initialDestination?.area_code || '');
   const [latitude, setLatitude] = useState(initialDestination?.latitude || 28.5355);
   const [longitude, setLongitude] = useState(initialDestination?.longitude || 77.2680);
   const [geofenceRadius, setGeofenceRadius] = useState(initialDestination?.geofence_radius_meters || 150);
@@ -37,7 +36,6 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
     const payload = {
       name: name.trim(),
       address: address.trim() || 'Logistics Destination Hub',
-      area_code: areaCode.trim().toUpperCase() || undefined,
       latitude: Number(latitude),
       longitude: Number(longitude),
       geofence_radius_meters: Number(geofenceRadius),
@@ -122,21 +120,7 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '10px' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                  Area Code / Hub ID
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. DL-OKH-110020"
-                  value={areaCode}
-                  onChange={(e) => setAreaCode(e.target.value.toUpperCase())}
-                  style={{ textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}
-                />
-              </div>
-
+            <div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Facility / Destination Name <span style={{ color: 'var(--status-danger)' }}>*</span>

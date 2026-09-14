@@ -1,6 +1,7 @@
 import { db } from '../db';
 import fs from 'fs';
 import path from 'path';
+import { generateAreaCode } from '../services/areaCode';
 
 export interface MigrationRecord {
   version: number;
@@ -361,6 +362,24 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
         db.exec(`ALTER TABLE destinations ADD COLUMN area_code TEXT;`);
       }
       db.exec(`CREATE INDEX IF NOT EXISTS idx_destinations_area_code ON destinations(area_code);`);
+    }
+  },
+  {
+    version: 5,
+    name: '005_generate_destination_area_codes',
+    up: () => {
+      const destinations = db.prepare(`
+        SELECT id, name, address FROM destinations
+        WHERE area_code IS NULL OR area_code = ''
+        ORDER BY created_at ASC, id ASC
+      `).all() as { id: string; name: string; address: string }[];
+
+      for (const destination of destinations) {
+        db.prepare(`UPDATE destinations SET area_code = ? WHERE id = ?`)
+          .run(generateAreaCode(destination.name, destination.address), destination.id);
+      }
+
+      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_destinations_area_code_unique ON destinations(area_code);`);
     }
   }
 ];
