@@ -54,6 +54,16 @@ import { EmptyState } from '../components/common/EmptyState';
 import { SearchableDropdown } from '../components/common/SearchableDropdown';
 import { SlaGauge, TrendBarChart, FleetStatusBar } from '../components/common/VisualCharts';
 
+// Dedicated Operations & Dispatch Workspaces
+import { OverviewDashboard } from '../components/operations/OverviewDashboard';
+import { ScheduleScreen } from '../components/operations/ScheduleScreen';
+import { DispatchBoard } from '../components/operations/DispatchBoard';
+import { AssignmentModal } from '../components/operations/AssignmentModal';
+import { ExceptionsCenter } from '../components/operations/ExceptionsCenter';
+import { DocumentsHub } from '../components/operations/DocumentsHub';
+import { SettingsView } from '../components/operations/SettingsView';
+import { OperationalException } from '../types';
+
 interface Props {
   currentUser: User;
   onLogout: () => void;
@@ -69,9 +79,11 @@ export const ManagerView: React.FC<Props> = ({
   onToggleTheme = () => {},
   onSwitchRole
 }) => {
-  const [activeSection, setActiveSection] = useState<NavSection>('operations');
+  const [activeSection, setActiveSection] = useState<NavSection>('overview');
   const [trips, setTrips] = useState<Trip[]>([]);
   const [attention, setAttention] = useState<any>(null);
+  const [exceptions, setExceptions] = useState<OperationalException[]>([]);
+  const [assignmentTrip, setAssignmentTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -146,7 +158,7 @@ export const ManagerView: React.FC<Props> = ({
   }, [selectedDate, statusFilter.join(',')]);
 
   useEffect(() => {
-    if (!liveRefresh || activeSection !== 'operations') return;
+    if (!liveRefresh || !['overview', 'schedule', 'dispatch', 'trips'].includes(activeSection as any)) return;
 
     const interval = setInterval(() => {
       silentRefreshOperations();
@@ -222,15 +234,86 @@ export const ManagerView: React.FC<Props> = ({
     }
   };
 
-  // Lazy load section data
+  // Initial mount: load dashboard, fleet master, and exceptions
   useEffect(() => {
-    if (['vehicles', 'drivers', 'destinations', 'map'].includes(activeSection)) {
+    loadDashboardData();
+    loadFleetData();
+    loadFleetExceptions();
+  }, []);
+
+  // Section data dependencies
+  useEffect(() => {
+    if (['vehicles', 'drivers', 'destinations', 'map', 'documents', 'schedule', 'dispatch'].includes(activeSection)) {
       loadFleetData();
     }
     if (activeSection === 'reports') {
       loadReportsData();
     }
+    if (activeSection === 'exceptions' || activeSection === 'overview') {
+      loadFleetExceptions();
+    }
   }, [activeSection, selectedDate, reportsPeriod]);
+
+  const loadFleetExceptions = async () => {
+    try {
+      const data = await api.fleet.getExceptions({ limit: 50 });
+      if (data && data.exceptions) {
+        setExceptions(data.exceptions);
+      }
+    } catch {
+      // Fallback handled in API
+    }
+  };
+
+  const handleConfirmAssignment = async (tripId: string, driverId: string, vehicleId: string) => {
+    const drv = drivers.find((d) => d.user_id === driverId || d.id === driverId);
+    const veh = vehicles.find((v) => v.id === vehicleId);
+
+    await api.manager.updateTrip(tripId, {
+      driver_id: driverId,
+      vehicle_id: vehicleId,
+      status: 'ASSIGNED'
+    });
+
+    setTrips((prev) =>
+      prev.map((t) =>
+        t.id === tripId
+          ? {
+              ...t,
+              driver_id: driverId,
+              driver_name: drv?.name || t.driver_name,
+              vehicle_id: vehicleId,
+              vehicle_number: veh?.vehicle_number || t.vehicle_number,
+              status: 'ASSIGNED'
+            }
+          : t
+      )
+    );
+  };
+
+  const handleAcknowledgeException = async (id: string, notes?: string) => {
+    await api.fleet.acknowledgeException(id, notes);
+    setExceptions((prev) =>
+      prev.map((e) =>
+        e.id === id
+          ? { ...e, is_acknowledged: 1, resolution_status: 'ACKNOWLEDGED', resolution_notes: notes }
+          : e
+      )
+    );
+  };
+
+  const handleCancelTrip = async (tripId: string) => {
+    const reason = window.prompt('Please provide a reason for cancelling this trip:');
+    if (reason === null) return;
+    try {
+      await api.manager.cancelTrip(tripId, reason || 'Cancelled by manager');
+      setTrips((prev) =>
+        prev.map((t) => (t.id === tripId ? { ...t, status: 'CANCELLED' } : t))
+      );
+    } catch (err: any) {
+      alert(err.message || 'Failed to cancel trip');
+    }
+  };
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -748,6 +831,15 @@ export const ManagerView: React.FC<Props> = ({
     }
   }, [destinations, destinationSearch, destinationSort]);
 
+  const unassignedCount = useMemo(
+    () => trips.filter((t) => t.status === 'PLANNED' || !t.driver_id).length,
+    [trips]
+  );
+  const exceptionsCount = useMemo(
+    () => exceptions.filter((e) => !e.is_acknowledged && e.resolution_status !== 'ACKNOWLEDGED').length,
+    [exceptions]
+  );
+
   return (
     <AppLayout
       currentUser={currentUser}
@@ -764,15 +856,64 @@ export const ManagerView: React.FC<Props> = ({
       alerts={operationalAlerts}
       onDismissAlert={(id) => setDismissedAlertIds((prev) => [...prev, id])}
       onClearAllAlerts={() => setDismissedAlertIds(operationalAlerts.map((a) => a.id))}
+      unassignedCount={unassignedCount}
+      exceptionsCount={exceptionsCount}
     >
       {/* ========================================================
-          1. OPERATIONS DISPATCH COMMAND
+          0. OPERATIONS OVERVIEW COCKPIT
           ======================================================== */}
-      {activeSection === 'operations' && (
+      {activeSection === 'overview' && (
+        <OverviewDashboard
+          trips={trips}
+          drivers={drivers}
+          vehicles={vehicles}
+          exceptions={exceptions}
+          theme={theme}
+          onNavigateSection={setActiveSection}
+          onOpenCreateTrip={() => setIsCreateModalOpen(true)}
+          onOpenTripDetails={(id) => setSelectedTripId(id)}
+          onOpenAssignment={(trip) => setAssignmentTrip(trip)}
+        />
+      )}
+
+      {/* ========================================================
+          1. SCHEDULE SCREEN
+          ======================================================== */}
+      {activeSection === 'schedule' && (
+        <ScheduleScreen
+          trips={trips}
+          drivers={drivers}
+          vehicles={vehicles}
+          onOpenCreateTrip={() => setIsCreateModalOpen(true)}
+          onOpenTripDetails={(id) => setSelectedTripId(id)}
+          onOpenAssignment={(trip) => setAssignmentTrip(trip)}
+          onCancelTrip={handleCancelTrip}
+        />
+      )}
+
+      {/* ========================================================
+          2. DISPATCH PIPELINE BOARD
+          ======================================================== */}
+      {activeSection === 'dispatch' && (
+        <DispatchBoard
+          trips={trips}
+          drivers={drivers}
+          vehicles={vehicles}
+          onOpenCreateTrip={() => setIsCreateModalOpen(true)}
+          onOpenTripDetails={(id) => setSelectedTripId(id)}
+          onOpenAssignment={(trip) => setAssignmentTrip(trip)}
+          onTrackOnMap={() => setActiveSection('map')}
+        />
+      )}
+
+      {/* ========================================================
+          3. TRIPS MANAGEMENT & DISPATCH COMMAND
+          ======================================================== */}
+      {activeSection === 'trips' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <PageHeader
-            breadcrumbs={[{ label: 'Operations' }, { label: 'Dispatch Command' }]}
-            title="Operations Dispatch Command"
+            breadcrumbs={[{ label: 'Operations' }, { label: 'Trips Management' }]}
+            title="Operations Trips & Dispatches"
             subtitle="Real-time dispatch telemetry, active routes, and transit exception monitoring across assigned fleet units."
             lastUpdated={lastRefresh}
             onRefresh={handleManualRefresh}
@@ -2724,7 +2865,39 @@ export const ManagerView: React.FC<Props> = ({
         </div>
       )}
 
+      {/* ========================================================
+          7. EXCEPTIONS CENTER & ALERT TRIAGE
+          ======================================================== */}
+      {activeSection === 'exceptions' && (
+        <ExceptionsCenter
+          exceptions={exceptions}
+          onAcknowledge={handleAcknowledgeException}
+          onViewTrip={(id) => setSelectedTripId(id)}
+          onRefresh={loadFleetExceptions}
+        />
+      )}
 
+      {/* ========================================================
+          8. COMPLIANCE DOCUMENTS HUB
+          ======================================================== */}
+      {activeSection === 'documents' && (
+        <DocumentsHub
+          vehicles={vehicles}
+          onOpenVehiclePapers={(v) => setPapersVehicle(v)}
+        />
+      )}
+
+      {/* ========================================================
+          9. SYSTEM SETTINGS & GOVERNANCE
+          ======================================================== */}
+      {activeSection === 'settings' && (
+        <SettingsView
+          currentUser={currentUser}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
+          onSwitchRole={onSwitchRole}
+        />
+      )}
 
       {/* Trip Creator Modal */}
       {isCreateModalOpen && (
@@ -2824,6 +2997,17 @@ export const ManagerView: React.FC<Props> = ({
           onClose={() => setSelectedTripId(null)}
           onRefresh={loadDashboardData}
           theme={theme}
+        />
+      )}
+
+      {/* Dispatch Assignment Workflow Modal */}
+      {assignmentTrip && (
+        <AssignmentModal
+          trip={assignmentTrip}
+          drivers={drivers}
+          vehicles={vehicles}
+          onConfirmAssignment={handleConfirmAssignment}
+          onClose={() => setAssignmentTrip(null)}
         />
       )}
     </AppLayout>

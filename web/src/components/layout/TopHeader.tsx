@@ -39,20 +39,32 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   const getSectionTitle = () => {
     switch (activeSection) {
-      case 'operations':
-        return { group: 'Operations', title: 'Dispatch Command' };
+      case 'overview':
+        return { group: 'Operations', title: 'Operations Overview' };
+      case 'schedule':
+        return { group: 'Operations', title: 'Dispatch Schedule' };
+      case 'dispatch':
+        return { group: 'Operations', title: 'Dispatch Pipeline Board' };
       case 'map':
         return { group: 'Operations', title: 'Live Fleet Map' };
+      case 'trips':
+        return { group: 'Operations', title: 'Trips Management' };
       case 'vehicles':
         return { group: 'Assets', title: 'Vehicle Master' };
       case 'drivers':
         return { group: 'Personnel', title: 'Driver Master' };
       case 'destinations':
         return { group: 'Assets', title: 'Facility Directory' };
+      case 'exceptions':
+        return { group: 'Control', title: 'Exceptions Center' };
+      case 'documents':
+        return { group: 'Compliance', title: 'Documents Hub' };
       case 'reports':
         return { group: 'Analytics', title: 'Performance Analytics' };
+      case 'settings':
+        return { group: 'System', title: 'System Settings' };
       default:
-        return { group: 'Operations', title: 'Dispatch Command' };
+        return { group: 'Operations', title: 'Operations Control Center' };
     }
   };
 

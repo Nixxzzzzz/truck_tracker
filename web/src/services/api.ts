@@ -715,6 +715,77 @@ export const api = {
         const success = mockStore.updateVehicleDocument(vehicleId, doc);
         return { success };
       }
+    },
+    getExceptions: async (params: { status?: string; severity?: string; limit?: number } = {}) => {
+      try {
+        const qs = new URLSearchParams(params as any).toString();
+        return await request(`/fleet/exceptions${qs ? `?${qs}` : ''}`);
+      } catch {
+        return {
+          exceptions: [
+            {
+              id: 'exc-demo-01',
+              severity: 'HIGH',
+              exception_type: 'DELAY',
+              title: 'Interstate Border Queue Bottleneck',
+              description: 'Commercial goods tax and checkpoint queue caused +22 minutes delay approaching Ghazipur border depot.',
+              location_name: 'Delhi-UP Border Highway Junction, Ghazipur',
+              vehicle_number: 'DL01 TA 4920',
+              driver_name: 'Rahul Sharma',
+              trip_ref: 'TR-DEL-2026-01',
+              impact: '+25 min ETA impact',
+              resolution_status: 'OPEN',
+              is_acknowledged: 0,
+              created_at: new Date().toISOString()
+            },
+            {
+              id: 'exc-demo-02',
+              severity: 'MEDIUM',
+              exception_type: 'CRITICAL_ALERT',
+              title: 'Statutory PUC Expiration Warning',
+              description: 'Pollution Under Control certificate for vehicle UP14 EX 7621 expires within 12 days. RTO testing inspection booking required.',
+              location_name: 'Okhla Central Fleet Yard',
+              vehicle_number: 'UP14 EX 7621',
+              driver_name: 'Rajesh Kumar',
+              impact: 'Compliance Risk',
+              resolution_status: 'ACKNOWLEDGED',
+              is_acknowledged: 1,
+              created_at: new Date(Date.now() - 3600000 * 24).toISOString()
+            }
+          ]
+        };
+      }
+    },
+    acknowledgeException: async (id: string, notes?: string) => {
+      try {
+        return await request(`/fleet/exceptions/${id}/acknowledge`, {
+          method: 'POST',
+          body: JSON.stringify({ resolution_notes: notes })
+        });
+      } catch {
+        return { message: 'Exception acknowledged successfully' };
+      }
+    },
+    getVehicleDocuments: async (vehicleId: string) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/documents`);
+      } catch {
+        return { documents: [] };
+      }
+    },
+    getVehicleMaintenance: async (vehicleId: string) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/maintenance`);
+      } catch {
+        return { maintenanceRecords: [] };
+      }
+    },
+    getVehicleFuel: async (vehicleId: string) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/fuel`);
+      } catch {
+        return { fuelTransactions: [] };
+      }
     }
   },
 

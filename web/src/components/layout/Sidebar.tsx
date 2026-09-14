@@ -11,19 +11,31 @@ import {
   Activity,
   Layers,
   ChevronRight,
-  Shield
+  Shield,
+  LayoutDashboard,
+  Calendar,
+  ClipboardList,
+  ShieldAlert,
+  FileCheck,
+  Settings
 } from 'lucide-react';
 import { User } from '../../types';
 import { ThemeToggle } from '../ThemeToggle';
 import { HoseXpertsLogo } from '../common/HoseXpertsLogo';
 
 export type NavSection =
-  | 'operations'
+  | 'overview'
+  | 'schedule'
+  | 'dispatch'
   | 'map'
-  | 'vehicles'
+  | 'trips'
   | 'drivers'
+  | 'vehicles'
   | 'destinations'
-  | 'reports';
+  | 'exceptions'
+  | 'documents'
+  | 'reports'
+  | 'settings';
 
 interface SidebarProps {
   activeSection: NavSection;
@@ -35,6 +47,8 @@ interface SidebarProps {
   onSwitchToDriver?: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
+  unassignedCount?: number;
+  exceptionsCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -46,28 +60,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleTheme,
   onSwitchToDriver,
   isOpenMobile,
-  onCloseMobile
+  onCloseMobile,
+  unassignedCount = 0,
+  exceptionsCount = 0
 }) => {
   const navGroups = [
     {
-      label: 'Fleet Operations',
+      label: 'Operations & Dispatch',
       items: [
-        { id: 'operations' as NavSection, label: 'Dispatch Command', icon: <Activity size={16} /> },
-        { id: 'map' as NavSection, label: 'Live Fleet Map', icon: <MapIcon size={16} /> }
+        { id: 'overview' as NavSection, label: 'Overview', icon: <LayoutDashboard size={16} /> },
+        { id: 'schedule' as NavSection, label: 'Schedule', icon: <Calendar size={16} /> },
+        {
+          id: 'dispatch' as NavSection,
+          label: 'Dispatch Board',
+          icon: <ClipboardList size={16} />,
+          badge: unassignedCount,
+          badgeColor: '#f59e0b'
+        },
+        { id: 'map' as NavSection, label: 'Live Fleet', icon: <MapIcon size={16} /> },
+        { id: 'trips' as NavSection, label: 'Trips', icon: <Activity size={16} /> }
       ]
     },
     {
-      label: 'Assets & Personnel',
+      label: 'Fleet & Resources',
       items: [
-        { id: 'vehicles' as NavSection, label: 'Vehicle Master', icon: <Truck size={16} /> },
-        { id: 'drivers' as NavSection, label: 'Driver Master', icon: <Users size={16} /> },
-        { id: 'destinations' as NavSection, label: 'Facility Directory', icon: <MapPin size={16} /> }
+        { id: 'drivers' as NavSection, label: 'Drivers', icon: <Users size={16} /> },
+        { id: 'vehicles' as NavSection, label: 'Vehicles', icon: <Truck size={16} /> },
+        { id: 'destinations' as NavSection, label: 'Stops & Facilities', icon: <MapPin size={16} /> },
+        { id: 'documents' as NavSection, label: 'Documents', icon: <FileCheck size={16} /> }
       ]
     },
     {
-      label: 'Reports & Audit',
+      label: 'Control & Governance',
       items: [
-        { id: 'reports' as NavSection, label: 'Performance Analytics', icon: <FileText size={16} /> }
+        {
+          id: 'exceptions' as NavSection,
+          label: 'Exceptions Center',
+          icon: <ShieldAlert size={16} />,
+          badge: exceptionsCount,
+          badgeColor: '#ef4444'
+        },
+        { id: 'reports' as NavSection, label: 'Reports', icon: <FileText size={16} /> },
+        { id: 'settings' as NavSection, label: 'Settings', icon: <Settings size={16} /> }
       ]
     }
   ];
@@ -181,6 +215,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {item.icon}
                       </span>
                       <span style={{ flex: 1 }}>{item.label}</span>
+                      {(item as any).badge && (item as any).badge > 0 ? (
+                        <span
+                          style={{
+                            padding: '1px 6px',
+                            borderRadius: '10px',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            backgroundColor: (item as any).badgeColor || 'var(--brand-primary)',
+                            color: '#ffffff',
+                            marginRight: '4px'
+                          }}
+                        >
+                          {(item as any).badge}
+                        </span>
+                      ) : null}
                       {isActive && (
                         <div
                           style={{

@@ -282,3 +282,37 @@ export interface Trip {
   photos?: Photo[];
   auditLogs?: AuditLog[];
 }
+
+export interface OperationalException {
+  id: string;
+  trip_id?: string;
+  trip_ref?: string;
+  stop_id?: string;
+  driver_id?: string;
+  driver_name?: string;
+  vehicle_id?: string;
+  vehicle_number?: string;
+  exception_type:
+    | 'DELAY'
+    | 'GPS_SIGNAL_LOST'
+    | 'OFFLINE_TIMEOUT'
+    | 'GEOFENCE_MISMATCH'
+    | 'MISSED_STOP'
+    | 'UPLOAD_FAILED'
+    | 'VEHICLE_BREAKDOWN'
+    | 'ACCIDENT'
+    | 'CRITICAL_ALERT';
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  description?: string;
+  location_name?: string;
+  latitude?: number;
+  longitude?: number;
+  impact?: string;
+  resolution_status: 'OPEN' | 'IN_REVIEW' | 'ACKNOWLEDGED' | 'RESOLVED';
+  is_acknowledged: number;
+  acknowledged_by?: string;
+  acknowledged_at?: string;
+  resolution_notes?: string;
+  created_at: string;
+}

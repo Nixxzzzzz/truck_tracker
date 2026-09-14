@@ -18,6 +18,8 @@ interface AppLayoutProps {
   alerts?: AlertItem[];
   onDismissAlert?: (id: string) => void;
   onClearAllAlerts?: () => void;
+  unassignedCount?: number;
+  exceptionsCount?: number;
   children: React.ReactNode;
 }
 
@@ -36,6 +38,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   alerts,
   onDismissAlert,
   onClearAllAlerts,
+  unassignedCount = 0,
+  exceptionsCount = 0,
   children
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -53,6 +57,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         onSwitchToDriver={onSwitchToDriver}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        unassignedCount={unassignedCount}
+        exceptionsCount={exceptionsCount}
       />
 
       {/* Main Workspace Frame */}

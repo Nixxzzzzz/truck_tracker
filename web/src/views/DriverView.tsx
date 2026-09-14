@@ -44,9 +44,7 @@ import { StopWorkflowCard } from '../components/driver/StopWorkflowCard';
 import { FloatingNavigationCard } from '../components/driver/FloatingNavigationCard';
 import { EmergencyScreen } from '../components/driver/EmergencyScreen';
 import { MoreScreen } from '../components/driver/MoreScreen';
-import { DesktopSidebar } from '../components/driver/DesktopSidebar';
-import { TopBar } from '../components/driver/TopBar';
-import { DesktopControlTower } from '../components/driver/DesktopControlTower';
+import { HoseXpertsLogo } from '../components/common/HoseXpertsLogo';
 
 interface Props {
   currentUser: User;
@@ -458,98 +456,130 @@ export const DriverView: React.FC<Props> = ({
 
   return (
     <div className="driver-theme-root">
-      {/* Desktop Wrapper (Flex container with Left Sidebar for >=1024px) */}
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
-        {/* Desktop Sidebar (hidden on mobile via CSS @media) */}
-        <div className="desktop-sidebar-wrapper">
-          <DesktopSidebar
-            activeTab={activeTab}
-            onTabChange={(tab) => {
-              setActiveTab(tab);
-              if (tab !== 'trip') setSelectedStopForWorkflow(null);
-            }}
-            currentUser={currentUser}
-            activeTrip={activeTrip}
-            theme={theme}
-            onToggleTheme={onToggleTheme}
-            onLogout={onLogout}
-            isOnline={isOnline}
-            offlineCount={offlineCount}
-            onOpenDocuments={() => setIsVehiclePapersOpen(true)}
-            onOpenAlerts={() => setIsDelayOpen(true)}
-            onOpenVehicles={() => setIsVehicleInfoOpen(true)}
-            onOpenDrivers={() => setIsHelpOpen(true)}
-            onOpenReports={() => setActiveTab('trip')}
-            onOpenSettings={() => setActiveTab('more')}
-          />
-        </div>
-
-        {/* Main Workspace Column */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Top Bar for Desktop Operations Mode */}
-          {isDesktop && (
-            <TopBar
-              currentUser={currentUser}
-              theme={theme}
-              onToggleTheme={onToggleTheme}
-              onOpenNotifications={() => setIsNotificationToastOpen(true)}
-            />
-          )}
-
-          {/* Main Content Workspace */}
-          <main
-            style={{
-              flex: 1,
-              display: 'flex',
-              justifyContent: 'center',
-              padding: activeTab === 'map' ? '0' : isDesktop ? '24px 28px 40px' : '12px 14px 90px',
-              width: '100%',
-              height: activeTab === 'map' ? '100%' : 'auto',
-              boxSizing: 'border-box'
-            }}
-          >
-            <div
+      {/* Top Driver In-Cab Bar for Tablet & Desktop Screens */}
+      {isDesktop && (
+        <header
+          style={{
+            padding: '12px 24px',
+            backgroundColor: 'var(--driver-card-bg)',
+            borderBottom: '1px solid var(--driver-card-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <HoseXpertsLogo variant={theme === 'dark' ? 'white' : 'blue'} height={28} />
+            <span
               style={{
-                maxWidth: activeTab === 'map' ? '100%' : isDesktop ? '1440px' : '520px',
-                width: '100%',
-                height: activeTab === 'map' ? '100%' : 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: activeTab === 'map' ? '0' : '16px'
+                padding: '3px 8px',
+                borderRadius: '4px',
+                backgroundColor: 'rgba(23, 100, 168, 0.12)',
+                color: 'var(--driver-primary)',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                textTransform: 'uppercase'
               }}
             >
-              {/* TAB 1: HOME SCREEN (Desktop Control Tower on >=1024px, Mobile Driver Home on <1024px) */}
-              {activeTab === 'home' && (
-                isDesktop ? (
-                  <DesktopControlTower
-                    currentUser={currentUser}
-                    activeTrip={activeTrip}
-                    trips={trips}
-                    driverCoords={driverCoords}
-                    gpsAccuracy={gpsAccuracy}
-                    theme={theme}
-                    onSelectStop={(stop) => {
-                      setSelectedStopForWorkflow(stop);
-                      setActiveTab('trip');
-                    }}
-                    onViewTripDetails={() => setActiveTab('trip')}
-                    onOpenLiveMap={() => setActiveTab('map')}
-                    getStopAreaCode={getStopAreaCode}
-                    calculateDistanceKm={calculateDistanceKm}
-                  />
-                ) : (
-                  <>
-                    <DriverHeader
-                      currentUser={currentUser}
-                      vehicleNumber={activeTrip?.vehicle_number}
-                      gpsAccuracy={gpsAccuracy}
-                      isRealGps={isRealGps}
-                      isRefreshingGps={isRefreshingGps}
-                      onRefreshGps={handleRefreshGps}
-                      theme={theme}
-                      onToggleTheme={onToggleTheme}
-                      onOpenNotifications={() => setIsNotificationToastOpen(true)}
-                    />
+              Commercial Driver Terminal
+            </span>
+          </div>
+
+          {/* Desktop Driver Navigation Pills */}
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {[
+              { id: 'home' as DriverTab, label: 'Home' },
+              { id: 'trip' as DriverTab, label: 'Trip & Stops' },
+              { id: 'map' as DriverTab, label: 'Route Map' },
+              { id: 'emergency' as DriverTab, label: 'Emergency SOS' },
+              { id: 'more' as DriverTab, label: 'Vehicle Papers' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== 'trip') setSelectedStopForWorkflow(null);
+                }}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: activeTab === tab.id ? 'var(--driver-primary)' : 'transparent',
+                  color: activeTab === tab.id ? '#ffffff' : 'var(--driver-text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.12s ease'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Driver Identity & Vehicle Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--driver-text-primary)' }}>
+                {currentUser.name}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--driver-text-secondary)' }}>
+                Assigned Truck: <strong style={{ color: 'var(--driver-primary)' }}>{activeTrip?.vehicle_number || 'DL01TA4920'}</strong>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="btn btn-outline"
+              style={{ fontSize: '0.8rem', padding: '5px 12px' }}
+            >
+              Logout
+            </button>
+          </div>
+        </header>
+      )}
+
+      {/* Main Content Workspace */}
+      <div style={{ display: 'flex', minHeight: isDesktop ? 'calc(100vh - 60px)' : '100vh', justifyContent: 'center' }}>
+        <main
+          style={{
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            padding: activeTab === 'map' ? '0' : isDesktop ? '24px 20px 40px' : '12px 14px 90px',
+            width: '100%',
+            height: activeTab === 'map' ? '100%' : 'auto',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div
+            style={{
+              maxWidth: activeTab === 'map' ? '100%' : '640px',
+              width: '100%',
+              height: activeTab === 'map' ? '100%' : 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: activeTab === 'map' ? '0' : '16px'
+            }}
+          >
+            {/* TAB 1: HOME SCREEN (Consistent Driver Identity & Route Actions) */}
+            {activeTab === 'home' && (
+              <>
+                <DriverHeader
+                  currentUser={currentUser}
+                  vehicleNumber={activeTrip?.vehicle_number}
+                  gpsAccuracy={gpsAccuracy}
+                  isRealGps={isRealGps}
+                  isRefreshingGps={isRefreshingGps}
+                  onRefreshGps={handleRefreshGps}
+                  theme={theme}
+                  onToggleTheme={onToggleTheme}
+                  onOpenNotifications={() => setIsNotificationToastOpen(true)}
+                />
 
                 {/* Status Alert Banner */}
                 <StatusBanner
@@ -650,8 +680,7 @@ export const DriverView: React.FC<Props> = ({
                   </div>
                 )}
               </>
-                )
-              )}
+            )}
 
             {/* TAB 2: TRIP SCREEN */}
             {activeTab === 'trip' && (
@@ -776,18 +805,19 @@ export const DriverView: React.FC<Props> = ({
           </div>
         </main>
       </div>
-    </div>
 
       {/* Sticky Mobile Bottom Navigation (Home | Trip | Map | More) */}
-      <BottomNavigation
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          if (tab !== 'trip') setSelectedStopForWorkflow(null);
-        }}
-        hasActiveDelay={!!activeDelay}
-        offlineCount={offlineCount}
-      />
+      {!isDesktop && (
+        <BottomNavigation
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            if (tab !== 'trip') setSelectedStopForWorkflow(null);
+          }}
+          hasActiveDelay={!!activeDelay}
+          offlineCount={offlineCount}
+        />
+      )}
 
       {/* Camera Capture Modal (POD / Delay proof) */}
       {isCameraOpen && activeTrip && (
