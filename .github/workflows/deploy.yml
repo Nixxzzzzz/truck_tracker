@@ -1,22 +1,23 @@
-name: Build and Deploy Web App
+name: CI - Build & Verify
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: "ci-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-verify:
     name: Build & Test
     runs-on: ubuntu-latest
     steps:
@@ -40,21 +41,3 @@ jobs:
 
       - name: Run Database Integrity & Invariant Tests
         run: npm test
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: web/dist
-
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        continue-on-error: true
