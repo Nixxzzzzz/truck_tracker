@@ -22,6 +22,8 @@ export async function runDatabaseIntegrityTests(): Promise<boolean> {
   }
 
   try {
+    initDatabase();
+
     // TEST 1: Migration Version Tracking
     const applied = getAppliedMigrations();
     assert(applied.length >= 3, 'Migration Catalog Tracks Ordered Versions', `Applied versions count: ${applied.length}`);
