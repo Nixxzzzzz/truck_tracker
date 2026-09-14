@@ -1097,12 +1097,12 @@ export const ManagerView: React.FC<Props> = ({
             {/* Top row: Search input, Period Pills & Action Controls */}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Responsive Search Input with Clear Button */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px', position: 'relative' }}>
-                <Search size={15} color="var(--text-muted)" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '320px', position: 'relative', padding: '4px 10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                <Search size={16} color="var(--text-muted)" />
                 <input
                   type="text"
                   className="form-input"
-                  style={{ padding: '6px 28px 6px 10px', fontSize: '0.85rem' }}
+                  style={{ flex: 1, minWidth: 0, height: '38px', padding: '8px 30px 8px 0', fontSize: '0.88rem', fontWeight: 500, backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
                   placeholder="Search by Trip ID, driver, vehicle plate, reference no, or stop..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
