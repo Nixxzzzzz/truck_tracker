@@ -290,7 +290,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
               Quick 1-Click Direct Launch
             </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--accent-whatsapp)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--accent-operational)', fontWeight: 600 }}>
               Instant Demo Access
             </span>
           </div>
