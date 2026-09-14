@@ -2222,7 +2222,7 @@ export const ManagerView: React.FC<Props> = ({
                 }}
               >
                 <Plus size={14} />
-                <span>Register Facility</span>
+                <span>Register Location</span>
               </button>
             }
           />
@@ -3013,3 +3013,4 @@ export const ManagerView: React.FC<Props> = ({
     </AppLayout>
   );
 };
+
