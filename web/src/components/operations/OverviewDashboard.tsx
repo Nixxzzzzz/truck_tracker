@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Truck,
   Users,
@@ -30,6 +30,7 @@ interface OverviewDashboardProps {
   onOpenCreateTrip: () => void;
   onOpenTripDetails: (tripId: string) => void;
   onOpenAssignment: (trip: Trip) => void;
+  onTrackVehicle?: (vehicle: Vehicle) => void;
 }
 
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
@@ -41,9 +42,22 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   onNavigateSection,
   onOpenCreateTrip,
   onOpenTripDetails,
-  onOpenAssignment
+  onOpenAssignment,
+  onTrackVehicle
 }) => {
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [focusedVehicleId, setFocusedVehicleId] = useState<string>('ALL');
+
+  const focusedVehicle = useMemo(() => {
+    return vehicles.find((v) => v.id === focusedVehicleId) || null;
+  }, [vehicles, focusedVehicleId]);
+
+  const focusedLocation = useMemo(() => {
+    if (focusedVehicle?.latitude && focusedVehicle?.longitude) {
+      return { latitude: focusedVehicle.latitude, longitude: focusedVehicle.longitude };
+    }
+    return null;
+  }, [focusedVehicle]);
 
   // Operational metrics
   const unassignedTrips = useMemo(
@@ -99,6 +113,11 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     () => exceptions.filter((e) => !e.is_acknowledged && e.resolution_status !== 'ACKNOWLEDGED'),
     [exceptions]
   );
+
+  // Memoized overview stops for stable Leaflet layer rendering
+  const overviewStops = useMemo(() => {
+    return trips.flatMap((t) => t.stops || []).slice(0, 15);
+  }, [trips]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%' }}>
@@ -303,7 +322,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'var(--bg-card)'
+            backgroundColor: 'var(--bg-card)',
+            flexWrap: 'wrap',
+            gap: '10px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -312,14 +333,43 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               Live Fleet Operational Tracking Map
             </h2>
           </div>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => onNavigateSection('map')}
-            style={{ fontSize: '0.8rem', padding: '5px 12px' }}
-          >
-            Open Full Screen Map
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Live Vehicle Focus Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Track Vehicle:</span>
+              <select
+                value={focusedVehicleId}
+                onChange={(e) => setFocusedVehicleId(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-subtle)',
+                  backgroundColor: 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="ALL">All Fleet Vehicles ({vehicles.length})</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.vehicle_number} ({(v.speed_kmh || 0) > 2 ? `🟢 ${Math.round(v.speed_kmh || 0)} km/h` : '🟡 Idle'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => onNavigateSection('map')}
+              style={{ fontSize: '0.8rem', padding: '5px 12px' }}
+            >
+              Open Full Screen Map
+            </button>
+          </div>
         </div>
 
         <div style={{ height: '380px', width: '100%', position: 'relative' }}>
@@ -329,10 +379,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               latitude: 28.5355,
               longitude: 77.2680
             }}
-            stops={
-              trips.flatMap((t) => t.stops || []).slice(0, 15)
-            }
+            stops={overviewStops}
             fleetVehicles={vehicles}
+            focusedLocation={focusedLocation}
+            onSelectVehicle={(v) => setFocusedVehicleId(v.id)}
             height="100%"
             theme={theme}
             showToolbar={false}
@@ -413,6 +463,38 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {trip.vehicle_number && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          const v = vehicles.find(
+                            (veh) => veh.vehicle_number === trip.vehicle_number || veh.id === trip.vehicle_id
+                          );
+                          if (v) {
+                            if (onTrackVehicle) {
+                              onTrackVehicle(v);
+                            } else {
+                              setFocusedVehicleId(v.id);
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: '0.74rem',
+                          padding: '4px 8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          borderColor: '#10b981',
+                          color: '#10b981',
+                          fontWeight: 700
+                        }}
+                        title="Track vehicle live on map"
+                      >
+                        <Navigation size={11} />
+                        <span>Track</span>
+                      </button>
+                    )}
                     {isUnassigned ? (
                       <button
                         type="button"

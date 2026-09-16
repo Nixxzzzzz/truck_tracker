@@ -1,5 +1,6 @@
 import React from 'react';
 import { Home, Route, MapPin, MoreHorizontal, AlertTriangle } from 'lucide-react';
+import { useDriverTranslation } from '../../context/DriverLanguageContext';
 
 export type DriverTab = 'home' | 'trip' | 'map' | 'emergency' | 'more';
 
@@ -16,6 +17,8 @@ export const BottomNavigation: React.FC<Props> = ({
   hasActiveDelay,
   offlineCount = 0
 }) => {
+  const { t } = useDriverTranslation();
+
   return (
     <nav className="driver-bottom-nav" aria-label="Driver Navigation Bar">
       {/* Home Tab */}
@@ -26,7 +29,7 @@ export const BottomNavigation: React.FC<Props> = ({
         aria-label="Home Dashboard"
       >
         <Home size={22} strokeWidth={activeTab === 'home' ? 2.5 : 1.9} />
-        <span>Home</span>
+        <span>{t.home}</span>
       </button>
 
       {/* Trip Details Tab */}
@@ -52,7 +55,7 @@ export const BottomNavigation: React.FC<Props> = ({
             />
           )}
         </div>
-        <span>Trip</span>
+        <span>{t.trip}</span>
       </button>
 
       {/* Navigation Map Tab */}
@@ -63,7 +66,7 @@ export const BottomNavigation: React.FC<Props> = ({
         aria-label="Live Map Navigation"
       >
         <MapPin size={22} strokeWidth={activeTab === 'map' ? 2.5 : 1.9} />
-        <span>Map</span>
+        <span>{t.map}</span>
       </button>
 
       {/* More / Menu Tab */}
@@ -89,7 +92,7 @@ export const BottomNavigation: React.FC<Props> = ({
             />
           )}
         </div>
-        <span>More</span>
+        <span>{t.more}</span>
       </button>
     </nav>
   );

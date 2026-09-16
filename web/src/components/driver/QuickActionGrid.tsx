@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Share2, Route, FileCheck, PhoneCall, Check, MapPin, ShieldAlert } from 'lucide-react';
+import { useDriverTranslation } from '../../context/DriverLanguageContext';
 
 interface Props {
   onOpenTrip: () => void;
@@ -16,6 +17,7 @@ export const QuickActionGrid: React.FC<Props> = ({
   onOpenSupport,
   driverCoords
 }) => {
+  const { t } = useDriverTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleShareLocation = async () => {
@@ -70,7 +72,7 @@ export const QuickActionGrid: React.FC<Props> = ({
             color: 'var(--driver-text-secondary)'
           }}
         >
-          Quick Actions
+          {t.quickActions}
         </span>
         {copied && (
           <span
@@ -83,7 +85,7 @@ export const QuickActionGrid: React.FC<Props> = ({
               gap: '4px'
             }}
           >
-            <Check size={13} /> Link Copied to Clipboard
+            <Check size={13} /> {t.linkCopied}
           </span>
         )}
       </div>
@@ -125,7 +127,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 lineHeight: 1.2
               }}
             >
-              Live Location
+              {t.liveLocation}
             </div>
             <div
               style={{
@@ -134,7 +136,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 marginTop: '2px'
               }}
             >
-              {copied ? 'Copied!' : 'Share position'}
+              {copied ? t.linkCopied : t.shareLocation}
             </div>
           </div>
         </button>
@@ -169,7 +171,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 lineHeight: 1.2
               }}
             >
-              Trip & Stops
+              {t.tripStops}
             </div>
             <div
               style={{
@@ -178,7 +180,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 marginTop: '2px'
               }}
             >
-              View route schedule
+              {t.viewTripAndStops}
             </div>
           </div>
         </button>
@@ -213,7 +215,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 lineHeight: 1.2
               }}
             >
-              Vehicle Papers
+              {t.vehiclePapers}
             </div>
             <div
               style={{
@@ -257,7 +259,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 lineHeight: 1.2
               }}
             >
-              Support
+              {t.callDispatch}
             </div>
             <div
               style={{
@@ -266,7 +268,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 marginTop: '2px'
               }}
             >
-              Call Control Room
+              HoseXperts Control
             </div>
           </div>
         </button>

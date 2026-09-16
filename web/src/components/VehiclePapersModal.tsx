@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   FileText,
@@ -19,14 +19,23 @@ import {
 import { Vehicle, VehicleDocument, VehicleChallan } from '../types';
 import { api } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
+import { normalizeDocTypeKey } from './operations/DocumentsHub';
 
 interface Props {
   vehicle: Vehicle;
   onClose: () => void;
   onUpdate: (updatedVehicle: Vehicle) => void;
+  initialDocType?: string;
+  initialAddDoc?: boolean;
 }
 
-export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate }) => {
+export const VehiclePapersModal: React.FC<Props> = ({
+  vehicle,
+  onClose,
+  onUpdate,
+  initialDocType,
+  initialAddDoc
+}) => {
   const [activeTab, setActiveTab] = useState<'papers' | 'challans'>('papers');
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle>(vehicle);
   const [isAddingDoc, setIsAddingDoc] = useState(false);
@@ -42,6 +51,31 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
   const [docExpiry, setDocExpiry] = useState('');
   const [docNotes, setDocNotes] = useState('');
   const [docFile, setDocFile] = useState<{ url: string; name: string; size: number } | null>(null);
+
+  // Auto-open and pre-populate edit document form
+  useEffect(() => {
+    if (initialDocType) {
+      const existing = (currentVehicle.documents || []).find(
+        (d) => normalizeDocTypeKey(d.type || d.document_type || d.title) === normalizeDocTypeKey(initialDocType)
+      );
+      if (existing) {
+        setDocType(existing.type);
+        setDocTitle(existing.title || `${existing.type} Certificate`);
+        setDocNumber(existing.document_number || '');
+        setDocIssue(existing.issue_date || '');
+        setDocExpiry(existing.expiry_date || '');
+        setDocNotes(existing.notes || '');
+        if (existing.file_url) {
+          setDocFile({ url: existing.file_url, name: existing.file_name || 'Document File', size: existing.file_size || 0 });
+        }
+        setIsAddingDoc(true);
+      } else if (initialAddDoc) {
+        setIsAddingDoc(true);
+      }
+    } else if (initialAddDoc) {
+      setIsAddingDoc(true);
+    }
+  }, [initialDocType, initialAddDoc]);
 
   // New Challan Form
   const [challanNumber, setChallanNumber] = useState('');

@@ -23,6 +23,13 @@ class OfflineQueue {
         console.log('[OfflineQueue] Connection restored. Synchronizing queued events...');
         this.processQueue();
       });
+
+      // Background heartbeat sync: periodically flush queued events whenever online
+      setInterval(() => {
+        if (typeof navigator !== 'undefined' && navigator.onLine && this.getQueue().length > 0) {
+          this.processQueue();
+        }
+      }, 12000);
     }
   }
 

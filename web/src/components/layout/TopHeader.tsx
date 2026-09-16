@@ -130,67 +130,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
       </div>
 
-      {/* Right: Telematics Status, Real-Time Stream, Alerts, Sync & Dispatch Action */}
+      {/* Right: Alerts Notification Center, Live Sync Status & Schedule Trip Action */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {/* Live Status Indicator */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: 'var(--status-success-bg)',
-            border: '1px solid var(--status-success-border)',
-            borderRadius: 'var(--radius-full)',
-            padding: '3px 8px',
-            fontSize: '0.72rem',
-            color: 'var(--status-success)',
-            fontWeight: 600
-          }}
-          className="telematics-badge hide-on-mobile"
-        >
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--status-success)',
-              animation: 'pulse 2s infinite ease-in-out'
-            }}
-          />
-          <span>TELEMATICS ONLINE</span>
-        </div>
-
-        {/* Real-time Continuous Stream Live Badge */}
-        <button
-          type="button"
-          onClick={onToggleLiveRefresh}
-          title={liveRefresh ? "Real-time auto-refresh active (5s continuous sync). Click to pause." : "Auto-refresh paused. Click to resume real-time sync."}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: liveRefresh ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-secondary)',
-            border: liveRefresh ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-full)',
-            padding: '3px 9px',
-            fontSize: '0.72rem',
-            color: liveRefresh ? 'var(--status-success)' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: onToggleLiveRefresh ? 'pointer' : 'default',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: liveRefresh ? 'var(--status-success)' : 'var(--text-muted)',
-              animation: liveRefresh ? 'pulse 1.5s infinite ease-in-out' : 'none'
-            }}
-          />
-          <span>{liveRefresh ? 'REAL-TIME LIVE (5s)' : 'LIVE PAUSED'}</span>
-        </button>
 
         {/* Alert Notifications Center Bell */}
         <div style={{ position: 'relative' }} ref={alertsRef}>

@@ -13,9 +13,11 @@ import {
   Moon,
   Smartphone,
   Route,
-  CheckCircle2
+  CheckCircle2,
+  Globe
 } from 'lucide-react';
 import { User, Trip } from '../../types';
+import { useDriverTranslation } from '../../context/DriverLanguageContext';
 
 interface Props {
   currentUser: User;
@@ -48,6 +50,7 @@ export const MoreScreen: React.FC<Props> = ({
   onSwitchRole,
   onLogout
 }) => {
+  const { language, setLanguage, t } = useDriverTranslation();
   const initials = currentUser.name
     ? currentUser.name
         .split(' ')
@@ -72,7 +75,7 @@ export const MoreScreen: React.FC<Props> = ({
             margin: 0
           }}
         >
-          More Options
+          {t.more}
         </h1>
       </div>
 
@@ -341,7 +344,93 @@ export const MoreScreen: React.FC<Props> = ({
             padding: '0 2px'
           }}
         >
-          Preferences & Sync
+          {t.languageSelect} & Preferences
+        </div>
+
+        {/* Language Selection Card */}
+        <div
+          className="driver-card"
+          style={{
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Globe size={18} color="var(--driver-primary)" />
+            <div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--driver-text-primary)' }}>
+                {t.languageSelect}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--driver-text-secondary)' }}>
+                {t.languageSelectSub}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '8px'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              style={{
+                padding: '10px 6px',
+                borderRadius: '10px',
+                border: language === 'en' ? '2px solid var(--driver-primary)' : '1px solid var(--driver-card-border)',
+                backgroundColor: language === 'en' ? 'var(--driver-primary-light)' : 'var(--bg-card)',
+                color: language === 'en' ? 'var(--driver-primary)' : 'var(--driver-text-primary)',
+                fontWeight: language === 'en' ? 800 : 600,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('hi')}
+              style={{
+                padding: '10px 6px',
+                borderRadius: '10px',
+                border: language === 'hi' ? '2px solid var(--driver-primary)' : '1px solid var(--driver-card-border)',
+                backgroundColor: language === 'hi' ? 'var(--driver-primary-light)' : 'var(--bg-card)',
+                color: language === 'hi' ? 'var(--driver-primary)' : 'var(--driver-text-primary)',
+                fontWeight: language === 'hi' ? 800 : 600,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              हिन्दी (Hindi)
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('hinglish')}
+              style={{
+                padding: '10px 6px',
+                borderRadius: '10px',
+                border: language === 'hinglish' ? '2px solid var(--driver-primary)' : '1px solid var(--driver-card-border)',
+                backgroundColor: language === 'hinglish' ? 'var(--driver-primary-light)' : 'var(--bg-card)',
+                color: language === 'hinglish' ? 'var(--driver-primary)' : 'var(--driver-text-primary)',
+                fontWeight: language === 'hinglish' ? 800 : 600,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Hinglish
+            </button>
+          </div>
         </div>
 
         {/* Dark/Light Theme Toggle */}
@@ -476,7 +565,7 @@ export const MoreScreen: React.FC<Props> = ({
         }}
       >
         <LogOut size={18} />
-        <span>Log Out of Driver Terminal</span>
+        <span>{t.logout}</span>
       </button>
 
       {/* Drive Safe Footer Badge */}

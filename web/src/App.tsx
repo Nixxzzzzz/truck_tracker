@@ -5,6 +5,8 @@ import { LoginView } from './views/LoginView';
 import { DriverView } from './views/DriverView';
 import { ManagerView } from './views/ManagerView';
 
+import { HoseXpertsLogo } from './components/common/HoseXpertsLogo';
+
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,35 +62,64 @@ export const App: React.FC = () => {
       <div
         style={{
           minHeight: '100vh',
-          backgroundColor: 'var(--bg-primary)',
+          backgroundColor: 'var(--bg-primary, #0B101B)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '12px'
+          gap: '22px',
+          padding: '24px'
         }}
       >
         <div
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: '#1764A8',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1rem',
-            fontFamily: 'var(--font-display)',
-            boxShadow: 'var(--shadow-sm)'
+            padding: '14px 26px',
+            background: 'var(--card-bg, rgba(255, 255, 255, 0.04))',
+            border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))',
+            borderRadius: '16px',
+            boxShadow: '0 15px 35px -10px rgba(0,0,0,0.6), 0 0 24px rgba(23,100,168,0.2)',
+            animation: 'pulse 2.2s infinite ease-in-out'
           }}
         >
-          HX
+          <HoseXpertsLogo
+            variant={theme === 'dark' ? 'white' : 'blue'}
+            height={54}
+            showTagline={true}
+          />
         </div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 600 }}>
-          Initializing HoseXperts Operations...
+        <div
+          style={{
+            width: '170px',
+            height: '4px',
+            backgroundColor: 'var(--border-subtle, rgba(255,255,255,0.1))',
+            borderRadius: '9999px',
+            overflow: 'hidden',
+            position: 'relative'
+          }}
+        >
+          <div
+            style={{
+              width: '55px',
+              height: '100%',
+              backgroundColor: '#1764A8',
+              borderRadius: '9999px',
+              animation: 'indeterminate 1.4s infinite ease-in-out'
+            }}
+          />
         </div>
+        <div style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '0.84rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+          Initializing HoseXperts Telematics...
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.025); opacity: 1; }
+          }
+          @keyframes indeterminate {
+            0% { transform: translateX(-55px); }
+            100% { transform: translateX(170px); }
+          }
+        `}</style>
       </div>
     );
   }

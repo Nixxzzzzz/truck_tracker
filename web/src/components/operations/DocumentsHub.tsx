@@ -11,14 +11,20 @@ import {
   Eye,
   FileCheck,
   Truck,
-  X
+  X,
+  Edit3,
+  Plus
 } from 'lucide-react';
 import { Vehicle, VehicleDocument } from '../../types';
 import { SearchableDropdown } from '../common/SearchableDropdown';
+import { PageHeader } from '../common/PageHeader';
 
 interface DocumentsHubProps {
   vehicles: Vehicle[];
-  onOpenVehiclePapers: (vehicle: Vehicle) => void;
+  onOpenVehiclePapers: (vehicle: Vehicle, docType?: string, isEdit?: boolean) => void;
+  lastUpdated?: Date;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 interface FlattenedDoc {
@@ -56,7 +62,13 @@ export const getDocTypeDisplay = (doc: { type?: string; document_type?: string; 
   }
 };
 
-export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehiclePapers }) => {
+export const DocumentsHub: React.FC<DocumentsHubProps> = ({
+  vehicles,
+  onOpenVehiclePapers,
+  lastUpdated,
+  onRefresh,
+  refreshing = false
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
@@ -117,15 +129,39 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-      {/* Header */}
-      <div>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-          Fleet Compliance & Document Registry
-        </h1>
-        <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-          Statutory compliance audit: Registration Certificates (RC), Fitness, Insurance, PUC & Permits
-        </p>
-      </div>
+      {/* Enhanced Page Header with Direct Document Registration & Update Action */}
+      <PageHeader
+        breadcrumbs={[{ label: 'Compliance' }, { label: 'Documents Hub' }]}
+        title="Fleet Compliance & Document Registry"
+        subtitle="Statutory compliance audit: Registration Certificates (RC), Fitness, Insurance, PUC & Permits"
+        lastUpdated={lastUpdated}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        actions={
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              if (vehicles.length > 0) {
+                onOpenVehiclePapers(vehicles[0], undefined, true);
+              }
+            }}
+            style={{
+              backgroundColor: '#1764A8',
+              borderColor: '#1764A8',
+              color: '#ffffff',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title="Register or update official vehicle compliance papers"
+          >
+            <Plus size={14} />
+            <span>Register & Update Document</span>
+          </button>
+        }
+      />
 
       {/* KPI Stat Cards */}
       <div
@@ -442,15 +478,37 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
                       </td>
 
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={() => onOpenVehiclePapers(vehicle)}
-                          style={{ fontSize: '0.78rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Eye size={13} />
-                          <span>View Papers</span>
-                        </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            onClick={() => onOpenVehiclePapers(vehicle, doc.type || doc.document_type || doc.title, true)}
+                            style={{
+                              fontSize: '0.78rem',
+                              padding: '5px 10px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              borderColor: 'var(--brand-primary)',
+                              color: 'var(--brand-primary)',
+                              fontWeight: 600
+                            }}
+                            title="Edit details, dates, or update certificate"
+                          >
+                            <Edit3 size={13} />
+                            <span>Update & Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => onOpenVehiclePapers(vehicle)}
+                            style={{ fontSize: '0.78rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="View all compliance documents for this vehicle"
+                          >
+                            <Eye size={13} />
+                            <span>View Papers</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

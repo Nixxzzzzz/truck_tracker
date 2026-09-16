@@ -140,6 +140,8 @@ async function request<T = any>(endpoint: string, options: RequestInit = {}): Pr
     ...getAuthHeader(),
     ...(options.headers || {})
   };
+  const isGet = !options.method || options.method === 'GET';
+  const cacheKey = `truck_tracker_cache_${endpoint}`;
 
   try {
     const response = await fetch(url, { ...options, headers });
@@ -149,19 +151,38 @@ async function request<T = any>(endpoint: string, options: RequestInit = {}): Pr
       throw new Error(data.error || `HTTP error ${response.status}`);
     }
 
+    // Cache successful GET responses in localStorage for offline access
+    if (isGet && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+      } catch {}
+    }
+
     return data;
   } catch (error: any) {
-    // If driver request and offline network error, queue event
-    if (
-      typeof navigator !== 'undefined' &&
-      !navigator.onLine &&
-      options.method &&
-      options.method !== 'GET' &&
-      endpoint.startsWith('/driver/')
-    ) {
+    const isNetworkError =
+      (typeof navigator !== 'undefined' && !navigator.onLine) ||
+      error.name === 'TypeError' ||
+      (error.message && (error.message.includes('fetch') || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')));
+
+    // If GET request fails due to network drop, return cached local data if available
+    if (isGet && isNetworkError && typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          console.warn(`[API Offline] Returning cached local data for ${endpoint}`);
+          return parsed.data;
+        }
+      } catch {}
+    }
+
+    // If mutation request fails due to network drop or offline, store update in local device queue
+    if (!isGet && isNetworkError) {
       const payload = options.body ? JSON.parse(options.body as string) : {};
-      offlineQueue.enqueue(url, options.method, payload);
-      throw new Error('You are currently offline. Action has been saved and will synchronize automatically once reconnected.');
+      offlineQueue.enqueue(url, options.method || 'POST', payload);
+      console.warn(`[OfflineQueue] Action stored in local device queue for ${endpoint}. Auto-syncing on reconnect.`);
+      return { success: true, offline: true, message: 'Action saved locally on device. Will auto-sync to server when online.' } as any;
     }
 
     throw error;

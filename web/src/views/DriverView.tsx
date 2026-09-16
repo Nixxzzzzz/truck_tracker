@@ -45,6 +45,7 @@ import { FloatingNavigationCard } from '../components/driver/FloatingNavigationC
 import { EmergencyScreen } from '../components/driver/EmergencyScreen';
 import { MoreScreen } from '../components/driver/MoreScreen';
 import { HoseXpertsLogo } from '../components/common/HoseXpertsLogo';
+import { DriverLanguageProvider, useDriverLanguage } from '../context/DriverLanguageContext';
 
 interface Props {
   currentUser: User;
@@ -72,13 +73,15 @@ function estimateReachingTimeMinutes(distanceKm: number): number {
   return Math.max(3, Math.round(distanceKm / 0.47));
 }
 
-export const DriverView: React.FC<Props> = ({
+const DriverViewInner: React.FC<Props> = ({
   currentUser,
   onLogout,
   theme = 'dark',
   onToggleTheme,
   onSwitchRole
 }) => {
+  const { t } = useDriverLanguage();
+
   // Navigation tab state: 'home' | 'trip' | 'map' | 'emergency' | 'more'
   const [activeTab, setActiveTab] = useState<DriverTab>('home');
 
@@ -453,6 +456,64 @@ export const DriverView: React.FC<Props> = ({
     ? calculateDistanceKm(targetNextStop.latitude, targetNextStop.longitude)
     : null;
   const nextStopEta = nextStopDistance !== null ? estimateReachingTimeMinutes(nextStopDistance) : null;
+
+  if (loading && !activeTrip && trips.length === 0) {
+    return (
+      <div
+        className="driver-theme-root"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '20px',
+          padding: '24px',
+          backgroundColor: 'var(--driver-bg, #0B101B)'
+        }}
+      >
+        <div
+          style={{
+            padding: '14px 26px',
+            background: 'var(--driver-card-bg, rgba(255, 255, 255, 0.04))',
+            border: '1px solid var(--driver-card-border, rgba(255, 255, 255, 0.1))',
+            borderRadius: '16px',
+            boxShadow: '0 15px 35px -10px rgba(0,0,0,0.6), 0 0 24px rgba(23,100,168,0.2)',
+            animation: 'hxPulse 2.2s infinite ease-in-out'
+          }}
+        >
+          <HoseXpertsLogo variant={theme === 'dark' ? 'white' : 'blue'} height={48} showTagline={true} />
+        </div>
+        <div
+          style={{
+            width: '160px',
+            height: '4px',
+            backgroundColor: 'var(--driver-card-border, rgba(255,255,255,0.1))',
+            borderRadius: '9999px',
+            overflow: 'hidden',
+            position: 'relative'
+          }}
+        >
+          <div
+            style={{
+              width: '50px',
+              height: '100%',
+              backgroundColor: '#1764A8',
+              borderRadius: '9999px',
+              animation: 'hxSlide 1.2s infinite ease-in-out'
+            }}
+          />
+        </div>
+        <div style={{ color: 'var(--driver-text-secondary, #94a3b8)', fontSize: '0.84rem', fontWeight: 600 }}>
+          {t.loading || 'Loading driver workflow...'}
+        </div>
+        <style>{`
+          @keyframes hxPulse { 0%, 100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 1; transform: scale(1.025); } }
+          @keyframes hxSlide { 0% { transform: translateX(-50px); } 100% { transform: translateX(160px); } }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="driver-theme-root">
@@ -1095,5 +1156,13 @@ export const DriverView: React.FC<Props> = ({
         </div>
       )}
     </div>
+  );
+};
+
+export const DriverView: React.FC<Props> = (props) => {
+  return (
+    <DriverLanguageProvider>
+      <DriverViewInner {...props} />
+    </DriverLanguageProvider>
   );
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Truck, ArrowRight, Clock, CheckCircle2, ChevronRight, Play } from 'lucide-react';
 import { Trip } from '../../types';
+import { useDriverTranslation } from '../../context/DriverLanguageContext';
 
 interface Props {
   trip: Trip | null;
@@ -15,6 +16,7 @@ export const CurrentTripCard: React.FC<Props> = ({
   onStartTrip,
   actionLoading = false
 }) => {
+  const { t } = useDriverTranslation();
   if (!trip) {
     return (
       <div
@@ -51,7 +53,7 @@ export const CurrentTripCard: React.FC<Props> = ({
               margin: '0 0 6px'
             }}
           >
-            No Active Trip Assigned
+            {t.noActiveTrip}
           </h3>
           <p
             style={{
@@ -61,7 +63,7 @@ export const CurrentTripCard: React.FC<Props> = ({
               maxWidth: '280px'
             }}
           >
-            You don't currently have an active dispatch order. Please stand by for fleet dispatch.
+            {t.noActiveTripSubtitle}
           </p>
         </div>
       </div>
@@ -84,12 +86,12 @@ export const CurrentTripCard: React.FC<Props> = ({
   const isCompleted = trip.status === 'COMPLETED';
 
   const statusLabel = isPlanned
-    ? 'READY TO START'
+    ? t.readyToStart
     : isReturning
-    ? 'RETURNING'
+    ? t.returning
     : isCompleted
-    ? 'COMPLETED'
-    : 'ON ROUTE';
+    ? t.completed
+    : t.onRoute;
 
   return (
     <div className="driver-hero-trip">
@@ -114,7 +116,7 @@ export const CurrentTripCard: React.FC<Props> = ({
                 color: 'rgba(255, 255, 255, 0.9)'
               }}
             >
-              CURRENT TRIP
+              {t.activeTrip}
             </span>
           </div>
           {trip.id && (
@@ -291,7 +293,7 @@ export const CurrentTripCard: React.FC<Props> = ({
           }}
         >
           <Play size={18} fill="currentColor" />
-          <span>START TRIP NOW</span>
+          <span>{actionLoading ? t.startingTrip : t.startTrip}</span>
         </button>
       ) : (
         <button
@@ -314,7 +316,7 @@ export const CurrentTripCard: React.FC<Props> = ({
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
           }}
         >
-          <span>View Trip Details</span>
+          <span>{t.viewTripAndStops}</span>
           <ChevronRight size={18} />
         </button>
       )}

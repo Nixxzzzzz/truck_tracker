@@ -54,6 +54,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { SearchableDropdown } from '../components/common/SearchableDropdown';
 import { SlaGauge, TrendBarChart, FleetStatusBar } from '../components/common/VisualCharts';
 import { DelayAttributionLineChart } from '../components/common/DelayAttributionLineChart';
+import { HoseXpertsLogo } from '../components/common/HoseXpertsLogo';
 
 // Dedicated Operations & Dispatch Workspaces
 import { OverviewDashboard } from '../components/operations/OverviewDashboard';
@@ -129,6 +130,8 @@ export const ManagerView: React.FC<Props> = ({
   const [isDestinationModalOpen, setIsDestinationModalOpen] = useState(false);
   const [editingDestination, setEditingDestination] = useState<Destination | null>(null);
   const [papersVehicle, setPapersVehicle] = useState<Vehicle | null>(null);
+  const [papersDocType, setPapersDocType] = useState<string | undefined>(undefined);
+  const [papersIsAddDoc, setPapersIsAddDoc] = useState<boolean | undefined>(undefined);
   const [dossierDriver, setDossierDriver] = useState<Driver | null>(null);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
@@ -171,8 +174,9 @@ export const ManagerView: React.FC<Props> = ({
   }, [liveRefresh, activeSection, selectedDate, statusFilter.join(','), searchQuery, reportsPeriod]);
 
   // Live Vehicle Telematics Simulation (Ola / Rapido style real-time movements)
+  // Tab-guarded to only run when actively viewing map or overview, eliminating background re-renders and blinking
   useEffect(() => {
-    if (!isSimulatingFleet) return;
+    if (!isSimulatingFleet || !['overview', 'map'].includes(activeSection)) return;
 
     const interval = setInterval(() => {
       setVehicles((prevVehicles) =>
@@ -198,7 +202,7 @@ export const ManagerView: React.FC<Props> = ({
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isSimulatingFleet]);
+  }, [isSimulatingFleet, activeSection]);
 
   // Manager Fleet Deletion & Decommissioning Handlers
   const handleDeleteVehicle = async (vehicle: Vehicle) => {
@@ -527,6 +531,23 @@ export const ManagerView: React.FC<Props> = ({
   );
   const completedTrips = trips.filter((t) => t.status === 'COMPLETED');
   const delayedTrips = trips.filter((t) => (t.total_delay_minutes || 0) > 0);
+
+  // Active trip associated with the currently tracked vehicle on live telematics map
+  const activeTripForSelectedVehicle = useMemo(() => {
+    if (selectedVehicleForMap) {
+      const match = trips.find(
+        (t) =>
+          (t.vehicle_id === selectedVehicleForMap.id || t.vehicle_number === selectedVehicleForMap.vehicle_number) &&
+          (t.status === 'IN_PROGRESS' || t.status === 'AT_DESTINATION' || t.status === 'ASSIGNED')
+      );
+      if (match) return match;
+      const anyMatch = trips.find(
+        (t) => t.vehicle_id === selectedVehicleForMap.id || t.vehicle_number === selectedVehicleForMap.vehicle_number
+      );
+      if (anyMatch) return anyMatch;
+    }
+    return trips.find((t) => t.status === 'IN_PROGRESS') || trips[0];
+  }, [selectedVehicleForMap, trips]);
 
   // Trips Table Columns Definition
   const tripColumns: Column<Trip>[] = [
@@ -909,6 +930,67 @@ export const ManagerView: React.FC<Props> = ({
     [exceptions]
   );
 
+  if (loading && trips.length === 0) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: 'var(--bg-primary, #0B101B)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '22px',
+          padding: '24px'
+        }}
+      >
+        <div
+          style={{
+            padding: '14px 26px',
+            background: 'var(--card-bg, rgba(255, 255, 255, 0.04))',
+            border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))',
+            borderRadius: '16px',
+            boxShadow: '0 15px 35px -10px rgba(0,0,0,0.6), 0 0 24px rgba(23,100,168,0.2)',
+            animation: 'hxPulse 2.2s infinite ease-in-out'
+          }}
+        >
+          <HoseXpertsLogo
+            variant={theme === 'dark' ? 'white' : 'blue'}
+            height={52}
+            showTagline={true}
+          />
+        </div>
+        <div
+          style={{
+            width: '180px',
+            height: '4px',
+            backgroundColor: 'var(--border-subtle, rgba(255,255,255,0.1))',
+            borderRadius: '9999px',
+            overflow: 'hidden',
+            position: 'relative'
+          }}
+        >
+          <div
+            style={{
+              width: '60px',
+              height: '100%',
+              backgroundColor: '#1764A8',
+              borderRadius: '9999px',
+              animation: 'hxSlide 1.2s infinite ease-in-out'
+            }}
+          />
+        </div>
+        <div style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '0.84rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+          Loading Operations Control Center...
+        </div>
+        <style>{`
+          @keyframes hxPulse { 0%, 100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 1; transform: scale(1.025); } }
+          @keyframes hxSlide { 0% { transform: translateX(-60px); } 100% { transform: translateX(180px); } }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <AppLayout
       currentUser={currentUser}
@@ -944,6 +1026,13 @@ export const ManagerView: React.FC<Props> = ({
           onOpenCreateTrip={() => setIsCreateModalOpen(true)}
           onOpenTripDetails={(id) => setSelectedTripId(id)}
           onOpenAssignment={(trip) => setAssignmentTrip(trip)}
+          onTrackVehicle={(v) => {
+            setSelectedVehicleForMap(v);
+            if (v.latitude && v.longitude) {
+              setFocusedMapLocation({ latitude: v.latitude, longitude: v.longitude });
+            }
+            setActiveSection('map');
+          }}
         />
       )}
 
@@ -1731,7 +1820,67 @@ export const ManagerView: React.FC<Props> = ({
             </div>
 
             {/* Right Map Canvas with All Live Vehicles */}
-            <div className="fleet-telematics-map-container">
+            <div className="fleet-telematics-map-container" style={{ position: 'relative' }}>
+              {selectedVehicleForMap && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '56px',
+                    zIndex: 999,
+                    backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#ffffff',
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(56, 189, 248, 0.5)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    fontSize: '0.82rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#10b981',
+                        animation: 'pulse 1.5s infinite'
+                      }}
+                    />
+                    <span><b>Live Tracking:</b> {selectedVehicleForMap.vehicle_number}</span>
+                  </div>
+                  <span style={{ color: '#64748b' }}>|</span>
+                  <span>⚡ {Math.round(selectedVehicleForMap.speed_kmh || 0)} km/h</span>
+                  <span style={{ color: '#64748b' }}>|</span>
+                  <span>👤 {selectedVehicleForMap.assigned_driver_name || 'Driver on Duty'}</span>
+                  {activeTripForSelectedVehicle && (
+                    <>
+                      <span style={{ color: '#64748b' }}>|</span>
+                      <span>📍 Trip: {activeTripForSelectedVehicle.id}</span>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVehicleForMap(null)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      fontSize: '0.76rem',
+                      textDecoration: 'underline',
+                      padding: 0,
+                      marginLeft: '4px'
+                    }}
+                  >
+                    Clear Focus
+                  </button>
+                </div>
+              )}
               <LeafletMap
                 fleetVehicles={vehicles}
                 focusedLocation={focusedMapLocation}
@@ -1742,12 +1891,12 @@ export const ManagerView: React.FC<Props> = ({
                   }
                 }}
                 baseLocation={{
-                  name: trips[0]?.starting_location || 'Delhi Central Logistics Depot',
-                  latitude: trips[0]?.starting_latitude || 28.5355,
-                  longitude: trips[0]?.starting_longitude || 77.2680
+                  name: activeTripForSelectedVehicle?.starting_location || 'Delhi Central Logistics Depot',
+                  latitude: activeTripForSelectedVehicle?.starting_latitude || 28.5355,
+                  longitude: activeTripForSelectedVehicle?.starting_longitude || 77.2680
                 }}
-                stops={trips[0]?.stops || []}
-                events={trips[0]?.events || []}
+                stops={activeTripForSelectedVehicle?.stops || []}
+                events={activeTripForSelectedVehicle?.events || []}
                 height="650px"
                 theme={theme}
               />
@@ -3084,7 +3233,14 @@ export const ManagerView: React.FC<Props> = ({
       {activeSection === 'documents' && (
         <DocumentsHub
           vehicles={vehicles}
-          onOpenVehiclePapers={(v) => setPapersVehicle(v)}
+          onOpenVehiclePapers={(v, docType, isEdit) => {
+            setPapersDocType(docType);
+            setPapersIsAddDoc(isEdit);
+            setPapersVehicle(v);
+          }}
+          lastUpdated={lastRefresh}
+          onRefresh={handleManualRefresh}
+          refreshing={refreshing}
         />
       )}
 
@@ -3178,7 +3334,13 @@ export const ManagerView: React.FC<Props> = ({
       {papersVehicle && (
         <VehiclePapersModal
           vehicle={papersVehicle}
-          onClose={() => setPapersVehicle(null)}
+          initialDocType={papersDocType}
+          initialAddDoc={papersIsAddDoc}
+          onClose={() => {
+            setPapersVehicle(null);
+            setPapersDocType(undefined);
+            setPapersIsAddDoc(undefined);
+          }}
           onUpdate={(updatedVehicle: Vehicle) => {
             setVehicles((prev) => prev.map((v) => (v.id === updatedVehicle.id ? updatedVehicle : v)));
             setPapersVehicle(updatedVehicle);

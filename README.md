@@ -90,30 +90,65 @@ TruckTracker is an internal enterprise logistics operations platform engineered 
 
 ---
 
-## 🚀 What's New in v1.1.0
+### 7. Official HoseXperts Brand Loading Screen & Unified Identity
+*Official corporate HoseXperts identity ("working with the flow") featured across application loading states on web and native Android, high-resolution vector emblem, and crisp dark/light themes.*
 
-The `v1.1.0` release introduces major enterprise capabilities across analytics, filtering ergonomics, mobile driver tools, and CI/CD automation:
+<p align="center">
+  <img src="docs/images/16-app-loading-logo.png" alt="HoseXperts Official App Loading Screen" width="100%" />
+</p>
 
-1. **Dual-Series Delay Attribution Intelligence**:
-   - Categorizes delays into **Management Delays** (dock wait, warehouse queue, gate pass verification, invoice paperwork) vs. **Driver Delays** (highway congestion, detours, rest stops).
-   - Interactive dual-series SVG line chart with hover tooltips, percentage distribution bars, and hourly trend comparisons.
+---
 
-2. **Multi-Select Checkbox Dropdown Filters**:
-   - Filter schedules, vehicles, and compliance registries across multiple statuses, drivers, or vehicle categories simultaneously.
-   - Dynamic selection count badges with 1-click clear-all actions.
-   - Smart viewport edge detection automatically flips dropdown menus leftward near screen boundaries to eliminate text clipping on tablet and mobile displays.
+### 8. Live Vehicle Tracking on Route & Anti-Flicker Map Command Center
+*Direct live tracking of any moving vehicle from the overview dashboard with auto-focused route corridor, driver telemetry HUD pill, and zero-flicker in-place coordinates updates.*
 
-3. **In-Cab Digital Vehicle Papers for Drivers**:
-   - Field drivers can now view and present verified digital copies of RC, Insurance, Fitness, PUC, and National Permits directly from the mobile cockpit with 1 tap.
-   - Eliminates paperwork loss and simplifies roadside RTO inspection compliance.
+<p align="center">
+  <img src="docs/images/10-overview-tracking.png" alt="Live Vehicle Tracking and Clean Header" width="100%" />
+</p>
 
-4. **Enterprise Delivery Deletion Safeguards**:
-   - Deliveries and manifests that are `IN_PROGRESS`, `DELAYED`, or `COMPLETED` cannot be deleted from the platform.
-   - Provides safe edit-only access to update delivery notes, contact numbers, or cargo instructions without risking accidental loss of historical dispatch data.
+---
 
-5. **Automated CI/CD Android APK Build & In-App Sync**:
-   - GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically compiles `TruckTracker-Driver-v1.1.0-debug.apk` on every push to `main` and attaches it to GitHub Releases.
-   - Server endpoint `GET /api/app-version` delivers version telemetry, enabling the Android application and web interface to remain continuously synchronized.
+### 9. Document Registry Editing & Direct Update Actions
+*Documents Hub with direct `+ Register & Update Document` top bar button and per-row `[✏️ Update & Edit]` action, allowing immediate renewal of certificates, policy numbers, and validity dates.*
+
+| 📋 Documents Hub with Edit Actions | ✏️ Document Registration & Edit Modal |
+|:---:|:---:|
+| <img src="docs/images/11-documents-hub-edit.png" alt="Documents Hub with Edit Actions" width="480" /> | <img src="docs/images/12-document-update-modal.png" alt="Document Registration Modal" width="480" /> |
+| *Direct update and edit options for all compliance papers.* | *Pre-populated modal for seamless certificate renewals.* |
+
+---
+
+### 10. Driver Tri-Lingual Cockpit (English, हिन्दी, Hinglish)
+*Driver interface fully localized into standard English, pure Hindi (हिन्दी), and conversational Hinglish for field drivers, complete with instant 1-tap header toggle and persistent language preference.*
+
+| 🇬🇧 English | 🇮🇳 हिन्दी (Hindi) | 🗣️ Hinglish |
+|:---:|:---:|:---:|
+| <img src="docs/images/13-driver-english.png" alt="Driver English Cockpit" width="280" /> | <img src="docs/images/14-driver-hindi.png" alt="Driver Hindi Cockpit" width="280" /> | <img src="docs/images/15-driver-hinglish.png" alt="Driver Hinglish Cockpit" width="280" /> |
+| *Standard enterprise English workflow.* | *Pure Devnagari script for Indian drivers.* | *Conversational phonetics for maximum ease of use.* |
+
+---
+
+## 🚀 What's New in v1.1.0 & v1.2.0
+
+1. **Official HoseXperts Identity & Loading Screen**:
+   - Official high-resolution brand emblem and typography displayed across web initial splash, React authentication check, and native Android `SplashScreen`.
+   - Polished frosted glass container card with ambient blue glow and smooth pulse animations.
+
+2. **Zero-Flicker Map Telematics & Live Vehicle Tracking**:
+   - In-place marker coordinate animation and tab-guarded polling preventing map or window blinking during real-time 3s/5s telematics updates.
+   - Dedicated "Track Vehicle" selector on the dashboard and 1-click `[↗ Track]` button on active trips to focus the live corridor map.
+   - Removed bulky `TELEMATICS ONLINE` and `REAL-TIME LIVE` badges from the top bar for a clean, modern command header with live pulse dot.
+
+3. **Documents Hub Editing & Registration**:
+   - Direct `+ Register & Update Document` header action and per-row `[✏️ Update & Edit]` buttons to update registration numbers, validity periods, and uploaded certificates.
+
+4. **Tri-Lingual Driver Localization (English, हिन्दी, Hinglish)**:
+   - Complete localization across all driver workflow cards, greetings, trip status, quick actions, GPS states, and navigation tabs.
+   - Instant 1-tap toggle pill `[EN | हिन्दी | Hinglish]` in the mobile header with automatic `localStorage` persistence.
+
+5. **Offline Local Device Persistence & Automatic Server Sync**:
+   - Instant offline storage for vehicle papers and dispatch updates with optimistic local state updates.
+   - Automatic queue flushing to the central API when internet connectivity resumes, plus continuous 12s heartbeat sync.
 
 ---
 

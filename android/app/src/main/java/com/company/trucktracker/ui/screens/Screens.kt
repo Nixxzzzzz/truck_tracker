@@ -1,12 +1,16 @@
 package com.company.trucktracker.ui.screens
 
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.company.trucktracker.R
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,15 +41,25 @@ fun SplashScreen(isLoading: Boolean, onSessionChecked: (Boolean) -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.LocalShipping,
-                contentDescription = null,
-                tint = ChampagneGold,
-                modifier = Modifier.size(72.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                shadowElevation = 8.dp,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "HoseXperts Official Logo",
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                        .height(52.dp)
+                        .fillMaxWidth(0.82f),
+                    contentScale = ContentScale.Fit
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
-            Text("TRUCKTRACKER", color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            Text("Corporate Logistics Fleet • v1.1.0", color = TextSecondary, fontSize = 13.sp)
+            Text("HOSEXPERTS TRUCKTRACKER", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text("Corporate Logistics Fleet • Working with the flow", color = TextSecondary, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(32.dp))
             if (isLoading) {
                 CircularProgressIndicator(color = ChampagneGold, modifier = Modifier.size(32.dp))
@@ -84,12 +98,21 @@ fun LoginScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.LocalShipping,
-                contentDescription = null,
-                tint = ChampagneGold,
-                modifier = Modifier.size(48.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                shadowElevation = 4.dp
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "HoseXperts Official Logo",
+                    modifier = Modifier
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .height(36.dp)
+                        .width(145.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
             IconButton(onClick = onToggleTheme) {
                 Icon(
                     if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,

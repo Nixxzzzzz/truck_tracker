@@ -1,7 +1,8 @@
 import React from 'react';
-import { MapPin, Bell, Sun, Moon, RefreshCw } from 'lucide-react';
+import { MapPin, Bell, Sun, Moon, RefreshCw, Globe } from 'lucide-react';
 import { User } from '../../types';
 import { HoseXpertsLogo } from '../common/HoseXpertsLogo';
+import { useDriverTranslation, DriverLanguage } from '../../context/DriverLanguageContext';
 
 interface Props {
   currentUser: User;
@@ -28,12 +29,14 @@ export const DriverHeader: React.FC<Props> = ({
   onOpenNotifications,
   isDesktop = false
 }) => {
-  // Time-aware greeting
+  const { language, setLanguage, t } = useDriverTranslation();
+
+  // Time-aware greeting using localized dictionary
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return t.goodMorning;
+    if (hour < 17) return t.goodAfternoon;
+    return t.goodEvening;
   };
 
   // Get driver initials
@@ -59,7 +62,73 @@ export const DriverHeader: React.FC<Props> = ({
       >
         {!isDesktop && <HoseXpertsLogo variant="compact" height={32} />}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Language Switcher Pill Button Group */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '9999px',
+              padding: '2px',
+              gap: '2px'
+            }}
+            title={t.languageSelect}
+          >
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              style={{
+                background: language === 'en' ? 'var(--driver-primary)' : 'transparent',
+                color: language === 'en' ? '#ffffff' : 'var(--driver-text-secondary)',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '2px 7px',
+                fontSize: '0.68rem',
+                fontWeight: language === 'en' ? 800 : 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('hi')}
+              style={{
+                background: language === 'hi' ? 'var(--driver-primary)' : 'transparent',
+                color: language === 'hi' ? '#ffffff' : 'var(--driver-text-secondary)',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '2px 7px',
+                fontSize: '0.68rem',
+                fontWeight: language === 'hi' ? 800 : 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              हिन्दी
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('hinglish')}
+              style={{
+                background: language === 'hinglish' ? 'var(--driver-primary)' : 'transparent',
+                color: language === 'hinglish' ? '#ffffff' : 'var(--driver-text-secondary)',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '2px 7px',
+                fontSize: '0.68rem',
+                fontWeight: language === 'hinglish' ? 800 : 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Hinglish
+            </button>
+          </div>
+
           {/* GPS indicator with interactive refresh */}
           <div
             onClick={onRefreshGps}
@@ -86,7 +155,7 @@ export const DriverHeader: React.FC<Props> = ({
                 backgroundColor: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)'
               }}
             />
-            <span>{isRefreshingGps ? 'Refreshing...' : gpsAccuracy !== null ? 'GPS Connected' : 'Acquiring GPS'}</span>
+            <span>{isRefreshingGps ? t.refreshingGps : gpsAccuracy !== null ? t.gpsConnected : t.acquiringGps}</span>
             {onRefreshGps && (
               <RefreshCw size={11} className={isRefreshingGps ? 'spin' : ''} style={{ opacity: 0.75 }} />
             )}
@@ -204,7 +273,7 @@ export const DriverHeader: React.FC<Props> = ({
               marginTop: '1px'
             }}
           >
-            Driver • {vehicleNumber}
+            {t.driverOnDuty} • {vehicleNumber}
           </div>
         </div>
       </header>
