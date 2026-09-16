@@ -144,21 +144,21 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         <div className="overview-banner-actions" style={{ display: 'flex', gap: '10px' }}>
           <button
             type="button"
+            className="btn btn-secondary"
+            onClick={() => onNavigateSection('map')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+          >
+            <Navigation size={15} />
+            <span>Live Fleet Radar</span>
+          </button>
+          <button
+            type="button"
             className="btn btn-outline"
             onClick={() => onNavigateSection('schedule')}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
           >
             <Calendar size={15} />
             <span>Today's Schedule</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onOpenCreateTrip}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
-          >
-            <Plus size={16} />
-            <span>Create Trip</span>
           </button>
         </div>
       </div>

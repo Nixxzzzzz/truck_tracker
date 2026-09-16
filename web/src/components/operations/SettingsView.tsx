@@ -117,7 +117,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             borderRadius: 'var(--radius-sm)',
             fontSize: '0.82rem',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
             gap: '10px'
           }}
         >
@@ -189,19 +189,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '6px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>API Endpoint Base:</span>
-            <span style={{ fontWeight: 700, fontFamily: 'monospace' }}>{API_BASE}</span>
+            <span style={{ fontWeight: 700, fontFamily: 'monospace', wordBreak: 'break-all' }}>{API_BASE}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '6px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Application Mode:</span>
             <span style={{ fontWeight: 700, color: '#10b981' }}>Role-Enforced Enterprise Platform</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '6px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Current Authenticated User:</span>
-            <span style={{ fontWeight: 700 }}>{currentUser.name} ({currentUser.email})</span>
+            <span style={{ fontWeight: 700, wordBreak: 'break-all' }}>{currentUser.name} ({currentUser.email})</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', flexWrap: 'wrap', gap: '6px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Backend Enforced Role:</span>
             <span style={{ fontWeight: 700, color: 'var(--brand-primary)' }}>{currentUser.role}</span>
           </div>
@@ -232,7 +232,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             Switch between the pure Driver Terminal experience and the Operations Control Center to audit role isolation.
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-outline"

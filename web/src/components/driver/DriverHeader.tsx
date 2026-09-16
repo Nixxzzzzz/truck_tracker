@@ -51,18 +51,190 @@ export const DriverHeader: React.FC<Props> = ({
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px', boxSizing: 'border-box' }}>
-      {/* Top Brand Bar with Compact Logo (on mobile) & Utilities */}
+      {/* Top Brand & Action Bar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: isDesktop ? 'flex-end' : 'space-between',
-          padding: isDesktop ? '0 2px' : '8px 2px 0'
+          padding: isDesktop ? '0 2px' : '4px 2px 0'
         }}
       >
-        {!isDesktop && <HoseXpertsLogo variant="compact" height={32} />}
+        {!isDesktop && <HoseXpertsLogo variant="compact" height={28} />}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Desktop view displays Language + GPS in single line */}
+          {isDesktop && (
+            <>
+              {/* Language Switcher Pill Button Group */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '9999px',
+                  padding: '2px',
+                  gap: '2px'
+                }}
+                title={t.languageSelect}
+              >
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  style={{
+                    background: language === 'en' ? 'var(--driver-primary)' : 'transparent',
+                    color: language === 'en' ? '#ffffff' : 'var(--driver-text-secondary)',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '2px 7px',
+                    fontSize: '0.68rem',
+                    fontWeight: language === 'en' ? 800 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('hi')}
+                  style={{
+                    background: language === 'hi' ? 'var(--driver-primary)' : 'transparent',
+                    color: language === 'hi' ? '#ffffff' : 'var(--driver-text-secondary)',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '2px 7px',
+                    fontSize: '0.68rem',
+                    fontWeight: language === 'hi' ? 800 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  हिन्दी
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('hinglish')}
+                  style={{
+                    background: language === 'hinglish' ? 'var(--driver-primary)' : 'transparent',
+                    color: language === 'hinglish' ? '#ffffff' : 'var(--driver-text-secondary)',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '2px 7px',
+                    fontSize: '0.68rem',
+                    fontWeight: language === 'hinglish' ? 800 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Hinglish
+                </button>
+              </div>
+
+              {/* GPS indicator with interactive refresh */}
+              <div
+                onClick={onRefreshGps}
+                title={onRefreshGps ? 'Click to refresh GPS fix' : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  color: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)',
+                  backgroundColor: gpsAccuracy !== null ? 'var(--driver-success-bg)' : 'var(--driver-warning-bg)',
+                  border: `1px solid ${gpsAccuracy !== null ? 'var(--driver-success-border)' : 'var(--driver-warning-border)'}`,
+                  padding: '3px 9px',
+                  borderRadius: '9999px',
+                  cursor: onRefreshGps ? 'pointer' : 'default'
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)'
+                  }}
+                />
+                <span>{isRefreshingGps ? t.refreshingGps : gpsAccuracy !== null ? t.gpsConnected : t.acquiringGps}</span>
+                {onRefreshGps && (
+                  <RefreshCw size={11} className={isRefreshingGps ? 'spin' : ''} style={{ opacity: 0.75 }} />
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Theme Toggle */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              aria-label="Toggle dark/light mode"
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                color: 'var(--driver-text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '32px',
+                height: '32px'
+              }}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          )}
+
+          {/* Notification Bell */}
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            aria-label="Notifications"
+            style={{
+              position: 'relative',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              color: 'var(--driver-text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px'
+            }}
+          >
+            <Bell size={15} />
+            <span
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#D92D20'
+              }}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Row 2 (Mobile only): Language Switcher Pill & GPS Telematics Status */}
+      {!isDesktop && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            padding: '0 2px'
+          }}
+        >
           {/* Language Switcher Pill Button Group */}
           <div
             style={{
@@ -84,8 +256,8 @@ export const DriverHeader: React.FC<Props> = ({
                 color: language === 'en' ? '#ffffff' : 'var(--driver-text-secondary)',
                 border: 'none',
                 borderRadius: '9999px',
-                padding: '2px 7px',
-                fontSize: '0.68rem',
+                padding: '3px 8px',
+                fontSize: '0.70rem',
                 fontWeight: language === 'en' ? 800 : 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
@@ -101,8 +273,8 @@ export const DriverHeader: React.FC<Props> = ({
                 color: language === 'hi' ? '#ffffff' : 'var(--driver-text-secondary)',
                 border: 'none',
                 borderRadius: '9999px',
-                padding: '2px 7px',
-                fontSize: '0.68rem',
+                padding: '3px 8px',
+                fontSize: '0.70rem',
                 fontWeight: language === 'hi' ? 800 : 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
@@ -118,8 +290,8 @@ export const DriverHeader: React.FC<Props> = ({
                 color: language === 'hinglish' ? '#ffffff' : 'var(--driver-text-secondary)',
                 border: 'none',
                 borderRadius: '9999px',
-                padding: '2px 7px',
-                fontSize: '0.68rem',
+                padding: '3px 8px',
+                fontSize: '0.70rem',
                 fontWeight: language === 'hinglish' ? 800 : 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
@@ -142,7 +314,7 @@ export const DriverHeader: React.FC<Props> = ({
               color: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)',
               backgroundColor: gpsAccuracy !== null ? 'var(--driver-success-bg)' : 'var(--driver-warning-bg)',
               border: `1px solid ${gpsAccuracy !== null ? 'var(--driver-success-border)' : 'var(--driver-warning-border)'}`,
-              padding: '3px 9px',
+              padding: '3px 10px',
               borderRadius: '9999px',
               cursor: onRefreshGps ? 'pointer' : 'default'
             }}
@@ -160,58 +332,8 @@ export const DriverHeader: React.FC<Props> = ({
               <RefreshCw size={11} className={isRefreshingGps ? 'spin' : ''} style={{ opacity: 0.75 }} />
             )}
           </div>
-
-          {/* Theme Toggle */}
-          {onToggleTheme && (
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              aria-label="Toggle dark/light mode"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--driver-text-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '4px'
-              }}
-            >
-              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-            </button>
-          )}
-
-          {/* Notification Bell */}
-          <button
-            type="button"
-            onClick={onOpenNotifications}
-            aria-label="Notifications"
-            style={{
-              position: 'relative',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--driver-text-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '4px'
-            }}
-          >
-            <Bell size={19} />
-            <span
-              style={{
-                position: 'absolute',
-                top: '2px',
-                right: '2px',
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                backgroundColor: '#D92D20'
-              }}
-            />
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Driver Profile Greeting Banner */}
       <header

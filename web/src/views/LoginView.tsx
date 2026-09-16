@@ -25,7 +25,7 @@ interface ProfilePreset {
 const PRESETS: ProfilePreset[] = [
   {
     id: 'manager',
-    label: 'My Shipments',
+    label: 'Manager',
     title: 'Dispatch Manager',
     roleBadge: 'Fleet Command',
     email: 'manager@company.com',
@@ -106,7 +106,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
       className="login-container-responsive"
     >
       {onToggleTheme && (
-        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
+        <div className="login-theme-toggle" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} showLabel />
         </div>
       )}
@@ -375,10 +375,16 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
       <style>{`
         @media (max-width: 480px) {
           .login-container-responsive {
-            padding: 10px !important;
+            padding: calc(46px + env(safe-area-inset-top, 12px)) 14px calc(24px + env(safe-area-inset-bottom, 12px)) !important;
+            align-items: flex-start !important;
+          }
+          .login-theme-toggle {
+            top: max(12px, env(safe-area-inset-top, 12px)) !important;
+            right: 14px !important;
           }
           .card {
-            padding: 20px 16px !important;
+            padding: 22px 18px !important;
+            border-radius: var(--radius-lg) !important;
           }
         }
       `}</style>

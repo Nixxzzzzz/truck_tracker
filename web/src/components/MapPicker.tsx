@@ -39,22 +39,25 @@ export const MapPicker: React.FC<Props> = ({
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           attribution: 'Tiles &copy; Esri',
           subdomains: undefined,
+          className: '',
           maxZoom: 19
         };
       case 'dark':
         return {
-          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; CARTO &bull; OpenStreetMap',
-          subdomains: 'abcd',
-          maxZoom: 20
+          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          attribution: '&copy; OpenStreetMap contributors &bull; Telematics',
+          subdomains: undefined,
+          className: 'map-tiles-dark',
+          maxZoom: 19
         };
       case 'streets':
       default:
         return {
-          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; CARTO &bull; OpenStreetMap',
-          subdomains: 'abcd',
-          maxZoom: 20
+          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          attribution: '&copy; OpenStreetMap contributors',
+          subdomains: undefined,
+          className: '',
+          maxZoom: 19
         };
     }
   };
@@ -73,6 +76,7 @@ export const MapPicker: React.FC<Props> = ({
       const tiles = L.tileLayer(tileConfig.url, {
         attribution: tileConfig.attribution,
         subdomains: tileConfig.subdomains as any,
+        className: tileConfig.className,
         maxZoom: tileConfig.maxZoom
       }).addTo(map);
 
@@ -143,6 +147,7 @@ export const MapPicker: React.FC<Props> = ({
     const tiles = L.tileLayer(tileConfig.url, {
       attribution: tileConfig.attribution,
       subdomains: tileConfig.subdomains as any,
+      className: tileConfig.className,
       maxZoom: tileConfig.maxZoom
     }).addTo(mapRef.current);
     tileLayerRef.current = tiles;
