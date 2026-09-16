@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { X, UserCheck, Check, AlertCircle, Phone, Mail, BadgeCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, UserCheck, Check, AlertCircle, Phone, Mail, BadgeCheck, Camera, Upload, FileText, Trash2, ShieldCheck, Eye } from 'lucide-react';
 import { api } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
-import { Driver, Vehicle } from '../types';
+import { Driver, Vehicle, DriverDocument } from '../types';
 
 interface Props {
   vehicles: Vehicle[];
@@ -13,6 +13,9 @@ interface Props {
 
 export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSuccess, onClose }) => {
   const isEdit = Boolean(initialDriver);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const docFileInputRef = useRef<HTMLInputElement>(null);
+
   const [name, setName] = useState(initialDriver?.name || '');
   const [employeeId, setEmployeeId] = useState(initialDriver?.employee_id || '');
   const [phone, setPhone] = useState(initialDriver?.phone || '+91 ');
@@ -22,8 +25,87 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
   const [licenseNumber, setLicenseNumber] = useState(initialDriver?.license_number || '');
   const [licenseCategory, setLicenseCategory] = useState(initialDriver?.license_category || 'Commercial HMV');
   const [emergencyPhone, setEmergencyPhone] = useState(initialDriver?.emergency_phone || '');
+  const [avatarUrl, setAvatarUrl] = useState(initialDriver?.avatar_url || '');
+
+  // Attached compliance documents
+  const [documents, setDocuments] = useState<DriverDocument[]>(initialDriver?.documents || []);
+  const [newDocType, setNewDocType] = useState<DriverDocument['type']>('DRIVING_LICENSE');
+  const [newDocTitle, setNewDocTitle] = useState('Commercial Heavy Driver License');
+  const [newDocNumber, setNewDocNumber] = useState('');
+  const [newDocExpiry, setNewDocExpiry] = useState('');
+  const [newDocFile, setNewDocFile] = useState<{ url: string; name: string; size: number } | null>(null);
+  const [showAddDoc, setShowAddDoc] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Avatar file upload handler
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Driver photo must be less than 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Document file upload handler
+  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Document file must be less than 10MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setNewDocFile({
+          url: reader.result as string,
+          name: file.name,
+          size: file.size
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddDocument = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocNumber.trim()) {
+      setError('Please provide document number before adding.');
+      return;
+    }
+
+    const newDoc: DriverDocument = {
+      id: `dd-${Date.now()}`,
+      type: newDocType,
+      title: newDocTitle || `${newDocType.replace(/_/g, ' ')}`,
+      document_number: newDocNumber.trim().toUpperCase(),
+      issue_date: new Date().toISOString().split('T')[0],
+      expiry_date: newDocExpiry || undefined,
+      status: 'VERIFIED',
+      file_url: newDocFile?.url,
+      file_name: newDocFile?.name,
+      file_size: newDocFile?.size
+    };
+
+    setDocuments((prev) => [...prev.filter((d) => d.type !== newDocType), newDoc]);
+    setNewDocNumber('');
+    setNewDocExpiry('');
+    setNewDocFile(null);
+    setShowAddDoc(false);
+    setError(null);
+  };
+
+  const handleRemoveDoc = (id: string) => {
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +127,11 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
       assigned_vehicle_id: assignedVehicleId || null,
       assigned_vehicle_number: selectedVehicle?.vehicle_number || undefined,
       status: status,
+      avatar_url: avatarUrl || undefined,
       license_number: licenseNumber.trim() || undefined,
       license_category: licenseCategory || undefined,
-      emergency_phone: emergencyPhone.trim() || undefined
+      emergency_phone: emergencyPhone.trim() || undefined,
+      documents: documents
     };
 
     try {
@@ -124,6 +208,99 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                 <span>{error}</span>
               </div>
             )}
+
+            {/* Driver Photo / Avatar Upload Section */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                padding: '12px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)'
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  backgroundColor: 'rgba(37, 211, 102, 0.1)',
+                  border: '2px solid var(--accent-whatsapp)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  cursor: 'pointer'
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to change driver photo"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Driver Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent-whatsapp)' }}>
+                    {name ? name.charAt(0).toUpperCase() : <Camera size={22} />}
+                  </span>
+                )}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    left: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '2px',
+                    color: '#fff'
+                  }}
+                >
+                  <Camera size={11} />
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Driver Profile Avatar / Photo
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Upload clear portrait picture for telematics ID and dossier
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ padding: '3px 8px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Upload size={11} />
+                    <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                  </button>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      className="btn btn-subtle btn-sm"
+                      onClick={() => setAvatarUrl('')}
+                      style={{ padding: '3px 6px', fontSize: '0.72rem', color: 'var(--status-danger)' }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+                onChange={handleAvatarChange}
+              />
+            </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
@@ -264,6 +441,190 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                   ...vehicles.map((v) => ({ value: v.id, label: `${v.vehicle_number} — ${v.model} (${v.status})` }))
                 ]}
               />
+            </div>
+
+            {/* Statutory Driver Documents Upload Section */}
+            <div
+              style={{
+                marginTop: '4px',
+                padding: '12px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldCheck size={16} color="var(--accent-whatsapp)" />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Compliance & Statutory Documents ({documents.length})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowAddDoc(!showAddDoc)}
+                  style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                >
+                  {showAddDoc ? 'Cancel' : '+ Attach Document'}
+                </button>
+              </div>
+
+              {/* List of Attached Documents */}
+              {documents.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 10px',
+                        backgroundColor: 'var(--bg-surface)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: '0.76rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <FileText size={14} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span style={{ fontWeight: 600 }}>{doc.title}</span>
+                          <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontFamily: 'var(--font-mono)' }}>
+                            #{doc.document_number}
+                          </span>
+                          {doc.file_name && (
+                            <span style={{ color: 'var(--accent-whatsapp)', marginLeft: '6px', fontSize: '0.7rem' }}>
+                              📎 {doc.file_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDoc(doc.id)}
+                        style={{ background: 'none', border: 'none', color: 'var(--status-danger)', cursor: 'pointer', padding: '2px' }}
+                        title="Remove document attachment"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  No statutory documents attached yet. Attach Driving License, Aadhaar, or Medical fitness certificates.
+                </div>
+              )}
+
+              {/* Add Document Inline Form */}
+              {showAddDoc && (
+                <div
+                  style={{
+                    padding: '10px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px dashed var(--accent-whatsapp)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Document Type</label>
+                      <SearchableDropdown
+                        value={newDocType}
+                        onChange={(val) => {
+                          const strVal = (Array.isArray(val) ? val[0] : val) as string;
+                          setNewDocType(strVal as any);
+                          const titles: Record<string, string> = {
+                            DRIVING_LICENSE: 'Commercial Heavy Driver License',
+                            AADHAR_CARD: 'UIDAI Government Identity Card',
+                            POLICE_VERIFICATION: 'Police Background Clearance',
+                            MEDICAL_FITNESS: 'Annual Vision & Medical Fitness'
+                          };
+                          setNewDocTitle(titles[strVal] || strVal);
+                        }}
+                        options={[
+                          { value: 'DRIVING_LICENSE', label: 'Commercial Driving License' },
+                          { value: 'AADHAR_CARD', label: 'Aadhaar / National ID' },
+                          { value: 'POLICE_VERIFICATION', label: 'Police Verification Record' },
+                          { value: 'MEDICAL_FITNESS', label: 'Medical Fitness Certificate' }
+                        ]}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Document / Certificate #</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. DL-042011"
+                        value={newDocNumber}
+                        onChange={(e) => setNewDocNumber(e.target.value)}
+                        style={{ height: '34px', fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Expiry Date (Optional)</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={newDocExpiry}
+                        onChange={(e) => setNewDocExpiry(e.target.value)}
+                        style={{ height: '34px', fontSize: '0.78rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Attach Scan / PDF</label>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => docFileInputRef.current?.click()}
+                        style={{ width: '100%', height: '34px', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        <Upload size={12} />
+                        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+                          {newDocFile ? newDocFile.name : 'Choose File (PDF/Img)'}
+                        </span>
+                      </button>
+                      <input
+                        ref={docFileInputRef}
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png,image/webp"
+                        style={{ display: 'none' }}
+                        onChange={handleDocFileChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setShowAddDoc(false)}
+                      style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={handleAddDocument}
+                      style={{ padding: '3px 10px', fontSize: '0.72rem', backgroundColor: 'var(--accent-whatsapp)', color: '#0b141a', fontWeight: 700 }}
+                    >
+                      Add Document
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

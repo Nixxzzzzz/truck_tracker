@@ -1,4 +1,4 @@
-import { User, Vehicle, Driver, Destination, Trip, TripStop, Photo, VehicleDocument, VehicleChallan } from '../types';
+import { User, Vehicle, Driver, Destination, Trip, TripStop, Photo, VehicleDocument, VehicleChallan, DriverDocument } from '../types';
 
 export const DEMO_USERS: Record<string, User> = {
   'director@company.com': {
@@ -1343,7 +1343,20 @@ class MockStore {
   }
 
   getDestinations(): Destination[] {
-    return this.get('destinations', INITIAL_DESTINATIONS);
+    const dests = this.get('destinations', INITIAL_DESTINATIONS);
+    const trips = this.getTrips();
+    return dests.map((d) => {
+      const deliveryCount = trips.reduce((acc, t) => {
+        const matches = (t.stops || []).filter(
+          (s) => s.destination_id === d.id || (s.destination_name && s.destination_name.trim().toLowerCase() === d.name.trim().toLowerCase())
+        ).length;
+        return acc + matches;
+      }, 0);
+      return {
+        ...d,
+        total_deliveries: d.total_deliveries !== undefined ? d.total_deliveries : deliveryCount
+      };
+    });
   }
 
   getTrips(): Trip[] {
@@ -1403,6 +1416,23 @@ class MockStore {
     return false;
   }
 
+  updateDriverDocument(driverId: string, doc: DriverDocument): boolean {
+    const drivers = this.getDrivers();
+    const d = drivers.find((item) => item.id === driverId || item.user_id === driverId);
+    if (d) {
+      if (!d.documents) d.documents = [];
+      const idx = d.documents.findIndex((docItem) => docItem.id === doc.id || docItem.type === doc.type);
+      if (idx >= 0) {
+        d.documents[idx] = { ...d.documents[idx], ...doc };
+      } else {
+        d.documents.push(doc);
+      }
+      this.set('drivers', drivers);
+      return true;
+    }
+    return false;
+  }
+
   getPhotos(tripId: string): Photo[] {
     const trips = this.getTrips();
     const trip = trips.find((t) => t.id === tripId);
@@ -1435,6 +1465,8 @@ class MockStore {
       assigned_driver_name: data.assigned_driver_name,
       status: data.status || 'AVAILABLE',
       notes: data.notes || 'Added to fleet operations registry',
+      photo_url: data.photo_url,
+      documents: data.documents || [],
       total_trips: 0
     };
     vehicles.unshift(newVehicle);
@@ -1454,6 +1486,11 @@ class MockStore {
       assigned_vehicle_id: data.assigned_vehicle_id,
       assigned_vehicle_number: data.assigned_vehicle_number,
       status: data.status || 'AVAILABLE',
+      avatar_url: data.avatar_url,
+      license_number: data.license_number,
+      license_category: data.license_category,
+      emergency_phone: data.emergency_phone,
+      documents: data.documents || [],
       total_trips: 0
     };
     drivers.unshift(newDriver);
@@ -1494,12 +1531,14 @@ class MockStore {
       id: `dst-${Date.now()}`,
       name: data.name || 'New Destination',
       address: data.address || '',
+      area_code: data.area_code,
       latitude: data.latitude || 28.55,
       longitude: data.longitude || 77.3,
       geofence_radius_meters: data.geofence_radius_meters || 150,
       contact_name: data.contact_name,
       contact_number: data.contact_number,
       notes: data.notes,
+      total_deliveries: 0,
       is_active: 1
     };
     dests.push(newDest);
@@ -1520,6 +1559,10 @@ class MockStore {
 
   deleteVehicle(id: string): boolean {
     const vehicles = this.getVehicles();
+    const v = vehicles.find((item) => item.id === id);
+    if (v && (v.total_trips || 0) > 0) {
+      throw new Error(`Cannot delete vehicle ${v.vehicle_number}: Completed or active trips/deliveries exist for this asset. Only editing is permitted.`);
+    }
     const filtered = vehicles.filter((v) => v.id !== id);
     this.set('vehicles', filtered);
     return true;
@@ -1538,8 +1581,12 @@ class MockStore {
 
   deleteDriver(id: string): boolean {
     const drivers = this.getDrivers();
+    const d = drivers.find((item) => item.id === id);
+    if (d && (d.total_trips || 0) > 0) {
+      throw new Error(`Cannot delete driver ${d.name}: Completed or active delivery trips exist for this driver. Only editing is permitted.`);
+    }
     const filtered = drivers.filter((d) => d.id !== id);
-    this.set('drivers', filtered);
+    this.set('drivers', drivers);
     return true;
   }
 
@@ -1556,6 +1603,10 @@ class MockStore {
 
   deleteDestination(id: string): boolean {
     const dests = this.getDestinations();
+    const dest = dests.find((d) => d.id === id);
+    if (dest && (dest.total_deliveries || 0) > 0) {
+      throw new Error(`Cannot delete destination "${dest.name}": Deliveries or orders have already been recorded for this facility. Deletion is disabled to protect order and audit history. Only editing is permitted.`);
+    }
     const filtered = dests.filter((d) => d.id !== id);
     this.set('destinations', filtered);
     return true;
@@ -1603,6 +1654,34 @@ class MockStore {
       { vehicle_number: 'HR55 AM 7712', model: 'Mahindra Bolero Maxi', trip_count: 1, total_distance_km: 34.6 }
     ];
 
+    const delayAttribution = {
+      management: {
+        total_minutes: 42,
+        incident_count: 3,
+        percentage: 62,
+        top_reasons: [
+          { reason: 'Customer Loading Dock Waiting Queue', count: 2, total_minutes: 28 },
+          { reason: 'Gate Pass & Manifest Verification Delay', count: 1, total_minutes: 14 }
+        ]
+      },
+      driver: {
+        total_minutes: 26,
+        incident_count: 2,
+        percentage: 38,
+        top_reasons: [
+          { reason: 'Traffic Congestion (NCR Corridor Bottleneck)', count: 1, total_minutes: 18 },
+          { reason: 'Extended Rest Break / Roadway Stoppage', count: 1, total_minutes: 8 }
+        ]
+      },
+      trend: [
+        { label: '06:00 - 09:00', managementMinutes: 8, driverMinutes: 4, managementIncidents: 1, driverIncidents: 1, topManagementReason: 'Dispatch Gate Pass Check', topDriverReason: 'Early Corridor Slowdown' },
+        { label: '09:00 - 12:00', managementMinutes: 18, driverMinutes: 12, managementIncidents: 1, driverIncidents: 1, topManagementReason: 'Loading Dock Queue', topDriverReason: 'Peak Ring Road Congestion' },
+        { label: '12:00 - 15:00', managementMinutes: 9, driverMinutes: 5, managementIncidents: 1, driverIncidents: 0, topManagementReason: 'Invoice & Unloading Bay Wait', topDriverReason: 'Transit Signal Delay' },
+        { label: '15:00 - 18:00', managementMinutes: 5, driverMinutes: 4, managementIncidents: 0, driverIncidents: 0, topManagementReason: 'Dock Handover Verification', topDriverReason: 'Evening Rush Bottleneck' },
+        { label: '18:00 - 21:00', managementMinutes: 2, driverMinutes: 1, managementIncidents: 0, driverIncidents: 0, topManagementReason: 'Return Depot Check-in', topDriverReason: 'Corridor Stoppage' }
+      ]
+    };
+
     return {
       date: queryDate,
       overview: {
@@ -1618,6 +1697,7 @@ class MockStore {
       },
       trips: reportTrips,
       delayReasons,
+      delayAttribution,
       driverSummary,
       vehicleSummary
     };
@@ -1662,6 +1742,45 @@ class MockStore {
       { vehicle_number: 'HR55 AM 7712', model: 'Mahindra Bolero Maxi', trip_count: period === 'monthly' ? 14 : 4, total_distance_km: period === 'monthly' ? 385.2 : 98.6 }
     ];
 
+    const isMonthly = period === 'monthly';
+    const delayAttribution = {
+      management: {
+        total_minutes: isMonthly ? 210 : 64,
+        incident_count: isMonthly ? 12 : 4,
+        percentage: 58,
+        top_reasons: [
+          { reason: 'Customer Loading Bay Queue / Dock Turnaround', count: isMonthly ? 8 : 3, total_minutes: isMonthly ? 145 : 44 },
+          { reason: 'Manifest & E-Way Bill Verification Staging', count: isMonthly ? 4 : 1, total_minutes: isMonthly ? 65 : 20 }
+        ]
+      },
+      driver: {
+        total_minutes: isMonthly ? 152 : 46,
+        incident_count: isMonthly ? 9 : 3,
+        percentage: 42,
+        top_reasons: [
+          { reason: 'NCR Highway & Expressway Congestion', count: isMonthly ? 6 : 2, total_minutes: isMonthly ? 105 : 32 },
+          { reason: 'Driver Route Diversion & Rest Break', count: isMonthly ? 3 : 1, total_minutes: isMonthly ? 47 : 14 }
+        ]
+      },
+      trend: isMonthly
+        ? [
+            { label: 'Week 1 (1-7)', managementMinutes: 48, driverMinutes: 32, managementIncidents: 3, driverIncidents: 2, topManagementReason: 'Loading Bay Queue', topDriverReason: 'Highway Congestion' },
+            { label: 'Week 2 (8-14)', managementMinutes: 56, driverMinutes: 42, managementIncidents: 3, driverIncidents: 3, topManagementReason: 'Manifest Clearance Delay', topDriverReason: 'NCR Border Checkpoint' },
+            { label: 'Week 3 (15-21)', managementMinutes: 44, driverMinutes: 36, managementIncidents: 3, driverIncidents: 2, topManagementReason: 'Receiving Dock Wait', topDriverReason: 'Route Diversion' },
+            { label: 'Week 4 (22-28)', managementMinutes: 50, driverMinutes: 34, managementIncidents: 2, driverIncidents: 2, topManagementReason: 'Dock Handover Queue', topDriverReason: 'Peak Commute Congestion' },
+            { label: 'Week 5 (29-30)', managementMinutes: 12, driverMinutes: 8, managementIncidents: 1, driverIncidents: 0, topManagementReason: 'End-of-Month Audit Staging', topDriverReason: 'Local Traffic' }
+          ]
+        : [
+            { label: 'Mon', managementMinutes: 10, driverMinutes: 6, managementIncidents: 1, driverIncidents: 1, topManagementReason: 'Morning Dispatch Queue', topDriverReason: 'Monday Rush Traffic' },
+            { label: 'Tue', managementMinutes: 12, driverMinutes: 7, managementIncidents: 1, driverIncidents: 0, topManagementReason: 'Loading Bay Wait', topDriverReason: 'Signal Stoppages' },
+            { label: 'Wed', managementMinutes: 14, driverMinutes: 9, managementIncidents: 1, driverIncidents: 1, topManagementReason: 'Invoice Clearance Bottleneck', topDriverReason: 'Corridor Slowdown' },
+            { label: 'Thu', managementMinutes: 9, driverMinutes: 8, managementIncidents: 0, driverIncidents: 1, topManagementReason: 'Consignee Verification', topDriverReason: 'Detour Stoppage' },
+            { label: 'Fri', managementMinutes: 13, driverMinutes: 12, managementIncidents: 1, driverIncidents: 1, topManagementReason: 'Pre-weekend Dock Congestion', topDriverReason: 'NCR Expressway Bottleneck' },
+            { label: 'Sat', managementMinutes: 4, driverMinutes: 3, managementIncidents: 0, driverIncidents: 0, topManagementReason: 'Weekend Shift Transition', topDriverReason: 'City Box Slowdown' },
+            { label: 'Sun', managementMinutes: 2, driverMinutes: 1, managementIncidents: 0, driverIncidents: 0, topManagementReason: 'Essential Delivery Clearance', topDriverReason: 'Minor Road Check' }
+          ]
+    };
+
     return {
       period,
       daysAnalyzed: days,
@@ -1678,6 +1797,7 @@ class MockStore {
       },
       trips,
       delayReasons,
+      delayAttribution,
       driverSummary,
       vehicleSummary
     };

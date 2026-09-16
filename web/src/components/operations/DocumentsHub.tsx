@@ -10,9 +10,11 @@ import {
   ExternalLink,
   Eye,
   FileCheck,
-  Truck
+  Truck,
+  X
 } from 'lucide-react';
 import { Vehicle, VehicleDocument } from '../../types';
+import { SearchableDropdown } from '../common/SearchableDropdown';
 
 interface DocumentsHubProps {
   vehicles: Vehicle[];
@@ -184,43 +186,64 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
           alignItems: 'center'
         }}
       >
-        <div style={{ position: 'relative', minWidth: '240px', flex: '1 1 240px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        {/* Search */}
+        <div className="searchbar-enhanced" style={{ minWidth: '240px', flex: '1 1 240px', position: 'relative' }}>
+          <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search vehicle plate or document number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-field"
-            style={{ width: '100%', paddingLeft: '36px', fontSize: '0.84rem' }}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="select-field"
-          style={{ minWidth: '150px', fontSize: '0.84rem' }}
-        >
-          <option value="ALL">All Doc Types</option>
-          <option value="RC">RC (Registration)</option>
-          <option value="INSURANCE">Insurance</option>
-          <option value="FITNESS">Fitness (Form 38)</option>
-          <option value="PUC">PUC (Pollution)</option>
-          <option value="PERMIT">Permit</option>
-        </select>
+        {/* Doc Type Filter */}
+        <SearchableDropdown
+          value={typeFilter === 'ALL' ? '' : typeFilter}
+          onChange={(val) => setTypeFilter(String(val) || 'ALL')}
+          placeholder="All Doc Types"
+          minWidth="160px"
+          options={[
+            { value: 'ALL', label: 'All Doc Types' },
+            { value: 'RC', label: 'RC (Registration)' },
+            { value: 'INSURANCE', label: 'Insurance' },
+            { value: 'FITNESS', label: 'Fitness (Form 38)' },
+            { value: 'PUC', label: 'PUC (Pollution)' },
+            { value: 'PERMIT', label: 'Permit' }
+          ]}
+        />
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="select-field"
-          style={{ minWidth: '150px', fontSize: '0.84rem' }}
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="VALID">Valid</option>
-          <option value="EXPIRING_SOON">Expiring Soon</option>
-          <option value="EXPIRED">Expired</option>
-        </select>
+        {/* Status Filter */}
+        <SearchableDropdown
+          value={statusFilter === 'ALL' ? '' : statusFilter}
+          onChange={(val) => setStatusFilter(String(val) || 'ALL')}
+          placeholder="All Statuses"
+          minWidth="150px"
+          options={[
+            { value: 'ALL', label: 'All Statuses' },
+            { value: 'VALID', label: 'Valid' },
+            { value: 'EXPIRING_SOON', label: 'Expiring Soon' },
+            { value: 'EXPIRED', label: 'Expired' }
+          ]}
+        />
 
         {(statusFilter !== 'ALL' || typeFilter !== 'ALL' || searchQuery) && (
           <button

@@ -15,10 +15,12 @@ import {
   Eye,
   AlertTriangle,
   RotateCcw,
-  CheckCircle2
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import { Trip, Driver, Vehicle } from '../../types';
 import { StatusBadge } from '../StatusBadge';
+import { SearchableDropdown } from '../common/SearchableDropdown';
 
 interface ScheduleScreenProps {
   trips: Trip[];
@@ -182,74 +184,82 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
         }}
       >
         {/* Search */}
-        <div style={{ position: 'relative', minWidth: '240px', flex: '1 1 240px' }}>
-          <Search
-            size={16}
-            style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--text-secondary)'
-            }}
-          />
+        <div className="searchbar-enhanced" style={{ minWidth: '240px', flex: '1 1 240px', position: 'relative' }}>
+          <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search trip ID, driver, destination..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-field"
-            style={{ width: '100%', paddingLeft: '36px', fontSize: '0.84rem' }}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         {/* Status Filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="select-field"
-          style={{ minWidth: '150px', fontSize: '0.84rem' }}
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="PLANNED">Planned (Unassigned)</option>
-          <option value="ASSIGNED">Assigned</option>
-          <option value="IN_PROGRESS">In Progress / On Route</option>
-          <option value="AT_DESTINATION">At Destination</option>
-          <option value="DELAYED">Delayed</option>
-          <option value="RETURNING">Returning to Depot</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
+        <SearchableDropdown
+          value={statusFilter === 'ALL' ? '' : statusFilter}
+          onChange={(val) => setStatusFilter(String(val) || 'ALL')}
+          placeholder="All Statuses"
+          minWidth="160px"
+          options={[
+            { value: 'ALL', label: 'All Statuses' },
+            { value: 'PLANNED', label: 'Planned (Unassigned)' },
+            { value: 'ASSIGNED', label: 'Assigned' },
+            { value: 'IN_PROGRESS', label: 'In Progress / On Route' },
+            { value: 'AT_DESTINATION', label: 'At Destination' },
+            { value: 'DELAYED', label: 'Delayed' },
+            { value: 'RETURNING', label: 'Returning to Depot' },
+            { value: 'COMPLETED', label: 'Completed' },
+            { value: 'CANCELLED', label: 'Cancelled' }
+          ]}
+        />
 
         {/* Driver Filter */}
-        <select
-          value={driverFilter}
-          onChange={(e) => setDriverFilter(e.target.value)}
-          className="select-field"
-          style={{ minWidth: '160px', fontSize: '0.84rem' }}
-        >
-          <option value="ALL">All Drivers</option>
-          {drivers.map((d) => (
-            <option key={d.id} value={d.user_id || d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+        <SearchableDropdown
+          value={driverFilter === 'ALL' ? '' : driverFilter}
+          onChange={(val) => setDriverFilter(String(val) || 'ALL')}
+          placeholder="All Drivers"
+          minWidth="170px"
+          options={[
+            { value: 'ALL', label: 'All Drivers' },
+            ...drivers.map((d) => ({
+              value: d.user_id || d.id,
+              label: d.name
+            }))
+          ]}
+        />
 
         {/* Vehicle Filter */}
-        <select
-          value={vehicleFilter}
-          onChange={(e) => setVehicleFilter(e.target.value)}
-          className="select-field"
-          style={{ minWidth: '160px', fontSize: '0.84rem' }}
-        >
-          <option value="ALL">All Vehicles</option>
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.vehicle_number}
-            </option>
-          ))}
-        </select>
+        <SearchableDropdown
+          value={vehicleFilter === 'ALL' ? '' : vehicleFilter}
+          onChange={(val) => setVehicleFilter(String(val) || 'ALL')}
+          placeholder="All Vehicles"
+          minWidth="170px"
+          options={[
+            { value: 'ALL', label: 'All Vehicles' },
+            ...vehicles.map((v) => ({
+              value: v.id,
+              label: `${v.vehicle_number} (${v.model || 'Fleet'})`
+            }))
+          ]}
+        />
 
         {(statusFilter !== 'ALL' || driverFilter !== 'ALL' || vehicleFilter !== 'ALL' || searchQuery) && (
           <button

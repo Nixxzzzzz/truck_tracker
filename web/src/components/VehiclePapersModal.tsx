@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   FileText,
@@ -12,7 +12,9 @@ import {
   Eye,
   Clock,
   MapPin,
-  Check
+  Check,
+  Upload,
+  Paperclip
 } from 'lucide-react';
 import { Vehicle, VehicleDocument, VehicleChallan } from '../types';
 import { api } from '../services/api';
@@ -30,6 +32,7 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
   const [isAddingDoc, setIsAddingDoc] = useState(false);
   const [isAddingChallan, setIsAddingChallan] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<VehicleDocument | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New Doc Form
   const [docType, setDocType] = useState<VehicleDocument['type']>('RC');
@@ -38,6 +41,7 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
   const [docIssue, setDocIssue] = useState('');
   const [docExpiry, setDocExpiry] = useState('');
   const [docNotes, setDocNotes] = useState('');
+  const [docFile, setDocFile] = useState<{ url: string; name: string; size: number } | null>(null);
 
   // New Challan Form
   const [challanNumber, setChallanNumber] = useState('');
@@ -54,6 +58,25 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
   const pendingChallans = challans.filter((c) => c.status === 'PENDING');
   const totalPendingFine = pendingChallans.reduce((sum, c) => sum + (c.amount || 0), 0);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File must be smaller than 10MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setDocFile({
+          url: reader.result as string,
+          name: file.name,
+          size: file.size
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveDoc = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!docNumber.trim()) return;
@@ -67,7 +90,10 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
       issue_date: docIssue || new Date().toISOString().split('T')[0],
       expiry_date: docExpiry || '2030-01-01',
       status: 'VALID',
-      notes: docNotes.trim() || undefined
+      notes: docNotes.trim() || undefined,
+      file_url: docFile?.url,
+      file_name: docFile?.name,
+      file_size: docFile?.size
     };
 
     try {
@@ -77,6 +103,7 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
       setCurrentVehicle(updatedVehicle);
       onUpdate(updatedVehicle);
       setIsAddingDoc(false);
+      setDocFile(null);
       setMessage(`✓ ${newDoc.title} updated successfully.`);
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
@@ -357,6 +384,53 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
                     />
                   </div>
 
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.74rem' }}>Attach Scanned Document / Certificate (PDF / Image)</label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px dashed var(--border-default)',
+                          backgroundColor: 'var(--bg-primary)',
+                          fontSize: '0.76rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          color: docFile ? 'var(--accent-whatsapp)' : 'var(--text-muted)'
+                        }}
+                      >
+                        <Upload size={14} />
+                        <span>{docFile ? docFile.name : 'Upload PDF / Scan file (Max 10MB)'}</span>
+                      </button>
+                      {docFile && (
+                        <button
+                          type="button"
+                          onClick={() => setDocFile(null)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--status-danger)',
+                            fontSize: '0.72rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAddingDoc(false)}>
                       Cancel
@@ -422,6 +496,7 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
                             <span>No: <b style={{ fontFamily: 'var(--font-mono)' }}>{d.document_number}</b></span>
                             <span>Expires: <b>{d.expiry_date}</b></span>
                             {d.notes && <span>• {d.notes}</span>}
+                            {d.file_name && <span>• 📎 {d.file_name}</span>}
                           </div>
                         </div>
                       </div>
@@ -701,6 +776,36 @@ export const VehiclePapersModal: React.FC<Props> = ({ vehicle, onClose, onUpdate
                 <span>Audit Ref: #{previewDoc.id}</span>
               </div>
             </div>
+
+            {previewDoc.file_url && (
+              <div style={{ marginTop: '14px', padding: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Uploaded Proof Document {previewDoc.file_name ? `(${previewDoc.file_name})` : ''}</span>
+                  <a
+                    href={previewDoc.file_url}
+                    download={previewDoc.file_name || 'vehicle-document'}
+                    style={{ color: 'var(--accent-whatsapp)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem' }}
+                  >
+                    <Download size={13} /> Download
+                  </a>
+                </div>
+                {previewDoc.file_url.startsWith('data:image/') ? (
+                  <img
+                    src={previewDoc.file_url}
+                    alt="Document Proof"
+                    style={{ width: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: 'var(--radius-sm)' }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)' }}>
+                    <FileText size={24} color="var(--accent-whatsapp)" />
+                    <div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{previewDoc.file_name || 'Scanned Document (PDF)'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Click download to view original file</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreviewDoc(null)}>
                 Dismiss

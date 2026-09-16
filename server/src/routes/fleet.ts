@@ -19,7 +19,14 @@ router.get('/vehicles', requireAuth, (req, res) => {
     FROM vehicles v
     LEFT JOIN users u ON v.assigned_driver_id = u.id
     ORDER BY v.created_at DESC
-  `).all();
+  `).all() as any[];
+
+  // Attach vehicle compliance documents
+  const docStmt = db.prepare(`SELECT * FROM vehicle_documents WHERE vehicle_id = ? ORDER BY expiry_date ASC`);
+  for (const v of vehicles) {
+    v.documents = docStmt.all(v.id);
+  }
+
   return res.json({ vehicles });
 });
 
@@ -33,7 +40,9 @@ router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: Authenticate
     notes,
     fleet_unit_id,
     chassis_number,
-    telematics_imei
+    telematics_imei,
+    photo_url,
+    documents
   } = req.body;
 
   if (!vehicle_number || !vehicle_type || !model) {
@@ -41,10 +50,10 @@ router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: Authenticate
   }
 
   const id = uuidv4();
-  try {
+  const tx = db.transaction(() => {
     db.prepare(`
-      INSERT INTO vehicles (id, vehicle_number, vehicle_type, model, assigned_driver_id, status, notes, fleet_unit_id, chassis_number, telematics_imei)
-      VALUES (?, UPPER(?), ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO vehicles (id, vehicle_number, vehicle_type, model, assigned_driver_id, status, notes, fleet_unit_id, chassis_number, telematics_imei, photo_url)
+      VALUES (?, UPPER(?), ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       vehicle_number,
@@ -55,15 +64,43 @@ router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: Authenticate
       notes || null,
       fleet_unit_id || null,
       chassis_number || null,
-      telematics_imei || null
+      telematics_imei || null,
+      photo_url || null
     );
+
+    if (Array.isArray(documents)) {
+      const docInsert = db.prepare(`
+        INSERT INTO vehicle_documents (id, vehicle_id, document_type, title, document_number, issue_date, expiry_date, status, file_url, file_name, file_size)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const d of documents) {
+        if (d.document_number) {
+          docInsert.run(
+            uuidv4(),
+            id,
+            d.type || 'RC',
+            d.title || `${d.type || 'RC'} Certificate`,
+            d.document_number,
+            d.issue_date || null,
+            d.expiry_date || '2030-01-01',
+            d.status || 'VALID',
+            d.file_url || null,
+            d.file_name || null,
+            d.file_size || null
+          );
+        }
+      }
+    }
 
     logAudit({
       action: 'VEHICLE_CREATED',
       newValue: `Vehicle ${vehicle_number} (${model}) added`,
       changedBy: req.user!.id
     });
+  });
 
+  try {
+    tx();
     return res.status(201).json({ message: 'Vehicle created', id });
   } catch (err: any) {
     return res.status(400).json({ error: 'Failed to create vehicle: ' + err.message });
@@ -81,7 +118,8 @@ router.put('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: Authentic
     notes,
     fleet_unit_id,
     chassis_number,
-    telematics_imei
+    telematics_imei,
+    photo_url
   } = req.body;
 
   try {
@@ -95,7 +133,8 @@ router.put('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: Authentic
           notes = COALESCE(?, notes),
           fleet_unit_id = COALESCE(?, fleet_unit_id),
           chassis_number = COALESCE(?, chassis_number),
-          telematics_imei = COALESCE(?, telematics_imei)
+          telematics_imei = COALESCE(?, telematics_imei),
+          photo_url = COALESCE(?, photo_url)
       WHERE id = ?
     `).run(
       vehicle_number || null,
@@ -107,6 +146,7 @@ router.put('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: Authentic
       fleet_unit_id || null,
       chassis_number || null,
       telematics_imei || null,
+      photo_url || null,
       id
     );
 
@@ -135,33 +175,24 @@ router.delete('/vehicles/:id', requireAuth, requireRole('MANAGER'), (req: Authen
   const vehicle = db.prepare(`SELECT * FROM vehicles WHERE id = ?`).get(id) as any;
   if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
-  const activeTrip = db.prepare(`
-    SELECT COUNT(*) as count FROM trips
-    WHERE vehicle_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
-  `).get(id) as { count: number };
-
-  if (activeTrip.count > 0) {
+  // Disallow delete if any delivery trips exist
+  const tripCount = db.prepare(`SELECT COUNT(*) as count FROM trips WHERE vehicle_id = ?`).get(id) as { count: number };
+  if (tripCount.count > 0) {
     return res.status(409).json({
-      error: `Cannot delete vehicle: it is currently assigned to ${activeTrip.count} active or scheduled trip(s). Complete or reassign those trips first.`
+      error: `Cannot delete vehicle: ${tripCount.count} delivery trip(s) have been completed or scheduled for vehicle ${vehicle.vehicle_number}. Deletion is disabled to protect delivery history. Only editing is permitted.`
     });
   }
 
-  const tripCount = db.prepare(`SELECT COUNT(*) as count FROM trips WHERE vehicle_id = ?`).get(id) as { count: number };
-
-  if (tripCount.count > 0) {
-    db.prepare(`UPDATE vehicles SET status = 'INACTIVE', assigned_driver_id = NULL WHERE id = ?`).run(id);
-  } else {
-    db.prepare(`DELETE FROM vehicles WHERE id = ?`).run(id);
-  }
+  db.prepare(`DELETE FROM vehicles WHERE id = ?`).run(id);
 
   logAudit({
     action: 'VEHICLE_DECOMMISSIONED',
     originalValue: vehicle.vehicle_number,
     changedBy: req.user!.id,
-    reason: `Vehicle ${vehicle.vehicle_number} decommissioned by manager`
+    reason: `Vehicle ${vehicle.vehicle_number} deleted by manager`
   });
 
-  return res.json({ message: `Vehicle ${vehicle.vehicle_number} has been decommissioned.` });
+  return res.json({ message: `Vehicle ${vehicle.vehicle_number} has been deleted.` });
 });
 
 // ==========================================
@@ -177,12 +208,31 @@ router.get('/drivers', requireAuth, (req, res) => {
     JOIN users u ON d.user_id = u.id
     LEFT JOIN vehicles v ON d.assigned_vehicle_id = v.id
     ORDER BY u.name ASC
-  `).all();
+  `).all() as any[];
+
+  const docStmt = db.prepare(`SELECT * FROM driver_documents WHERE driver_id = ? ORDER BY expiry_date ASC`);
+  for (const d of drivers) {
+    d.documents = docStmt.all(d.id);
+  }
+
   return res.json({ drivers });
 });
 
 router.post('/drivers', requireAuth, requireRole('MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
-  const { name, email, password, phone, employee_id, assigned_vehicle_id, status = 'AVAILABLE' } = req.body;
+  const {
+    name,
+    email,
+    password,
+    phone,
+    employee_id,
+    assigned_vehicle_id,
+    status = 'AVAILABLE',
+    avatar_url,
+    license_number,
+    license_category,
+    emergency_phone,
+    documents
+  } = req.body;
 
   if (!name || !email || !password || !employee_id) {
     return res.status(400).json({ error: 'Name, email, password, and employee ID are required' });
@@ -199,9 +249,43 @@ router.post('/drivers', requireAuth, requireRole('MANAGER'), async (req: Authent
     `).run(userId, name, email, hash, phone || null);
 
     db.prepare(`
-      INSERT INTO drivers (id, user_id, employee_id, assigned_vehicle_id, status)
-      VALUES (?, ?, UPPER(?), ?, ?)
-    `).run(driverId, userId, employee_id, assigned_vehicle_id || null, status);
+      INSERT INTO drivers (id, user_id, employee_id, assigned_vehicle_id, status, avatar_url, license_number, license_category, emergency_phone)
+      VALUES (?, ?, UPPER(?), ?, ?, ?, ?, ?, ?)
+    `).run(
+      driverId,
+      userId,
+      employee_id,
+      assigned_vehicle_id || null,
+      status,
+      avatar_url || null,
+      license_number || null,
+      license_category || null,
+      emergency_phone || null
+    );
+
+    if (Array.isArray(documents)) {
+      const docInsert = db.prepare(`
+        INSERT INTO driver_documents (id, driver_id, document_type, title, document_number, issue_date, expiry_date, status, file_url, file_name, file_size)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const d of documents) {
+        if (d.document_number) {
+          docInsert.run(
+            uuidv4(),
+            driverId,
+            d.type || 'DRIVING_LICENSE',
+            d.title || `${d.type || 'DRIVING_LICENSE'} Certificate`,
+            d.document_number,
+            d.issue_date || null,
+            d.expiry_date || null,
+            d.status || 'VERIFIED',
+            d.file_url || null,
+            d.file_name || null,
+            d.file_size || null
+          );
+        }
+      }
+    }
 
     logAudit({
       action: 'DRIVER_CREATED',
@@ -220,7 +304,7 @@ router.post('/drivers', requireAuth, requireRole('MANAGER'), async (req: Authent
 
 router.put('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { name, phone, assigned_vehicle_id, status, employee_id } = req.body;
+  const { name, phone, assigned_vehicle_id, status, employee_id, avatar_url, license_number, license_category, emergency_phone } = req.body;
 
   const driver = db.prepare(`SELECT * FROM drivers WHERE id = ?`).get(id) as any;
   if (!driver) return res.status(404).json({ error: 'Driver not found' });
@@ -237,9 +321,22 @@ router.put('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: Authentica
       UPDATE drivers
       SET assigned_vehicle_id = ?,
           status = COALESCE(?, status),
-          employee_id = COALESCE(UPPER(?), employee_id)
+          employee_id = COALESCE(UPPER(?), employee_id),
+          avatar_url = COALESCE(?, avatar_url),
+          license_number = COALESCE(?, license_number),
+          license_category = COALESCE(?, license_category),
+          emergency_phone = COALESCE(?, emergency_phone)
       WHERE id = ?
-    `).run(assigned_vehicle_id || null, status || null, employee_id || null, id);
+    `).run(
+      assigned_vehicle_id || null,
+      status || null,
+      employee_id || null,
+      avatar_url || null,
+      license_number || null,
+      license_category || null,
+      emergency_phone || null,
+      id
+    );
   });
 
   try {
@@ -272,21 +369,19 @@ router.delete('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: Authent
   const driver = db.prepare(`SELECT d.*, u.name FROM drivers d JOIN users u ON d.user_id = u.id WHERE d.id = ?`).get(id) as any;
   if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
-  const activeTrip = db.prepare(`
-    SELECT COUNT(*) as count FROM trips
-    WHERE driver_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
-  `).get(driver.user_id) as { count: number };
-
-  if (activeTrip.count > 0) {
+  // Disallow delete if any delivery trips exist
+  const tripCount = db.prepare(`SELECT COUNT(*) as count FROM trips WHERE driver_id = ?`).get(driver.user_id) as { count: number };
+  if (tripCount.count > 0) {
     return res.status(409).json({
-      error: `Cannot delete driver: ${driver.name} is currently assigned to ${activeTrip.count} active or scheduled trip(s). Reassign or complete those trips first.`
+      error: `Cannot delete driver: ${tripCount.count} delivery trip(s) are recorded for driver ${driver.name}. Deletion is disabled to protect delivery history. Only editing is permitted.`
     });
   }
 
   const tx = db.transaction(() => {
     db.prepare(`UPDATE vehicles SET assigned_driver_id = NULL WHERE assigned_driver_id = ?`).run(driver.user_id);
-    db.prepare(`UPDATE drivers SET status = 'INACTIVE', assigned_vehicle_id = NULL WHERE id = ?`).run(id);
-    db.prepare(`UPDATE users SET is_active = 0 WHERE id = ?`).run(driver.user_id);
+    db.prepare(`DELETE FROM driver_documents WHERE driver_id = ?`).run(id);
+    db.prepare(`DELETE FROM drivers WHERE id = ?`).run(id);
+    db.prepare(`DELETE FROM users WHERE id = ?`).run(driver.user_id);
   });
 
   try {
@@ -295,9 +390,9 @@ router.delete('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: Authent
       action: 'DRIVER_DECOMMISSIONED',
       originalValue: driver.name,
       changedBy: req.user!.id,
-      reason: `Driver ${driver.name} (${driver.employee_id}) removed by manager`
+      reason: `Driver ${driver.name} (${driver.employee_id}) deleted by manager`
     });
-    return res.json({ message: `Driver ${driver.name} has been removed from active roster.` });
+    return res.json({ message: `Driver ${driver.name} has been deleted.` });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }
@@ -309,7 +404,11 @@ router.delete('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: Authent
 
 router.get('/destinations', requireAuth, (req, res) => {
   const destinations = db.prepare(`
-    SELECT * FROM destinations WHERE is_active = 1 ORDER BY name ASC
+    SELECT d.*,
+           (SELECT COUNT(*) FROM trip_stops ts WHERE ts.destination_id = d.id OR ts.destination_name = d.name) as total_deliveries
+    FROM destinations d
+    WHERE d.is_active = 1
+    ORDER BY d.name ASC
   `).all();
   return res.json({ destinations });
 });
@@ -370,6 +469,7 @@ router.put('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: Authe
     return res.status(400).json({ error: err.message });
   }
 });
+
 router.delete('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
 
@@ -378,30 +478,29 @@ router.delete('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: Au
     return res.status(404).json({ error: 'Destination not found' });
   }
 
-  // Check if any active/in-progress trips currently reference this destination
-  const activeUsage = db.prepare(`
+  // If ANY delivery, order, or trip has ever been done or scheduled for this destination, forbid deletion!
+  const deliveryUsage = db.prepare(`
     SELECT COUNT(*) as count FROM trip_stops ts
-    JOIN trips t ON ts.trip_id = t.id
-    WHERE ts.destination_id = ? AND t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
-  `).get(id) as { count: number };
+    WHERE ts.destination_id = ? OR ts.destination_name = ?
+  `).get(id, destination.name) as { count: number };
 
-  if (activeUsage.count > 0) {
+  if (deliveryUsage.count > 0) {
     return res.status(409).json({
-      error: `Cannot deactivate destination: it is referenced by ${activeUsage.count} active or in-progress trip(s). Complete or cancel those trips first.`
+      error: `Cannot delete destination "${destination.name}": ${deliveryUsage.count} delivery/order stop(s) are recorded for this facility. Deletion is permanently disabled to preserve delivery history. Only editing is permitted.`
     });
   }
 
-  // Soft-delete: preserve historical trip/stop references
+  // Safe to soft-delete if no deliveries or orders have ever occurred
   db.prepare(`UPDATE destinations SET is_active = 0 WHERE id = ?`).run(id);
 
   logAudit({
     action: 'DESTINATION_DEACTIVATED',
     originalValue: destination.name,
     changedBy: req.user!.id,
-    reason: `Destination '${destination.name}' soft-deleted by manager`
+    reason: `Destination '${destination.name}' deactivated by manager`
   });
 
-  return res.json({ message: `Destination '${destination.name}' has been deactivated. Historical trip records are preserved.` });
+  return res.json({ message: `Destination '${destination.name}' has been deactivated.` });
 });
 
 // ==========================================
@@ -421,7 +520,7 @@ router.get('/vehicles/:id/documents', requireAuth, (req, res) => {
 
 router.post('/vehicles/:id/documents', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { document_type, title, document_number, issue_date, expiry_date, issuing_authority, notes } = req.body;
+  const { document_type, title, document_number, issue_date, expiry_date, issuing_authority, notes, file_url, file_name, file_size } = req.body;
 
   if (!document_type || !title || !document_number || !expiry_date) {
     return res.status(400).json({ error: 'Document type, title, number, and expiry date are required' });
@@ -436,8 +535,8 @@ router.post('/vehicles/:id/documents', requireAuth, requireRole('MANAGER'), (req
   try {
     db.prepare(`
       INSERT INTO vehicle_documents (
-        id, vehicle_id, document_type, title, document_number, issue_date, expiry_date, issuing_authority, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, vehicle_id, document_type, title, document_number, issue_date, expiry_date, issuing_authority, status, notes, file_url, file_name, file_size
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       docId,
       id,
@@ -448,7 +547,10 @@ router.post('/vehicles/:id/documents', requireAuth, requireRole('MANAGER'), (req
       expiry_date,
       issuing_authority || null,
       status,
-      notes || null
+      notes || null,
+      file_url || null,
+      file_name || null,
+      file_size || null
     );
 
     logAudit({
@@ -458,6 +560,61 @@ router.post('/vehicles/:id/documents', requireAuth, requireRole('MANAGER'), (req
     });
 
     return res.status(201).json({ message: 'Vehicle document recorded', id: docId });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// DRIVER COMPLIANCE DOCUMENTS
+// ==========================================
+
+router.get('/drivers/:id/documents', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const documents = db.prepare(`
+    SELECT * FROM driver_documents
+    WHERE driver_id = ?
+    ORDER BY expiry_date ASC
+  `).all(id);
+
+  return res.json({ documents });
+});
+
+router.post('/drivers/:id/documents', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { document_type, title, document_number, issue_date, expiry_date, status = 'VERIFIED', file_url, file_name, file_size } = req.body;
+
+  if (!document_type || !title || !document_number) {
+    return res.status(400).json({ error: 'Document type, title, and number are required' });
+  }
+
+  const docId = uuidv4();
+  try {
+    db.prepare(`
+      INSERT INTO driver_documents (
+        id, driver_id, document_type, title, document_number, issue_date, expiry_date, status, file_url, file_name, file_size
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      docId,
+      id,
+      document_type,
+      title,
+      document_number,
+      issue_date || null,
+      expiry_date || null,
+      status,
+      file_url || null,
+      file_name || null,
+      file_size || null
+    );
+
+    logAudit({
+      action: 'DRIVER_DOCUMENT_RECORDED',
+      newValue: `${title} (${document_number}) added for driver ${id}`,
+      changedBy: req.user!.id
+    });
+
+    return res.status(201).json({ message: 'Driver document recorded', id: docId });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }

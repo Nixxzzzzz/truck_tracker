@@ -53,6 +53,7 @@ import { EnterpriseTable, Column } from '../components/common/EnterpriseTable';
 import { EmptyState } from '../components/common/EmptyState';
 import { SearchableDropdown } from '../components/common/SearchableDropdown';
 import { SlaGauge, TrendBarChart, FleetStatusBar } from '../components/common/VisualCharts';
+import { DelayAttributionLineChart } from '../components/common/DelayAttributionLineChart';
 
 // Dedicated Operations & Dispatch Workspaces
 import { OverviewDashboard } from '../components/operations/OverviewDashboard';
@@ -199,7 +200,12 @@ export const ManagerView: React.FC<Props> = ({
 
   // Manager Fleet Deletion & Decommissioning Handlers
   const handleDeleteVehicle = async (vehicle: Vehicle) => {
-    if (!window.confirm(`Are you sure you want to decommission/delete vehicle ${vehicle.vehicle_number}?`)) {
+    const hasTrips = (vehicle.total_trips || 0) > 0 || trips.some((t) => t.vehicle_id === vehicle.id || t.vehicle_number === vehicle.vehicle_number);
+    if (hasTrips) {
+      alert(`Cannot delete vehicle ${vehicle.vehicle_number}: Completed or active trips/deliveries are recorded for this vehicle. Deletion is disabled to protect delivery history. Only editing is permitted.`);
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete vehicle ${vehicle.vehicle_number}?`)) {
       return;
     }
     try {
@@ -211,7 +217,12 @@ export const ManagerView: React.FC<Props> = ({
   };
 
   const handleDeleteDriver = async (driver: Driver) => {
-    if (!window.confirm(`Are you sure you want to remove driver ${driver.name} from the active roster?`)) {
+    const hasTrips = (driver.total_trips || 0) > 0 || trips.some((t) => t.driver_id === driver.user_id || t.driver_id === driver.id || t.driver_name === driver.name);
+    if (hasTrips) {
+      alert(`Cannot delete driver ${driver.name}: Completed or active trips/deliveries are recorded for this driver. Deletion is disabled to protect delivery history. Only editing is permitted.`);
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to remove driver ${driver.name} from the roster?`)) {
       return;
     }
     try {
@@ -223,6 +234,13 @@ export const ManagerView: React.FC<Props> = ({
   };
 
   const handleDeleteDestination = async (dest: Destination) => {
+    const hasDeliveries = (dest.total_deliveries || 0) > 0 || trips.some((t) =>
+      t.stops?.some((s) => s.destination_id === dest.id || (s.destination_name && s.destination_name.trim().toLowerCase() === dest.name.trim().toLowerCase()))
+    );
+    if (hasDeliveries) {
+      alert(`Cannot delete destination "${dest.name}": Deliveries or orders have already been recorded for this facility. Deletion is disabled to protect delivery history. Only editing is permitted.`);
+      return;
+    }
     if (!window.confirm(`Are you sure you want to deactivate destination "${dest.name}"?`)) {
       return;
     }
@@ -1253,6 +1271,7 @@ export const ManagerView: React.FC<Props> = ({
                 value={statusFilter}
                 onChange={(value) => setStatusFilter(value as string[])}
                 placeholder="All Statuses"
+                minWidth="150px"
                 options={[
                   { value: 'ASSIGNED', label: 'Assigned' },
                   { value: 'AT_DESTINATION', label: 'At Destination' },
@@ -1270,6 +1289,7 @@ export const ManagerView: React.FC<Props> = ({
                 value={filterDriverId}
                 onChange={(value) => setFilterDriverId(value as string[])}
                 placeholder="All Drivers"
+                minWidth="160px"
                 options={drivers.map((d) => ({ value: d.name, label: `${d.name} (${d.employee_id})` }))}
               />
 
@@ -1279,6 +1299,7 @@ export const ManagerView: React.FC<Props> = ({
                 value={filterVehicleId}
                 onChange={(value) => setFilterVehicleId(value as string[])}
                 placeholder="All Vehicles"
+                minWidth="160px"
                 options={vehicles.map((v) => ({ value: v.vehicle_number, label: `${v.vehicle_number} (${v.model})` }))}
               />
 
@@ -1290,7 +1311,7 @@ export const ManagerView: React.FC<Props> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  padding: '4px 10px',
+                  padding: '5px 10px',
                   fontSize: '0.74rem',
                   borderRadius: 'var(--radius-sm)',
                   cursor: 'pointer',
@@ -1311,6 +1332,7 @@ export const ManagerView: React.FC<Props> = ({
                   value={tripSort}
                   onChange={(value) => setTripSort(value as any)}
                   placeholder="Sort: Scheduled Order"
+                  minWidth="190px"
                   options={[
                     { value: 'delay_desc', label: 'Delay Duration (Highest First)' },
                     { value: 'driver_asc', label: 'Driver (A to Z)' },
@@ -1748,12 +1770,10 @@ export const ManagerView: React.FC<Props> = ({
             }}
           >
             {/* Search with Clear Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px', position: 'relative' }}>
-              <Search size={15} color="var(--text-muted)" />
+            <div className="searchbar-enhanced" style={{ flex: '1 1 240px', minWidth: '220px', position: 'relative' }}>
+              <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
-                className="form-input"
-                style={{ padding: '6px 28px 6px 10px', fontSize: '0.85rem' }}
                 placeholder="Search registration plate, model, or driver..."
                 value={vehicleSearch}
                 onChange={(e) => setVehicleSearch(e.target.value)}
@@ -1763,8 +1783,6 @@ export const ManagerView: React.FC<Props> = ({
                   type="button"
                   onClick={() => setVehicleSearch('')}
                   style={{
-                    position: 'absolute',
-                    right: '8px',
                     background: 'none',
                     border: 'none',
                     color: 'var(--text-muted)',
@@ -1787,6 +1805,7 @@ export const ManagerView: React.FC<Props> = ({
                 value={vehicleSort}
                 onChange={(value) => setVehicleSort(value as any)}
                 placeholder="Sort vehicles"
+                minWidth="175px"
                 options={[
                   { value: 'driver_asc', label: 'Assigned Driver (A to Z)' },
                   { value: 'model_asc', label: 'Make / Model (A to Z)' },
@@ -1802,6 +1821,7 @@ export const ManagerView: React.FC<Props> = ({
               value={vehicleStatusFilter}
               onChange={(value) => setVehicleStatusFilter(value as string[])}
               placeholder="All Statuses"
+              minWidth="155px"
               options={[
                 { value: 'AVAILABLE', label: 'Available' },
                 { value: 'INACTIVE', label: 'Inactive' },
@@ -1810,7 +1830,7 @@ export const ManagerView: React.FC<Props> = ({
               ]}
             />
 
-            <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+            <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
               Showing <b>{sortedVehicles.length}</b> of <b>{vehicles.length}</b> assets
             </span>
           </div>
@@ -1823,9 +1843,35 @@ export const ManagerView: React.FC<Props> = ({
                 header: 'Registration Plate',
                 sortable: true,
                 render: (v) => (
-                  <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-                    {v.vehicle_number}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {v.photo_url ? (
+                      <img
+                        src={v.photo_url}
+                        alt={v.vehicle_number}
+                        style={{ width: '30px', height: '30px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--border-subtle)', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-subtle)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'var(--text-muted)',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Truck size={14} />
+                      </div>
+                    )}
+                    <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                      {v.vehicle_number}
+                    </span>
+                  </div>
                 )
               },
               { key: 'model', header: 'Make & Model', sortable: true },
@@ -1878,56 +1924,61 @@ export const ManagerView: React.FC<Props> = ({
                 key: 'actions',
                 header: 'Manager Actions',
                 align: 'right',
-                render: (v) => (
-                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPapersVehicle(v);
-                      }}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '0.75rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        color: 'var(--accent-gold)',
-                        borderColor: 'rgba(197, 160, 89, 0.4)'
-                      }}
-                      title="Manage Official RC, Insurance, Fitness & Challans"
-                    >
-                      <FileCheck size={12} />
-                      <span>Documents</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingVehicle(v);
-                      }}
-                      style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      title="Edit Vehicle Details"
-                    >
-                      <Edit3 size={12} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteVehicle(v);
-                      }}
-                      style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
-                      title="Decommission Vehicle"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                )
+                render: (v) => {
+                  const hasTrips = (v.total_trips || 0) > 0 || trips.some((t) => t.vehicle_id === v.id || t.vehicle_number === v.vehicle_number);
+                  return (
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPapersVehicle(v);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.75rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: 'var(--accent-gold)',
+                          borderColor: 'rgba(197, 160, 89, 0.4)'
+                        }}
+                        title="Manage Official RC, Insurance, Fitness & Challans"
+                      >
+                        <FileCheck size={12} />
+                        <span>Documents</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingVehicle(v);
+                        }}
+                        style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Edit Vehicle Details"
+                      >
+                        <Edit3 size={12} />
+                        <span>Edit</span>
+                      </button>
+                      {!hasTrips && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVehicle(v);
+                          }}
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
+                          title="Decommission Vehicle"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
               }
             ]}
             data={sortedVehicles}
@@ -2017,12 +2068,10 @@ export const ManagerView: React.FC<Props> = ({
             }}
           >
             {/* Search with Clear Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px', position: 'relative' }}>
-              <Search size={15} color="var(--text-muted)" />
+            <div className="searchbar-enhanced" style={{ flex: '1 1 240px', minWidth: '220px', position: 'relative' }}>
+              <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
-                className="form-input"
-                style={{ padding: '6px 28px 6px 10px', fontSize: '0.85rem' }}
                 placeholder="Search driver by name, employee ID, or contact number..."
                 value={driverSearch}
                 onChange={(e) => setDriverSearch(e.target.value)}
@@ -2032,8 +2081,6 @@ export const ManagerView: React.FC<Props> = ({
                   type="button"
                   onClick={() => setDriverSearch('')}
                   style={{
-                    position: 'absolute',
-                    right: '8px',
                     background: 'none',
                     border: 'none',
                     color: 'var(--text-muted)',
@@ -2056,6 +2103,7 @@ export const ManagerView: React.FC<Props> = ({
                 value={driverSort}
                 onChange={(value) => setDriverSort(value as any)}
                 placeholder="Sort drivers"
+                minWidth="175px"
                 options={[
                   { value: 'id_asc', label: 'Employee ID (A to Z)' },
                   { value: 'trips_desc', label: 'Completed Deliveries (High to Low)' },
@@ -2083,7 +2131,36 @@ export const ManagerView: React.FC<Props> = ({
                 key: 'name',
                 header: 'Driver Name',
                 sortable: true,
-                render: (d) => <span style={{ fontWeight: 600 }}>{d.name}</span>
+                render: (d) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                    {d.avatar_url ? (
+                      <img
+                        src={d.avatar_url}
+                        alt={d.name}
+                        style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-subtle)', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #008069, #25D366)',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.78rem',
+                          flexShrink: 0
+                        }}
+                      >
+                        {d.name.charAt(0)}
+                      </div>
+                    )}
+                    <span style={{ fontWeight: 600 }}>{d.name}</span>
+                  </div>
+                )
               },
               {
                 key: 'phone',
@@ -2136,56 +2213,61 @@ export const ManagerView: React.FC<Props> = ({
                 key: 'actions',
                 header: 'Manager Actions',
                 align: 'right',
-                render: (d) => (
-                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDossierDriver(d);
-                      }}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '0.75rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        color: 'var(--accent-whatsapp)',
-                        borderColor: 'rgba(37, 211, 102, 0.4)'
-                      }}
-                      title="View Official Driver Profile, DL & Verification"
-                    >
-                      <Eye size={12} />
-                      <span>Compliance File</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingDriver(d);
-                      }}
-                      style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      title="Edit Driver Details"
-                    >
-                      <Edit3 size={12} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteDriver(d);
-                      }}
-                      style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
-                      title="Remove Driver"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                )
+                render: (d) => {
+                  const hasTrips = (d.total_trips || 0) > 0 || trips.some((t) => t.driver_id === d.user_id || t.driver_id === d.id || t.driver_name === d.name);
+                  return (
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDossierDriver(d);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.75rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: 'var(--accent-whatsapp)',
+                          borderColor: 'rgba(37, 211, 102, 0.4)'
+                        }}
+                        title="View Official Driver Profile, DL & Verification"
+                      >
+                        <Eye size={12} />
+                        <span>Compliance File</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingDriver(d);
+                        }}
+                        style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Edit Driver Details"
+                      >
+                        <Edit3 size={12} />
+                        <span>Edit</span>
+                      </button>
+                      {!hasTrips && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDriver(d);
+                          }}
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
+                          title="Remove Driver"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
               }
             ]}
             data={sortedDrivers}
@@ -2241,12 +2323,10 @@ export const ManagerView: React.FC<Props> = ({
             }}
           >
             {/* Search with Clear Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px', position: 'relative' }}>
-              <Search size={15} color="var(--text-muted)" />
+            <div className="searchbar-enhanced" style={{ flex: '1 1 240px', minWidth: '220px', position: 'relative' }}>
+              <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
-                className="form-input"
-                style={{ padding: '6px 28px 6px 10px', fontSize: '0.85rem' }}
                 placeholder="Search area code, facility name, address, or contact..."
                 value={destinationSearch}
                 onChange={(e) => setDestinationSearch(e.target.value)}
@@ -2256,8 +2336,6 @@ export const ManagerView: React.FC<Props> = ({
                   type="button"
                   onClick={() => setDestinationSearch('')}
                   style={{
-                    position: 'absolute',
-                    right: '8px',
                     background: 'none',
                     border: 'none',
                     color: 'var(--text-muted)',
@@ -2280,6 +2358,7 @@ export const ManagerView: React.FC<Props> = ({
                 value={destinationSort}
                 onChange={(value) => setDestinationSort(value as any)}
                 placeholder="Sort facilities"
+                minWidth="175px"
                 options={[
                   { value: 'address_asc', label: 'Address (A to Z)' },
                   { value: 'code_asc', label: 'Area Code (A to Z)' },
@@ -2376,35 +2455,42 @@ export const ManagerView: React.FC<Props> = ({
                 key: 'actions',
                 header: 'Manager Actions',
                 align: 'right',
-                render: (dest) => (
-                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingDestination(dest);
-                      }}
-                      style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      title="Edit Destination Site & Geofence"
-                    >
-                      <Edit3 size={12} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteDestination(dest);
-                      }}
-                      style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
-                      title="Deactivate Destination"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                )
+                render: (dest) => {
+                  const hasDeliveries = (dest.total_deliveries || 0) > 0 || trips.some((t) =>
+                    t.stops?.some((s) => s.destination_id === dest.id || (s.destination_name && s.destination_name.trim().toLowerCase() === dest.name.trim().toLowerCase()))
+                  );
+                  return (
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingDestination(dest);
+                        }}
+                        style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Edit Destination Site & Geofence"
+                      >
+                        <Edit3 size={12} />
+                        <span>Edit</span>
+                      </button>
+                      {!hasDeliveries && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDestination(dest);
+                          }}
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--status-danger)', borderColor: 'var(--status-danger-border)' }}
+                          title="Deactivate Destination"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
               }
             ]}
             data={sortedDestinations}
@@ -2673,6 +2759,15 @@ export const ManagerView: React.FC<Props> = ({
                   />
                 </div>
               </div>
+
+              {/* Graphical Dual-Line Chart: Delays Made by Management vs Driver (User Requested Dual-Series Trend) */}
+              {dailyReport.delayAttribution && (
+                <DelayAttributionLineChart
+                  data={dailyReport.delayAttribution}
+                  period={reportsPeriod}
+                  selectedDate={selectedDate}
+                />
+              )}
 
               {/* Proportional Fleet Distribution Bar */}
               <div className="card" style={{ padding: '16px 20px' }}>

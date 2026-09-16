@@ -381,6 +381,64 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
 
       db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_destinations_area_code_unique ON destinations(area_code);`);
     }
+  },
+  {
+    version: 6,
+    name: '006_add_driver_vehicle_docs_and_photos',
+    up: () => {
+      // 1. Add photo_url to vehicles
+      const vehicleCols = (db.prepare(`PRAGMA table_info(vehicles)`).all() as any[]).map((c) => c.name);
+      if (!vehicleCols.includes('photo_url')) {
+        db.exec(`ALTER TABLE vehicles ADD COLUMN photo_url TEXT;`);
+      }
+
+      // 2. Add columns to drivers
+      const driverCols = (db.prepare(`PRAGMA table_info(drivers)`).all() as any[]).map((c) => c.name);
+      if (!driverCols.includes('avatar_url')) {
+        db.exec(`ALTER TABLE drivers ADD COLUMN avatar_url TEXT;`);
+      }
+      if (!driverCols.includes('license_number')) {
+        db.exec(`ALTER TABLE drivers ADD COLUMN license_number TEXT;`);
+      }
+      if (!driverCols.includes('license_category')) {
+        db.exec(`ALTER TABLE drivers ADD COLUMN license_category TEXT;`);
+      }
+      if (!driverCols.includes('emergency_phone')) {
+        db.exec(`ALTER TABLE drivers ADD COLUMN emergency_phone TEXT;`);
+      }
+
+      // 3. Create driver_documents table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS driver_documents (
+          id TEXT PRIMARY KEY,
+          driver_id TEXT NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+          document_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          document_number TEXT NOT NULL,
+          issue_date TEXT,
+          expiry_date TEXT,
+          status TEXT CHECK(status IN ('VERIFIED', 'PENDING', 'EXPIRED')) DEFAULT 'VERIFIED',
+          file_path TEXT,
+          file_url TEXT,
+          file_name TEXT,
+          file_size INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_driver_docs_driver ON driver_documents(driver_id);
+      `);
+
+      // 4. Ensure vehicle_documents has file_url, file_name, file_size
+      const vDocCols = (db.prepare(`PRAGMA table_info(vehicle_documents)`).all() as any[]).map((c) => c.name);
+      if (!vDocCols.includes('file_url')) {
+        db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_url TEXT;`);
+      }
+      if (!vDocCols.includes('file_name')) {
+        db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_name TEXT;`);
+      }
+      if (!vDocCols.includes('file_size')) {
+        db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_size INTEGER;`);
+      }
+    }
   }
 ];
 

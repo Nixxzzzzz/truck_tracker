@@ -5,9 +5,10 @@ export interface DropdownOption {
   value: string;
   label: string;
   searchText?: string;
+  icon?: React.ReactNode;
 }
 
-interface SearchableDropdownProps {
+export interface SearchableDropdownProps {
   options: DropdownOption[];
   value: string | string[];
   onChange: (value: string | string[]) => void;
@@ -17,6 +18,14 @@ interface SearchableDropdownProps {
   disabled?: boolean;
   required?: boolean;
   className?: string;
+  style?: React.CSSProperties;
+  buttonStyle?: React.CSSProperties;
+  menuStyle?: React.CSSProperties;
+  searchable?: boolean;
+  sortOptions?: boolean;
+  showQuickClear?: boolean;
+  width?: string | number;
+  minWidth?: string | number;
 }
 
 export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -28,22 +37,43 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   multiple = false,
   disabled = false,
   required = false,
-  className = 'form-select'
+  className,
+  style,
+  buttonStyle,
+  menuStyle,
+  searchable,
+  sortOptions = false,
+  showQuickClear = true,
+  width,
+  minWidth
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const selectedValues = Array.isArray(value) ? value : value ? [value] : [];
-  const selectedSet = new Set(selectedValues);
+
+  const selectedValues = useMemo(() => {
+    if (Array.isArray(value)) return value;
+    if (value !== undefined && value !== null && value !== '') return [String(value)];
+    return [];
+  }, [value]);
+
+  const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
   const normalizedQuery = query.trim().toLowerCase();
 
-  const sortedOptions = useMemo(
-    () => [...options].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })),
-    [options]
-  );
-  const filteredOptions = sortedOptions.filter((option) =>
-    `${option.label} ${option.searchText || ''}`.toLowerCase().includes(normalizedQuery)
-  );
+  const displayOptions = useMemo(() => {
+    if (!sortOptions) return options;
+    return [...options].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  }, [options, sortOptions]);
+
+  const filteredOptions = useMemo(() => {
+    if (!normalizedQuery) return displayOptions;
+    return displayOptions.filter((option) =>
+      `${option.label} ${option.searchText || ''}`.toLowerCase().includes(normalizedQuery)
+    );
+  }, [displayOptions, normalizedQuery]);
+
+  const isSearchable = searchable ?? (options.length > 5);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -52,57 +82,169 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         setQuery('');
       }
     };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && open) {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
-  const getDisplayValue = () => {
-    if (selectedValues.length === 0) return placeholder;
-    const selectedLabels = sortedOptions
-      .filter((option) => selectedSet.has(option.value))
-      .map((option) => option.label);
-    if (selectedLabels.length <= 2) return selectedLabels.join(', ');
-    return `${selectedLabels.length} Selected`;
-  };
-
-  const toggleOption = (optionValue: string) => {
-    if (multiple) {
-      const nextValues = selectedSet.has(optionValue)
-        ? selectedValues.filter((selectedValue) => selectedValue !== optionValue)
-        : [...selectedValues, optionValue];
-      onChange(nextValues);
-      return;
+  useEffect(() => {
+    if (open && isSearchable) {
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-    onChange(optionValue);
+  }, [open, isSearchable]);
+
+  const getDisplayLabel = () => {
+    if (selectedValues.length === 0) return placeholder;
+
+    if (!multiple) {
+      const match = options.find((option) => option.value === selectedValues[0]);
+      return match ? match.label : selectedValues[0] || placeholder;
+    }
+
+    const selectedLabels = selectedValues
+      .map((val) => options.find((option) => option.value === val)?.label)
+      .filter(Boolean) as string[];
+
+    if (selectedLabels.length === 0) return placeholder;
+    if (selectedLabels.length === 1) return selectedLabels[0];
+    if (selectedLabels.length === 2) return selectedLabels.join(', ');
+    return `${placeholder} (${selectedLabels.length})`;
   };
 
-  const clearSelection = () => onChange(multiple ? [] : '');
+  const handleSelectOption = (optionValue: string) => {
+    if (multiple) {
+      const next = selectedSet.has(optionValue)
+        ? selectedValues.filter((v) => v !== optionValue)
+        : [...selectedValues, optionValue];
+      onChange(next);
+    } else {
+      onChange(optionValue);
+      setOpen(false);
+      setQuery('');
+    }
+  };
+
+  const handleSelectAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const allValues = filteredOptions.map((o) => o.value);
+    const combined = Array.from(new Set([...selectedValues, ...allValues]));
+    onChange(combined);
+  };
+
+  const handleClearAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(multiple ? [] : '');
+  };
+
+  const handleQuickClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(multiple ? [] : '');
+  };
 
   return (
-    <div ref={rootRef} className="searchable-dropdown" style={{ position: 'relative', width: '100%' }}>
+    <div
+      ref={rootRef}
+      className={`searchable-dropdown-container ${className || ''}`}
+      style={{
+        position: 'relative',
+        width: width || style?.width || undefined,
+        minWidth: minWidth || style?.minWidth || undefined,
+        ...style
+      }}
+    >
       <button
         type="button"
-        className={className}
-        onClick={() => !disabled && setOpen((current) => !current)}
+        className="searchable-dropdown-trigger"
+        onClick={() => !disabled && setOpen((prev) => !prev)}
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="listbox"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
           width: '100%',
-          minHeight: '38px',
-          textAlign: 'left',
-          cursor: disabled ? 'not-allowed' : 'pointer'
+          ...buttonStyle
         }}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getDisplayValue()}</span>
-        <ChevronDown size={15} aria-hidden="true" />
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: selectedValues.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          {getDisplayLabel()}
+          {multiple && selectedValues.length > 2 && (
+            <span className="searchable-dropdown-badge">{selectedValues.length}</span>
+          )}
+        </span>
+
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          {showQuickClear && selectedValues.length > 0 && !disabled && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleQuickClear}
+              onKeyDown={(e) => e.key === 'Enter' && handleQuickClear(e as any)}
+              title="Clear selection"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--border-subtle)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <X size={12} />
+            </span>
+          )}
+          <ChevronDown
+            size={14}
+            style={{
+              color: 'var(--text-muted)',
+              transition: 'transform 0.2s ease',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
+            }}
+            aria-hidden="true"
+          />
+        </div>
       </button>
 
-      {required && selectedValues.length === 0 && <input required aria-hidden="true" tabIndex={-1} value="" onChange={() => {}} style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />}
+      {required && selectedValues.length === 0 && (
+        <input
+          required
+          aria-hidden="true"
+          tabIndex={-1}
+          value=""
+          onChange={() => {}}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+        />
+      )}
 
       {open && (
         <div
@@ -110,61 +252,161 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           role="listbox"
           aria-multiselectable={multiple}
           style={{
-            position: 'absolute',
-            zIndex: 1200,
-            top: 'calc(100% + 4px)',
             left: 0,
-            right: 0,
-            minWidth: '220px',
-            maxHeight: '310px',
-            overflow: 'auto',
-            padding: '8px',
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-medium)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)'
+            right: width === '100%' ? 0 : 'auto',
+            minWidth: width ? '100%' : '210px',
+            ...menuStyle
           }}
         >
-          <div style={{ position: 'relative', marginBottom: '7px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: 'var(--text-muted)' }} />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search options..."
-              aria-label="Search options"
-              autoFocus
-              style={{ width: '100%', padding: '7px 30px 7px 28px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }}
-            />
-            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search" style={{ position: 'absolute', right: '6px', top: '6px', border: 0, background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={15} /></button>}
-          </div>
-
-          {filteredOptions.length === 0 ? (
-            <div style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{emptyLabel}</div>
-          ) : (
-            filteredOptions.map((option) => {
-              const checked = selectedSet.has(option.value);
-              return (
+          {isSearchable && (
+            <div style={{ position: 'relative', marginBottom: '6px', padding: '2px' }}>
+              <Search
+                size={13}
+                style={{
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                  pointerEvents: 'none'
+                }}
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search options..."
+                aria-label="Search options"
+                style={{
+                  width: '100%',
+                  padding: '6px 26px 6px 28px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.8rem',
+                  outline: 'none'
+                }}
+              />
+              {query && (
                 <button
                   type="button"
-                  role="option"
-                  aria-selected={checked}
-                  key={option.value}
-                  onClick={() => toggleOption(option.value)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%', padding: '8px', border: 0, borderRadius: 'var(--radius-sm)', background: checked ? 'var(--accent-primary-subtle)' : 'transparent', color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', fontSize: '0.82rem' }}
+                  onClick={() => setQuery('')}
+                  aria-label="Clear search"
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 0,
+                    background: 'transparent',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
                 >
-                  <span aria-hidden="true" style={{ width: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${checked ? 'var(--accent-primary)' : 'var(--border-strong)'}`, borderRadius: '3px', background: checked ? 'var(--accent-primary)' : 'transparent', color: 'var(--text-inverse)' }}>
-                    {checked && <Check size={12} strokeWidth={3} />}
-                  </span>
-                  <span style={{ flex: 1 }}>{option.label}</span>
+                  <X size={13} />
                 </button>
-              );
-            })
+              )}
+            </div>
           )}
 
-          <button type="button" onClick={clearSelection} disabled={selectedValues.length === 0} style={{ width: '100%', marginTop: '7px', padding: '7px 8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', background: 'transparent', color: selectedValues.length ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: selectedValues.length ? 'pointer' : 'not-allowed', textAlign: 'left', fontFamily: 'inherit', fontSize: '0.78rem' }}>
-            Clear selections
-          </button>
+          {multiple && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '4px 6px 6px 6px',
+                marginBottom: '4px',
+                borderBottom: '1px solid var(--border-subtle)',
+                fontSize: '0.72rem',
+                color: 'var(--text-muted)'
+              }}
+            >
+              <span>
+                {selectedValues.length} of {options.length} selected
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  style={{
+                    border: 0,
+                    background: 'none',
+                    color: 'var(--brand-primary)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.72rem',
+                    padding: 0
+                  }}
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  disabled={selectedValues.length === 0}
+                  style={{
+                    border: 0,
+                    background: 'none',
+                    color: selectedValues.length > 0 ? 'var(--text-muted)' : 'var(--border-strong)',
+                    cursor: selectedValues.length > 0 ? 'pointer' : 'not-allowed',
+                    fontSize: '0.72rem',
+                    padding: 0
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {filteredOptions.length === 0 ? (
+              <div style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center' }}>
+                {emptyLabel}
+              </div>
+            ) : (
+              filteredOptions.map((option) => {
+                const checked = selectedSet.has(option.value);
+
+                return (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={checked}
+                    key={option.value}
+                    onClick={() => handleSelectOption(option.value)}
+                    className={`searchable-dropdown-item ${checked ? 'is-selected' : ''}`}
+                  >
+                    {multiple ? (
+                      <span
+                        className={`searchable-dropdown-checkbox ${checked ? 'is-checked' : ''}`}
+                        aria-hidden="true"
+                      >
+                        {checked && <Check size={11} strokeWidth={3} color="#FFFFFF" />}
+                      </span>
+                    ) : null}
+
+                    {option.icon && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>{option.icon}</span>
+                    )}
+
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {option.label}
+                    </span>
+
+                    {!multiple && checked && (
+                      <Check size={14} strokeWidth={2.5} color="var(--brand-primary)" style={{ flexShrink: 0 }} />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>

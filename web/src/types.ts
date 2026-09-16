@@ -38,6 +38,8 @@ export interface VehicleDocument {
   expiry_date: string;
   status: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
   file_url?: string;
+  file_name?: string;
+  file_size?: number;
   notes?: string;
 }
 
@@ -69,6 +71,7 @@ export interface Vehicle {
   current_location?: string;
   last_ping?: string;
   total_fine_amount?: number;
+  photo_url?: string;
   // Live Telematics Feed & SAP Equipment properties
   latitude?: number;
   longitude?: number;
@@ -96,6 +99,8 @@ export interface DriverDocument {
   expiry_date?: string;
   status: 'VERIFIED' | 'PENDING' | 'EXPIRED';
   file_url?: string;
+  file_name?: string;
+  file_size?: number;
 }
 
 export interface Driver {
@@ -140,6 +145,7 @@ export interface Destination {
   geofence_radius_meters: number;
   notes?: string;
   is_active: number;
+  total_deliveries?: number;
 }
 
 export interface Activity {

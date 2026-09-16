@@ -716,6 +716,14 @@ export const api = {
         return { success };
       }
     },
+    updateDriverDocument: async (driverId: string, doc: any) => {
+      try {
+        return await request(`/fleet/drivers/${driverId}/documents`, { method: 'POST', body: JSON.stringify(doc) });
+      } catch {
+        const success = mockStore.updateDriverDocument(driverId, doc);
+        return { success };
+      }
+    },
     getExceptions: async (params: { status?: string; severity?: string; limit?: number } = {}) => {
       try {
         const qs = new URLSearchParams(params as any).toString();
