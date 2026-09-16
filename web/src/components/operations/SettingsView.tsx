@@ -13,19 +13,26 @@ import {
 } from 'lucide-react';
 import { api, API_BASE } from '../../services/api';
 import { User } from '../../types';
+import { PageHeader } from '../common/PageHeader';
 
 interface SettingsViewProps {
   currentUser: User;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   onSwitchRole?: (role: 'DRIVER' | 'MANAGER') => void;
+  lastUpdated?: Date;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   theme,
   onToggleTheme,
-  onSwitchRole
+  onSwitchRole,
+  lastUpdated,
+  onRefresh,
+  refreshing = false
 }) => {
   const [syncStatus, setSyncStatus] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
@@ -33,6 +40,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     loadSyncStatus();
+    const interval = setInterval(() => {
+      loadSyncStatus();
+    }, 6000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadSyncStatus = async () => {
@@ -66,14 +77,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
-      <div>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-          Operations & System Settings
-        </h1>
-        <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-          Manage external cloud ledger synchronizations, diagnostics, and testing personas
-        </p>
-      </div>
+      {/* Enterprise Unified Header with Real-Time Pulse */}
+      <PageHeader
+        breadcrumbs={[{ label: 'System' }, { label: 'System Settings' }]}
+        title="Operations & System Settings"
+        subtitle="Manage external cloud ledger synchronizations, diagnostics, and testing personas"
+        lastUpdated={lastUpdated}
+        onRefresh={onRefresh || loadSyncStatus}
+        refreshing={refreshing || syncing}
+      />
 
       {/* 1. Google Sheets Integration */}
       <div

@@ -51,7 +51,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                   height: '6px',
                   borderRadius: '50%',
                   backgroundColor: 'var(--status-success)',
-                  display: 'inline-block'
+                  display: 'inline-block',
+                  animation: 'pulse 2s infinite ease-in-out'
                 }}
               />
               Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}

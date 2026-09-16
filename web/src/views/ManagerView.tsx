@@ -154,20 +154,21 @@ export const ManagerView: React.FC<Props> = ({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [liveRefresh, setLiveRefresh] = useState(true);
 
-  // Auto-refresh live operations every 30 seconds when on operations tab
+  // Initial and filter-triggered fetch
   useEffect(() => {
     loadDashboardData();
   }, [selectedDate, statusFilter.join(',')]);
 
+  // Continuous Real-Time Auto-Refresh Engine: runs non-blocking sync every 5 seconds across all operational modules
   useEffect(() => {
-    if (!liveRefresh || !['overview', 'schedule', 'dispatch', 'trips'].includes(activeSection as any)) return;
+    if (!liveRefresh) return;
 
     const interval = setInterval(() => {
-      silentRefreshOperations();
-    }, 30000);
+      silentRealtimeSync();
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [liveRefresh, activeSection, selectedDate, statusFilter.join(',')]);
+  }, [liveRefresh, activeSection, selectedDate, statusFilter.join(','), searchQuery, reportsPeriod]);
 
   // Live Vehicle Telematics Simulation (Ola / Rapido style real-time movements)
   useEffect(() => {
@@ -372,23 +373,65 @@ export const ManagerView: React.FC<Props> = ({
     setRefreshing(false);
   };
 
-  const silentRefreshOperations = async () => {
+  const silentRealtimeSync = async () => {
     try {
-      const [tripsRes, attentionRes] = await Promise.all([
-        api.manager.getTrips({
-          date: selectedDate,
-          status: statusFilter.join(','),
-          search: searchQuery
-        }),
-        api.manager.getAttention()
-      ]);
-      setTrips(tripsRes.trips);
-      setAttention(attentionRes);
+      // 1. Always poll attention alerts and live operational exceptions
+      const promises: Promise<any>[] = [
+        api.manager.getAttention(),
+        api.fleet.getExceptions({ limit: 50 })
+      ];
+
+      // 2. Conditionally poll active module data silently
+      const shouldFetchTrips = ['overview', 'schedule', 'dispatch', 'trips'].includes(activeSection);
+      const shouldFetchVehicles = ['vehicles', 'drivers', 'destinations', 'map', 'documents'].includes(activeSection);
+      const shouldFetchReports = activeSection === 'reports';
+
+      if (shouldFetchTrips) {
+        promises.push(
+          api.manager.getTrips({
+            date: selectedDate,
+            status: statusFilter.join(','),
+            search: searchQuery
+          })
+        );
+      } else if (shouldFetchVehicles) {
+        promises.push(api.fleet.getVehicles());
+      } else if (shouldFetchReports) {
+        if (reportsPeriod === 'weekly' || reportsPeriod === 'monthly') {
+          promises.push(api.reports.getPeriodic(reportsPeriod));
+        } else {
+          promises.push(api.reports.getDaily(selectedDate));
+        }
+      }
+
+      const results = await Promise.allSettled(promises);
+
+      // Attention metrics update
+      if (results[0].status === 'fulfilled' && results[0].value) {
+        setAttention(results[0].value);
+      }
+
+      // Exceptions & incident triage update
+      if (results[1].status === 'fulfilled' && results[1].value?.exceptions) {
+        setExceptions(results[1].value.exceptions);
+      }
+
+      // Module-specific seamless data update
+      if (shouldFetchTrips && results[2]?.status === 'fulfilled' && results[2].value?.trips) {
+        setTrips(results[2].value.trips);
+      } else if (shouldFetchVehicles && results[2]?.status === 'fulfilled' && results[2].value?.vehicles) {
+        setVehicles(results[2].value.vehicles);
+      } else if (shouldFetchReports && results[2]?.status === 'fulfilled' && results[2].value) {
+        setDailyReport(results[2].value);
+      }
+
       setLastRefresh(new Date());
     } catch (err) {
-      console.warn('[AutoRefresh] Poll failed silently:', err);
+      console.warn('[RealTimeSync] Silent background tick failed:', err);
     }
   };
+
+  const silentRefreshOperations = silentRealtimeSync;
 
   const loadFleetData = async () => {
     setFleetLoading(true);
@@ -884,6 +927,8 @@ export const ManagerView: React.FC<Props> = ({
       onClearAllAlerts={() => setDismissedAlertIds(operationalAlerts.map((a) => a.id))}
       unassignedCount={unassignedCount}
       exceptionsCount={exceptionsCount}
+      liveRefresh={liveRefresh}
+      onToggleLiveRefresh={() => setLiveRefresh((prev) => !prev)}
     >
       {/* ========================================================
           0. OPERATIONS OVERVIEW COCKPIT
@@ -3028,6 +3073,8 @@ export const ManagerView: React.FC<Props> = ({
           onAcknowledge={handleAcknowledgeException}
           onViewTrip={(id) => setSelectedTripId(id)}
           onRefresh={loadFleetExceptions}
+          lastUpdated={lastRefresh}
+          refreshing={refreshing}
         />
       )}
 
@@ -3050,6 +3097,9 @@ export const ManagerView: React.FC<Props> = ({
           theme={theme}
           onToggleTheme={onToggleTheme}
           onSwitchRole={onSwitchRole}
+          lastUpdated={lastRefresh}
+          onRefresh={handleManualRefresh}
+          refreshing={refreshing}
         />
       )}
 

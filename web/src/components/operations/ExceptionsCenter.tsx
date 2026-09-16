@@ -17,19 +17,24 @@ import {
   X
 } from 'lucide-react';
 import { OperationalException } from '../../types';
+import { PageHeader } from '../common/PageHeader';
 
 interface ExceptionsCenterProps {
   exceptions: OperationalException[];
   onAcknowledge: (id: string, notes?: string) => Promise<void>;
   onViewTrip: (tripId: string) => void;
   onRefresh: () => void;
+  lastUpdated?: Date;
+  refreshing?: boolean;
 }
 
 export const ExceptionsCenter: React.FC<ExceptionsCenterProps> = ({
   exceptions,
   onAcknowledge,
   onViewTrip,
-  onRefresh
+  onRefresh,
+  lastUpdated,
+  refreshing = false
 }) => {
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('OPEN');
@@ -108,35 +113,15 @@ export const ExceptionsCenter: React.FC<ExceptionsCenterProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px'
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            Operational Exceptions & Alert Triage
-          </h1>
-          <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-            Real-time incident response: Delays, GPS losses, geofence breaches, and compliance risks
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-outline"
-          onClick={onRefresh}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
-        >
-          <RotateCcw size={14} />
-          <span>Refresh Live Alerts</span>
-        </button>
-      </div>
+      {/* Enterprise Unified Header with Real-Time Pulse */}
+      <PageHeader
+        breadcrumbs={[{ label: 'Control' }, { label: 'Exceptions Center' }]}
+        title="Operational Exceptions & Alert Triage"
+        subtitle="Real-time incident response: Delays, GPS losses, geofence breaches, and compliance risks"
+        lastUpdated={lastUpdated}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
 
       {/* Severity Metric Tiles */}
       <div

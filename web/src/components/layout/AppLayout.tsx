@@ -20,6 +20,8 @@ interface AppLayoutProps {
   onClearAllAlerts?: () => void;
   unassignedCount?: number;
   exceptionsCount?: number;
+  liveRefresh?: boolean;
+  onToggleLiveRefresh?: () => void;
   children: React.ReactNode;
 }
 
@@ -40,6 +42,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onClearAllAlerts,
   unassignedCount = 0,
   exceptionsCount = 0,
+  liveRefresh = true,
+  onToggleLiveRefresh,
   children
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -73,6 +77,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           alerts={alerts}
           onDismissAlert={onDismissAlert}
           onClearAllAlerts={onClearAllAlerts}
+          liveRefresh={liveRefresh}
+          onToggleLiveRefresh={onToggleLiveRefresh}
         />
 
         <main
