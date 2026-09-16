@@ -2077,4 +2077,60 @@ video.camera-viewfinder {
   }
 }
 
+/* ==========================================================================
+   Mobile Ergonomics & Responsive Modals / Deck Controls
+   ========================================================================== */
+@media (max-width: 640px) {
+  .responsive-modal-grid-2,
+  .responsive-modal-grid-3,
+  .trip-modal-grid-2,
+  .trip-modal-stop-grid,
+  .papers-modal-grid-2,
+  .papers-modal-grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Schedule screen responsive header */
+  .schedule-header-actions {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .schedule-horizon-segmented {
+    width: 100% !important;
+    display: flex !important;
+  }
+
+  .schedule-horizon-segmented button {
+    flex: 1 !important;
+    text-align: center !important;
+    padding: 8px 4px !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+  }
+
+  .schedule-header-actions .btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Documents Hub responsive KPI grid */
+  .documents-kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .documents-kpi-grid > div {
+    padding: 12px 14px !important;
+  }
+
+  /* Manager Bottom Navigation Safe Bottom Margin */
+  .app-main-content {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 16px)) !important;
+  }
+}
+
 

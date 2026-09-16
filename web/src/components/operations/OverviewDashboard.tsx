@@ -123,6 +123,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%' }}>
       {/* Top Banner with Quick Actions */}
       <div
+        className="overview-top-banner"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -132,7 +133,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         }}
       >
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+          <h1 className="overview-title" style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
             HoseXperts Operations Control Center
           </h1>
           <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
@@ -140,7 +141,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="overview-banner-actions" style={{ display: 'flex', gap: '10px' }}>
           <button
             type="button"
             className="btn btn-outline"
@@ -164,6 +165,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
 
       {/* Decision-Making Operational KPI Cards */}
       <div
+        className="overview-kpi-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -372,7 +374,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           </div>
         </div>
 
-        <div style={{ height: '380px', width: '100%', position: 'relative' }}>
+        <div className="overview-map-container" style={{ height: '380px', width: '100%', position: 'relative' }}>
           <LeafletMap
             baseLocation={{
               name: 'HoseXperts Central Depot',
@@ -391,7 +393,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
       </div>
 
       {/* 2-Column Operational Deck */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+      <div className="overview-deck-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
         {/* Left Column: Active Trips & Upcoming Departures */}
         <div
           className="card-elevation-1"
@@ -620,6 +622,39 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 860px) {
+          .overview-top-banner {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+          .overview-banner-actions {
+            width: 100% !important;
+          }
+          .overview-banner-actions button {
+            flex: 1 !important;
+            justify-content: center !important;
+          }
+          .overview-deck-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .overview-title {
+            font-size: 1.22rem !important;
+          }
+          .overview-kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .overview-map-container {
+            height: 290px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -145,6 +145,14 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
 
   return (
     <div className="modal-overlay">
+      <style>{`
+        @media (max-width: 640px) {
+          .responsive-modal-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       <div className="modal-content" style={{ maxWidth: '580px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -296,7 +304,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+            <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Registration Number (Plate) <span style={{ color: 'var(--status-danger)' }}>*</span>
@@ -342,7 +350,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Vehicle Class / Type
@@ -435,7 +443,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
                     gap: '10px'
                   }}
                 >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+                  <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
                         Paper Type
@@ -480,7 +488,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '8px' }}>
+                  <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '8px' }}>
                     <div>
                       <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
                         Expiry Date

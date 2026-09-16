@@ -152,6 +152,14 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
 
   return (
     <div className="modal-overlay">
+      <style>{`
+        @media (max-width: 640px) {
+          .responsive-modal-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       <div className="modal-content" style={{ maxWidth: '480px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -316,7 +324,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Employee ID
@@ -350,7 +358,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Phone Line <span style={{ color: 'var(--status-danger)' }}>*</span>
@@ -385,7 +393,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+            <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   Commercial Driver License (DL) #
@@ -534,7 +542,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                     gap: '8px'
                   }}
                 >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={{ fontSize: '0.7rem', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Document Type</label>
                       <SearchableDropdown
@@ -571,7 +579,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={{ fontSize: '0.7rem', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Expiry Date (Optional)</label>
                       <input

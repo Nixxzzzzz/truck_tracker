@@ -212,6 +212,18 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
 
   return (
     <div className="modal-overlay">
+      <style>{`
+        @media (max-width: 640px) {
+          .trip-modal-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+          .trip-modal-stop-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+        }
+      `}</style>
       <div className="modal-content" style={{ maxWidth: '680px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -232,7 +244,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
             )}
 
             {/* Row 1: Date & Departure Time */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="trip-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">
                   <Calendar size={13} style={{ display: 'inline', marginRight: '4px' }} />
@@ -263,7 +275,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
             </div>
 
             {/* Row 2: Driver & Vehicle Selection */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="trip-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">
                   <UserCheck size={13} style={{ display: 'inline', marginRight: '4px' }} />
@@ -294,7 +306,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
             </div>
 
             {/* Row 3: Starting Location & Purpose */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+            <div className="trip-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Starting Base / Depot</label>
                 <input
@@ -424,7 +436,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                       </div>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '10px' }}>
+                    <div className="trip-modal-stop-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '10px' }}>
                       <input
                         type="text"
                         className="form-input"
@@ -462,7 +474,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                       <input
                         type="text"
                         className="form-input"
-                        style={{ flex: 1, minWidth: '220px' }}
+                        style={{ flex: '1 1 180px', minWidth: '0' }}
                         placeholder="Destination address"
                         value={stop.address}
                         onChange={(e) => {

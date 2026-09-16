@@ -63,6 +63,14 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
 
   return (
     <div className="modal-overlay">
+      <style>{`
+        @media (max-width: 640px) {
+          .responsive-modal-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       <div className="modal-content" style={{ maxWidth: '580px', maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -168,7 +176,7 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
             </div>
 
             {/* Contact Person Details */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                   On-Site Contact Person

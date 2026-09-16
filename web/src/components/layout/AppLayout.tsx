@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar, NavSection } from './Sidebar';
 import { TopHeader, AlertItem } from './TopHeader';
+import { ManagerBottomNavigation } from './ManagerBottomNavigation';
 import { User } from '../../types';
 
 interface AppLayoutProps {
@@ -66,7 +67,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       />
 
       {/* Main Workspace Frame */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowX: 'hidden' }}>
         <TopHeader
           activeSection={activeSection}
           onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
@@ -96,10 +97,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         </main>
       </div>
 
+      {/* Mobile Bottom Navigation for Managers */}
+      <ManagerBottomNavigation
+        activeSection={activeSection}
+        onSelectSection={onSelectSection}
+        onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
+        unassignedCount={unassignedCount}
+        exceptionsCount={exceptionsCount}
+      />
+
       <style>{`
-        @media (max-width: 640px) {
+        @media (max-width: 860px) {
           .app-main-content {
-            padding: 14px 12px !important;
+            padding: 16px 12px calc(72px + env(safe-area-inset-bottom)) !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .app-main-content {
+            padding: 12px 10px calc(68px + env(safe-area-inset-bottom)) !important;
           }
         }
       `}</style>

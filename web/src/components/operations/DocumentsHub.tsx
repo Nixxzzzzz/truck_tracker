@@ -165,6 +165,7 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({
 
       {/* KPI Stat Cards */}
       <div
+        className="documents-kpi-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',

@@ -120,9 +120,10 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="schedule-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Time Horizon Segmented Control */}
           <div
+            className="schedule-horizon-segmented"
             style={{
               display: 'flex',
               backgroundColor: 'var(--bg-card)',

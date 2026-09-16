@@ -202,6 +202,15 @@ export const VehiclePapersModal: React.FC<Props> = ({
 
   return (
     <div className="modal-overlay">
+      <style>{`
+        @media (max-width: 640px) {
+          .papers-modal-grid-2,
+          .papers-modal-grid-3 {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '90vh' }}>
         {/* Header */}
         <div className="modal-header">
@@ -342,7 +351,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
                   <div style={{ fontWeight: 600, fontSize: '0.84rem', color: 'var(--accent-whatsapp)' }}>
                     Add or Renew Official Vehicle Certificate
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="papers-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.74rem' }}>Certificate Category</label>
                       <SearchableDropdown
@@ -374,7 +383,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '10px' }}>
+                  <div className="papers-modal-grid-3" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '10px' }}>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.74rem' }}>Certificate / Policy #</label>
                       <input
@@ -610,7 +619,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
                   <div style={{ fontWeight: 600, fontSize: '0.84rem', color: 'var(--status-delayed)' }}>
                     Log Commercial Traffic Challan
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="papers-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.74rem' }}>Challan / Notice #</label>
                       <input
@@ -648,7 +657,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="papers-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.74rem' }}>Violation Location</label>
                       <input

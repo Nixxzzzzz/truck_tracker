@@ -112,26 +112,26 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       }}
     >
       {/* Left: Mobile Toggle & Breadcrumbs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexShrink: 1 }}>
         <button
           type="button"
           onClick={onOpenMobileMenu}
           className="btn btn-subtle mobile-menu-btn"
-          style={{ padding: '6px', display: 'none' }}
+          style={{ padding: '6px', display: 'none', flexShrink: 0 }}
           aria-label="Toggle navigation menu"
         >
           <Menu size={18} />
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}>
-          <span style={{ color: 'var(--text-muted)' }}>{group}</span>
-          <span style={{ color: 'var(--text-muted)' }}>/</span>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <span className="hide-on-mobile" style={{ color: 'var(--text-muted)' }}>{group}</span>
+          <span className="hide-on-mobile" style={{ color: 'var(--text-muted)' }}>/</span>
+          <span style={{ color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
         </div>
       </div>
 
       {/* Right: Alerts Notification Center, Live Sync Status & Schedule Trip Action */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
 
         {/* Alert Notifications Center Bell */}
         <div style={{ position: 'relative' }} ref={alertsRef}>
@@ -179,9 +179,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               style={{
                 position: 'absolute',
                 top: 'calc(100% + 8px)',
-                right: 0,
-                width: '360px',
-                maxWidth: '90vw',
+                right: '-40px',
+                width: '340px',
+                maxWidth: 'min(340px, calc(100vw - 24px))',
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-lg)',
@@ -346,21 +346,32 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         <button
           type="button"
           onClick={onNewTrip}
-          className="btn btn-primary btn-sm"
-          style={{ padding: '6px 12px' }}
+          className="btn btn-primary btn-sm header-cta-btn"
+          style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}
+          title="Create and schedule a new trip manifest"
         >
           <Plus size={14} />
-          <span>Schedule Trip</span>
+          <span className="hide-on-mobile">Schedule Trip</span>
+          <span className="show-on-mobile">Trip</span>
         </button>
       </div>
 
       <style>{`
+        .show-on-mobile {
+          display: none;
+        }
         @media (max-width: 860px) {
           .mobile-menu-btn {
             display: inline-flex !important;
           }
           .hide-on-mobile {
             display: none !important;
+          }
+          .show-on-mobile {
+            display: inline !important;
+          }
+          .header-cta-btn {
+            padding: 6px 10px !important;
           }
         }
       `}</style>
