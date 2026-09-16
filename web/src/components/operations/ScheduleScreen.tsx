@@ -170,19 +170,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div
-        className="card-elevation-1"
-        style={{
-          padding: '14px 18px',
-          backgroundColor: 'var(--bg-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '12px'
-        }}
-      >
+      <div className="card-elevation-1 schedule-filter-bar">
         {/* Search */}
         <div className="searchbar-enhanced" style={{ minWidth: '240px', flex: '1 1 240px', position: 'relative' }}>
           <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -312,22 +300,10 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
             return (
               <div
                 key={trip.id}
-                className="card-elevation-1"
-                style={{
-                  padding: '18px 20px',
-                  backgroundColor: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-md)',
-                  border: isUnassigned ? '1px dashed var(--brand-primary)' : '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '16px',
-                  transition: 'border-color 0.15s ease'
-                }}
+                className={`card-elevation-1 schedule-trip-card ${isUnassigned ? 'is-unassigned' : ''}`}
               >
                 {/* Trip Primary Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: '220px' }}>
+                <div className="schedule-trip-primary">
                   <div
                     style={{
                       width: '44px',
@@ -341,14 +317,15 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '0.9rem'
+                      fontSize: '0.9rem',
+                      flexShrink: 0
                     }}
                   >
                     <Truck size={22} />
                   </div>
 
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span
                         onClick={() => onOpenTripDetails(trip.id)}
                         style={{
@@ -370,7 +347,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                 </div>
 
                 {/* Route: Origin -> Stops */}
-                <div style={{ minWidth: '200px', flex: '1 1 200px' }}>
+                <div className="schedule-trip-route">
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                     Route & Destinations
                   </div>
@@ -388,7 +365,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                 </div>
 
                 {/* Assigned Driver & Vehicle */}
-                <div style={{ minWidth: '180px' }}>
+                <div className="schedule-trip-driver">
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                     Driver & Fleet Unit
                   </div>
@@ -409,7 +386,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                 </div>
 
                 {/* Schedule Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="schedule-trip-actions">
                   {isUnassigned ? (
                     <button
                       type="button"
@@ -453,7 +430,9 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
                         borderRadius: 'var(--radius-sm)',
                         padding: '7px 10px',
                         cursor: 'pointer',
-                        color: 'var(--text-secondary)'
+                        color: 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center'
                       }}
                       title="Cancel Trip"
                     >

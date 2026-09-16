@@ -51,6 +51,18 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [alignRight, setAlignRight] = useState(false);
+
+  useEffect(() => {
+    if (open && rootRef.current) {
+      const rect = rootRef.current.getBoundingClientRect();
+      const isNearRightEdge =
+        rect.left + 280 > window.innerWidth ||
+        (window.innerWidth - rect.right < 140) ||
+        (rect.left > window.innerWidth / 2 && window.innerWidth - rect.right < 240);
+      setAlignRight(isNearRightEdge);
+    }
+  }, [open]);
 
   const selectedValues = useMemo(() => {
     if (Array.isArray(value)) return value;
@@ -258,9 +270,11 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           role="listbox"
           aria-multiselectable={multiple}
           style={{
-            left: 0,
-            right: width === '100%' ? 0 : 'auto',
-            minWidth: width ? '100%' : '210px',
+            left: alignRight ? 'auto' : 0,
+            right: alignRight ? 0 : 'auto',
+            minWidth: width ? '100%' : '250px',
+            maxWidth: 'min(380px, calc(100vw - 28px))',
+            width: 'max-content',
             ...menuStyle
           }}
         >
@@ -387,6 +401,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                     key={option.value}
                     onClick={() => handleSelectOption(option.value)}
                     className={`searchable-dropdown-item ${checked ? 'is-selected' : ''}`}
+                    title={option.label}
                   >
                     {multiple ? (
                       <span

@@ -1925,4 +1925,156 @@ video.camera-viewfinder {
   color: var(--text-muted);
 }
 
+/* ==========================================================================
+   Cross-Device Responsive Layout System & Visual Optimizations
+   ========================================================================== */
+
+/* Dispatch Schedule Filter Bar */
+.schedule-filter-bar {
+  padding: 14px 18px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Dispatch Schedule Trip Cards */
+.schedule-trip-card {
+  padding: 18px 20px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  display: grid;
+  grid-template-columns: 260px 1.4fr 1fr auto;
+  align-items: center;
+  gap: 20px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.schedule-trip-card.is-unassigned {
+  border: 1px dashed var(--brand-primary);
+}
+
+.schedule-trip-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-trip-primary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.schedule-trip-route {
+  min-width: 0;
+}
+
+.schedule-trip-driver {
+  min-width: 0;
+}
+
+.schedule-trip-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* Visual Analytics Panel Responsive Layout */
+@media (max-width: 900px) {
+  .visual-analytics-card {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .visual-analytics-card > div:first-child {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-right: 0 !important;
+    padding-bottom: 14px !important;
+  }
+  .visual-analytics-card > div:last-child {
+    padding-left: 0 !important;
+  }
+}
+
+/* Tablet / Medium Laptop Form Factors (768px - 1180px) */
+@media (max-width: 1180px) {
+  .schedule-trip-card {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .schedule-trip-actions {
+    grid-column: span 2;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 12px;
+  }
+}
+
+/* Mobile Devices (<768px) */
+@media (max-width: 768px) {
+  .schedule-filter-bar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .schedule-filter-bar .searchbar-enhanced {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+  }
+
+  .schedule-filter-bar .searchable-dropdown-container {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 130px;
+  }
+
+  .schedule-trip-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .schedule-trip-actions {
+    grid-column: span 1;
+    justify-content: stretch;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 12px;
+  }
+
+  .schedule-trip-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Dropdown Menus full width on mobile if small screen */
+  .searchable-dropdown-menu {
+    max-width: calc(100vw - 28px) !important;
+  }
+}
+
+/* Small Smartphone Viewports (<480px) */
+@media (max-width: 480px) {
+  .schedule-filter-bar .searchable-dropdown-container {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .schedule-trip-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .schedule-trip-actions button {
+    width: 100%;
+  }
+}
+
 
