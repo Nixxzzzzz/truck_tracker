@@ -20,6 +20,7 @@ import { Vehicle, VehicleDocument, VehicleChallan } from '../types';
 import { api } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
 import { normalizeDocTypeKey } from './operations/DocumentsHub';
+import { processAndCompressFile } from '../utils/imageCompressor';
 
 interface Props {
   vehicle: Vehicle;
@@ -95,71 +96,58 @@ export const VehiclePapersModal: React.FC<Props> = ({
   const pendingChallans = challans.filter((c) => c.status === 'PENDING');
   const totalPendingFine = pendingChallans.reduce((sum, c) => sum + (c.amount || 0), 0);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File must be smaller than 10MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
+      try {
+        const processed = await processAndCompressFile(file);
         setDocFile({
-          url: reader.result as string,
-          name: file.name,
-          size: file.size
+          url: processed.dataUrl,
+          name: processed.name,
+          size: processed.size
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        alert(err.message || 'Error processing document file.');
+      }
     }
   };
 
-  const handleChallanFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChallanFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File must be smaller than 10MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
+      try {
+        const processed = await processAndCompressFile(file);
         setChallanProofFile({
-          url: reader.result as string,
-          name: file.name,
-          size: file.size
+          url: processed.dataUrl,
+          name: processed.name,
+          size: processed.size
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        alert(err.message || 'Error processing challan proof file.');
+      }
     }
   };
 
   const handleAttachProofToExisting = async (challanId: string, file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File must be smaller than 10MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async () => {
+    try {
+      const processed = await processAndCompressFile(file);
       const proofPayload = {
-        proof_url: reader.result as string,
-        proof_name: file.name,
-        proof_size: file.size
+        proof_url: processed.dataUrl,
+        proof_name: processed.name,
+        proof_size: processed.size
       };
-      try {
-        await api.fleet.attachChallanProof(currentVehicle.id, challanId, proofPayload);
-        const updatedChallans = challans.map((c) =>
-          c.id === challanId ? { ...c, ...proofPayload } : c
-        );
-        const updatedVehicle: Vehicle = { ...currentVehicle, challans: updatedChallans };
-        setCurrentVehicle(updatedVehicle);
-        onUpdate(updatedVehicle);
-        setMessage(`✓ Proof document attached to Challan.`);
-        setTimeout(() => setMessage(null), 3000);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    reader.readAsDataURL(file);
+      await api.fleet.attachChallanProof(currentVehicle.id, challanId, proofPayload);
+      const updatedChallans = challans.map((c) =>
+        c.id === challanId ? { ...c, ...proofPayload } : c
+      );
+      const updatedVehicle: Vehicle = { ...currentVehicle, challans: updatedChallans };
+      setCurrentVehicle(updatedVehicle);
+      onUpdate(updatedVehicle);
+      setMessage(`✓ Proof document attached to Challan.`);
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Error attaching proof.');
+    }
   };
 
   const handleSaveDoc = async (e: React.FormEvent) => {

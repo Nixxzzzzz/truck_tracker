@@ -1283,23 +1283,45 @@ export const INITIAL_TRIPS: Trip[] = [
 ];
 
 class MockStore {
+  private memoryCache = new Map<string, any>();
+
   private get<T>(key: string, fallback: T): T {
     if (typeof window === 'undefined') return fallback;
-    const stored = localStorage.getItem(`tt_mock_${key}_delhi`);
-    if (!stored) {
-      this.set(key, fallback);
-      return fallback;
-    }
     try {
-      return JSON.parse(stored);
-    } catch {
-      return fallback;
+      const stored = localStorage.getItem(`tt_mock_${key}_delhi`);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.warn(`[MockStore] Error reading ${key} from storage:`, e);
     }
+    if (this.memoryCache.has(key)) {
+      return this.memoryCache.get(key);
+    }
+    this.set(key, fallback);
+    return fallback;
   }
 
   private set<T>(key: string, val: T): void {
+    this.memoryCache.set(key, val);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(`tt_mock_${key}_delhi`, JSON.stringify(val));
+      try {
+        localStorage.setItem(`tt_mock_${key}_delhi`, JSON.stringify(val));
+      } catch (err) {
+        console.warn(`[MockStore] Storage quota exceeded while saving ${key}, stored safely in memory:`, err);
+        // Attempt to clean non-essential api cache keys if storage is full
+        try {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('tt_api_cache_') || k.startsWith('tt_last_real_gps'))) {
+              keysToRemove.push(k);
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+          localStorage.setItem(`tt_mock_${key}_delhi`, JSON.stringify(val));
+        } catch {
+          // Keep in memoryCache gracefully without throwing
+        }
+      }
     }
   }
 

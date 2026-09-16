@@ -452,11 +452,29 @@ export const api = {
         const photoFile = formData.get('photo') as File | null;
         const mockPhotoId = `photo-${Date.now()}`;
         let photoUrl = '';
-        if (photoFile && typeof window !== 'undefined' && window.URL) {
+        if (photoFile) {
           try {
-            photoUrl = URL.createObjectURL(photoFile);
+            photoUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => {
+                try {
+                  resolve(URL.createObjectURL(photoFile));
+                } catch {
+                  resolve('');
+                }
+              };
+              reader.readAsDataURL(photoFile);
+            });
             DEMO_PHOTOS_MAP[mockPhotoId] = photoUrl;
-          } catch {}
+          } catch {
+            if (typeof window !== 'undefined' && window.URL) {
+              try {
+                photoUrl = URL.createObjectURL(photoFile);
+                DEMO_PHOTOS_MAP[mockPhotoId] = photoUrl;
+              } catch {}
+            }
+          }
         }
         const fallbackPhoto = {
           id: mockPhotoId,
@@ -488,10 +506,11 @@ export const api = {
       }
     },
     getPhotoUrl: (photoId: string) => {
+      if (!photoId) return '';
       if (DEMO_PHOTOS_MAP[photoId]) {
         return DEMO_PHOTOS_MAP[photoId];
       }
-      if (photoId.startsWith('data:') || photoId.startsWith('http')) {
+      if (photoId.startsWith('data:') || photoId.startsWith('http') || photoId.startsWith('blob:')) {
         return photoId;
       }
       const token = typeof window !== 'undefined' ? localStorage.getItem('truck_tracker_token') : null;

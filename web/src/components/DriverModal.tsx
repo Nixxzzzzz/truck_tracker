@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, UserCheck, Check, AlertCircle, Phone, Mail, BadgeCheck, Camera, Upload, FileText, Trash2, ShieldCheck, Eye } from 'lucide-react';
 import { api } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
+import { processAndCompressFile } from '../utils/imageCompressor';
 import { Driver, Vehicle, DriverDocument } from '../types';
 
 interface Props {
@@ -39,39 +40,35 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Avatar file upload handler
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Avatar file upload handler with auto client-side compression
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Driver photo must be less than 5MB.');
-        return;
+      try {
+        setError(null);
+        const processed = await processAndCompressFile(file, { maxWidth: 800, maxHeight: 800, quality: 0.82 });
+        setAvatarUrl(processed.dataUrl);
+      } catch (err: any) {
+        setError(err.message || 'Failed to process driver photo.');
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
-  // Document file upload handler
-  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Document file upload handler with safe client-side compression
+  const handleDocFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Document file must be less than 10MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
+      try {
+        setError(null);
+        const processed = await processAndCompressFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
         setNewDocFile({
-          url: reader.result as string,
-          name: file.name,
-          size: file.size
+          url: processed.dataUrl,
+          name: processed.name,
+          size: processed.size
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        setError(err.message || 'Failed to process document file.');
+      }
     }
   };
 

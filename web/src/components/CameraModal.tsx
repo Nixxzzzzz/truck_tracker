@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, X, Check, RefreshCw, Upload, SwitchCamera, AlertCircle, Sparkles } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
+import { processAndCompressFile } from '../utils/imageCompressor';
 
 interface Props {
   tripId: string;
@@ -21,6 +22,7 @@ export const CameraModal: React.FC<Props> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -251,16 +253,22 @@ export const CameraModal: React.FC<Props> = ({
         }
       },
       'image/jpeg',
-      0.92
+      0.85
     );
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setCapturedBlob(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      stopCamera();
+      try {
+        setCameraError(null);
+        const processed = await processAndCompressFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.85 });
+        setCapturedBlob(processed.file);
+        setPreviewUrl(processed.dataUrl);
+        stopCamera();
+      } catch (err: any) {
+        setCameraError(err.message || 'Failed to process selected photo.');
+      }
     }
   };
 
@@ -568,14 +576,21 @@ export const CameraModal: React.FC<Props> = ({
             <canvas ref={canvasRef} style={{ display: 'none' }} />
           </div>
 
-          {/* Native Phone Camera / File Gallery Direct Trigger */}
+          {/* Native Phone Camera / File Gallery Direct Triggers */}
           {!previewUrl && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
+                onChange={handleFileInput}
+                style={{ display: 'none' }}
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
                 onChange={handleFileInput}
                 style={{ display: 'none' }}
               />
@@ -587,14 +602,31 @@ export const CameraModal: React.FC<Props> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 14px',
-                  fontSize: '0.84rem',
+                  gap: '6px',
+                  padding: '10px 8px',
+                  fontSize: '0.8rem',
                   fontWeight: 500
                 }}
               >
-                <Upload size={16} />
-                <span>Choose from Gallery / Native Phone Camera</span>
+                <Camera size={15} color="var(--accent-whatsapp)" />
+                <span>Camera</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => galleryInputRef.current?.click()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '10px 8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 500
+                }}
+              >
+                <Upload size={15} />
+                <span>Gallery / Files</span>
               </button>
             </div>
           )}

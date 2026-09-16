@@ -3,6 +3,7 @@ import { X, Truck, Check, AlertCircle, Camera, Upload, FileText, Trash2, ShieldC
 import { api } from '../services/api';
 import { Vehicle, Driver, VehicleDocument } from '../types';
 import { SearchableDropdown } from './common/SearchableDropdown';
+import { processAndCompressFile } from '../utils/imageCompressor';
 
 interface Props {
   drivers: Driver[];
@@ -37,37 +38,33 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Truck photo must be less than 5MB.');
-        return;
+      try {
+        setError(null);
+        const processed = await processAndCompressFile(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.8 });
+        setPhotoUrl(processed.dataUrl);
+      } catch (err: any) {
+        setError(err.message || 'Failed to process truck photo.');
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
-  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Document file must be less than 10MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
+      try {
+        setError(null);
+        const processed = await processAndCompressFile(file);
         setNewDocFile({
-          url: reader.result as string,
-          name: file.name,
-          size: file.size
+          url: processed.dataUrl,
+          name: processed.name,
+          size: processed.size
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        setError(err.message || 'Failed to process document file.');
+      }
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { AlertTriangle, X, Send, Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
+import { processAndCompressFile } from '../utils/imageCompressor';
 
 interface Props {
   tripId: string;
@@ -28,24 +29,24 @@ export const DelayModal: React.FC<Props> = ({ tripId, stopId, onSuccess, onClose
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Selected file exceeds 10MB limit. Please choose a smaller photo.');
-        return;
+      try {
+        setError(null);
+        setStatusText('Compressing image for upload...');
+        const processed = await processAndCompressFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
+        setProofFile(processed.file);
+        setProofPreview(processed.dataUrl);
+      } catch (err: any) {
+        setError(err.message || 'Failed to process selected photo.');
+      } finally {
+        setStatusText(null);
       }
-      setError(null);
-      setProofFile(file);
-      const url = URL.createObjectURL(file);
-      setProofPreview(url);
     }
   };
 
   const handleRemovePhoto = () => {
-    if (proofPreview) {
-      URL.revokeObjectURL(proofPreview);
-    }
     setProofFile(null);
     setProofPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -97,10 +98,6 @@ export const DelayModal: React.FC<Props> = ({ tripId, stopId, onSuccess, onClose
         gps_accuracy: coords.gps_accuracy,
         photoId
       });
-
-      if (proofPreview) {
-        URL.revokeObjectURL(proofPreview);
-      }
 
       onSuccess();
       onClose();
