@@ -28,8 +28,8 @@ interface FlattenedDoc {
 
 export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehiclePapers }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
 
   // Flatten all documents across all vehicles
   const allDocs = useMemo(() => {
@@ -62,8 +62,8 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
   // Filtered documents
   const filteredDocs = useMemo(() => {
     return allDocs.filter(({ doc, vehicle }) => {
-      if (statusFilter !== 'ALL' && doc.status !== statusFilter) return false;
-      if (typeFilter !== 'ALL' && doc.type !== typeFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(doc.status)) return false;
+      if (typeFilter.length > 0 && !typeFilter.includes(doc.type)) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -115,13 +115,13 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
         </div>
 
         <div
-          onClick={() => setStatusFilter(statusFilter === 'VALID' ? 'ALL' : 'VALID')}
+          onClick={() => setStatusFilter((prev) => prev.includes('VALID') ? prev.filter((s) => s !== 'VALID') : [...prev, 'VALID'])}
           className="card-elevation-1"
           style={{
             padding: '16px 20px',
             backgroundColor: 'var(--bg-surface)',
             borderRadius: 'var(--radius-md)',
-            border: statusFilter === 'VALID' ? '2px solid #10b981' : '1px solid var(--border-subtle)',
+            border: statusFilter.includes('VALID') ? '2px solid #10b981' : '1px solid var(--border-subtle)',
             cursor: 'pointer'
           }}
         >
@@ -134,13 +134,13 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
         </div>
 
         <div
-          onClick={() => setStatusFilter(statusFilter === 'EXPIRING_SOON' ? 'ALL' : 'EXPIRING_SOON')}
+          onClick={() => setStatusFilter((prev) => prev.includes('EXPIRING_SOON') ? prev.filter((s) => s !== 'EXPIRING_SOON') : [...prev, 'EXPIRING_SOON'])}
           className="card-elevation-1"
           style={{
             padding: '16px 20px',
             backgroundColor: 'var(--bg-surface)',
             borderRadius: 'var(--radius-md)',
-            border: statusFilter === 'EXPIRING_SOON' ? '2px solid #f59e0b' : '1px solid var(--border-subtle)',
+            border: statusFilter.includes('EXPIRING_SOON') ? '2px solid #f59e0b' : '1px solid var(--border-subtle)',
             cursor: 'pointer'
           }}
         >
@@ -153,13 +153,13 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
         </div>
 
         <div
-          onClick={() => setStatusFilter(statusFilter === 'EXPIRED' ? 'ALL' : 'EXPIRED')}
+          onClick={() => setStatusFilter((prev) => prev.includes('EXPIRED') ? prev.filter((s) => s !== 'EXPIRED') : [...prev, 'EXPIRED'])}
           className="card-elevation-1"
           style={{
             padding: '16px 20px',
             backgroundColor: 'var(--bg-surface)',
             borderRadius: 'var(--radius-md)',
-            border: statusFilter === 'EXPIRED' ? '2px solid #ef4444' : '1px solid var(--border-subtle)',
+            border: statusFilter.includes('EXPIRED') ? '2px solid #ef4444' : '1px solid var(--border-subtle)',
             cursor: 'pointer'
           }}
         >
@@ -217,12 +217,12 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
 
         {/* Doc Type Filter */}
         <SearchableDropdown
-          value={typeFilter === 'ALL' ? '' : typeFilter}
-          onChange={(val) => setTypeFilter(String(val) || 'ALL')}
+          multiple
+          value={typeFilter}
+          onChange={(val) => setTypeFilter(val as string[])}
           placeholder="All Doc Types"
           minWidth="160px"
           options={[
-            { value: 'ALL', label: 'All Doc Types' },
             { value: 'RC', label: 'RC (Registration)' },
             { value: 'INSURANCE', label: 'Insurance' },
             { value: 'FITNESS', label: 'Fitness (Form 38)' },
@@ -233,25 +233,25 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
 
         {/* Status Filter */}
         <SearchableDropdown
-          value={statusFilter === 'ALL' ? '' : statusFilter}
-          onChange={(val) => setStatusFilter(String(val) || 'ALL')}
+          multiple
+          value={statusFilter}
+          onChange={(val) => setStatusFilter(val as string[])}
           placeholder="All Statuses"
           minWidth="150px"
           options={[
-            { value: 'ALL', label: 'All Statuses' },
             { value: 'VALID', label: 'Valid' },
             { value: 'EXPIRING_SOON', label: 'Expiring Soon' },
             { value: 'EXPIRED', label: 'Expired' }
           ]}
         />
 
-        {(statusFilter !== 'ALL' || typeFilter !== 'ALL' || searchQuery) && (
+        {(statusFilter.length > 0 || typeFilter.length > 0 || searchQuery) && (
           <button
             type="button"
             className="btn btn-outline"
             onClick={() => {
-              setStatusFilter('ALL');
-              setTypeFilter('ALL');
+              setStatusFilter([]);
+              setTypeFilter([]);
               setSearchQuery('');
             }}
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}

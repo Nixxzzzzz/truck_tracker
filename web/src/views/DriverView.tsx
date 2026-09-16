@@ -494,8 +494,7 @@ export const DriverView: React.FC<Props> = ({
               { id: 'home' as DriverTab, label: 'Home' },
               { id: 'trip' as DriverTab, label: 'Trip & Stops' },
               { id: 'map' as DriverTab, label: 'Route Map' },
-              { id: 'emergency' as DriverTab, label: 'Emergency SOS' },
-              { id: 'more' as DriverTab, label: 'Vehicle Papers' }
+              { id: 'more' as DriverTab, label: 'Vehicle Papers & Menu' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -579,6 +578,7 @@ export const DriverView: React.FC<Props> = ({
                   theme={theme}
                   onToggleTheme={onToggleTheme}
                   onOpenNotifications={() => setIsNotificationToastOpen(true)}
+                  isDesktop={isDesktop}
                 />
 
                 {/* Status Alert Banner */}
@@ -630,6 +630,7 @@ export const DriverView: React.FC<Props> = ({
                 {/* 2x2 Quick Actions */}
                 <QuickActionGrid
                   onOpenTrip={() => setActiveTab('trip')}
+                  onOpenPapers={() => setIsVehiclePapersOpen(true)}
                   onOpenEmergency={() => setActiveTab('emergency')}
                   onOpenSupport={() => setIsHelpOpen(true)}
                   driverCoords={driverCoords}
@@ -650,32 +651,102 @@ export const DriverView: React.FC<Props> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: '12px'
+                      gap: '12px',
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
                     }}
                   >
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            color: 'var(--driver-primary)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.06em'
+                          }}
+                        >
+                          NEXT DESTINATION
+                        </span>
+                        {nextStopDistance !== null && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              color: 'var(--driver-text-muted)',
+                              backgroundColor: 'var(--driver-bg)',
+                              padding: '2px 6px',
+                              borderRadius: '4px'
+                            }}
+                          >
+                            ~{nextStopDistance} km • {nextStopEta}m
+                          </span>
+                        )}
+                      </div>
                       <div
                         style={{
-                          fontSize: '0.7rem',
+                          fontSize: '1rem',
                           fontWeight: 800,
-                          color: 'var(--driver-primary)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.06em'
+                          color: 'var(--driver-text-primary)',
+                          marginTop: '2px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
                         }}
                       >
-                        NEXT STOP
-                      </div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--driver-text-primary)', marginTop: '2px' }}>
                         {currentStop.destination_name}
                       </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--driver-text-secondary)', marginTop: '2px' }}>
+                      <div
+                        style={{
+                          fontSize: '0.78rem',
+                          color: 'var(--driver-text-secondary)',
+                          marginTop: '2px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
                         {currentStop.address}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--driver-primary)', fontWeight: 700, fontSize: '0.8rem' }}>
-                      <span>View</span>
-                      <ChevronRight size={16} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveTab('map');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          backgroundColor: 'rgba(23, 100, 168, 0.1)',
+                          color: 'var(--driver-primary)',
+                          border: 'none',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <MapPin size={13} />
+                        <span>Map</span>
+                      </button>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                          color: 'var(--driver-primary)',
+                          fontWeight: 700,
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <span>Deliver</span>
+                        <ChevronRight size={16} />
+                      </div>
                     </div>
                   </div>
                 )}

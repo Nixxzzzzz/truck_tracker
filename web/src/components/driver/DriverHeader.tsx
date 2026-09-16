@@ -13,6 +13,7 @@ interface Props {
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
   onOpenNotifications?: () => void;
+  isDesktop?: boolean;
 }
 
 export const DriverHeader: React.FC<Props> = ({
@@ -24,7 +25,8 @@ export const DriverHeader: React.FC<Props> = ({
   onRefreshGps,
   theme,
   onToggleTheme,
-  onOpenNotifications
+  onOpenNotifications,
+  isDesktop = false
 }) => {
   // Time-aware greeting
   const getGreeting = () => {
@@ -46,31 +48,34 @@ export const DriverHeader: React.FC<Props> = ({
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px', boxSizing: 'border-box' }}>
-      {/* Top Brand Bar with Compact Logo & Notification */}
+      {/* Top Brand Bar with Compact Logo (on mobile) & Utilities */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 2px 0'
+          justifyContent: isDesktop ? 'flex-end' : 'space-between',
+          padding: isDesktop ? '0 2px' : '8px 2px 0'
         }}
       >
-        <HoseXpertsLogo variant="compact" height={32} />
+        {!isDesktop && <HoseXpertsLogo variant="compact" height={32} />}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* GPS indicator - only show operational status, not raw technical numbers */}
+          {/* GPS indicator with interactive refresh */}
           <div
+            onClick={onRefreshGps}
+            title={onRefreshGps ? 'Click to refresh GPS fix' : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '6px',
               fontSize: '0.72rem',
               fontWeight: 600,
               color: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)',
               backgroundColor: gpsAccuracy !== null ? 'var(--driver-success-bg)' : 'var(--driver-warning-bg)',
               border: `1px solid ${gpsAccuracy !== null ? 'var(--driver-success-border)' : 'var(--driver-warning-border)'}`,
-              padding: '3px 8px',
-              borderRadius: '9999px'
+              padding: '3px 9px',
+              borderRadius: '9999px',
+              cursor: onRefreshGps ? 'pointer' : 'default'
             }}
           >
             <span
@@ -81,7 +86,10 @@ export const DriverHeader: React.FC<Props> = ({
                 backgroundColor: gpsAccuracy !== null ? 'var(--driver-success)' : 'var(--driver-warning)'
               }}
             />
-            <span>{gpsAccuracy !== null ? 'GPS Connected' : 'Acquiring GPS'}</span>
+            <span>{isRefreshingGps ? 'Refreshing...' : gpsAccuracy !== null ? 'GPS Connected' : 'Acquiring GPS'}</span>
+            {onRefreshGps && (
+              <RefreshCw size={11} className={isRefreshingGps ? 'spin' : ''} style={{ opacity: 0.75 }} />
+            )}
           </div>
 
           {/* Theme Toggle */}

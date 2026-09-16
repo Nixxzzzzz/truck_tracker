@@ -43,9 +43,9 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
 }) => {
   const [timeHorizon, setTimeHorizon] = useState<'today' | 'tomorrow' | 'week'>('today');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [driverFilter, setDriverFilter] = useState<string>('ALL');
-  const [vehicleFilter, setVehicleFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [driverFilter, setDriverFilter] = useState<string[]>([]);
+  const [vehicleFilter, setVehicleFilter] = useState<string[]>([]);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const tomorrowStr = useMemo(() => {
@@ -80,9 +80,9 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
   // Apply filters & search
   const filteredTrips = useMemo(() => {
     return horizonTrips.filter((t) => {
-      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-      if (driverFilter !== 'ALL' && t.driver_id !== driverFilter) return false;
-      if (vehicleFilter !== 'ALL' && t.vehicle_id !== vehicleFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(t.status)) return false;
+      if (driverFilter.length > 0 && !driverFilter.includes(t.driver_id || '')) return false;
+      if (vehicleFilter.length > 0 && !vehicleFilter.includes(t.vehicle_id || '')) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -214,12 +214,12 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
 
         {/* Status Filter */}
         <SearchableDropdown
-          value={statusFilter === 'ALL' ? '' : statusFilter}
-          onChange={(val) => setStatusFilter(String(val) || 'ALL')}
+          multiple
+          value={statusFilter}
+          onChange={(val) => setStatusFilter(val as string[])}
           placeholder="All Statuses"
           minWidth="160px"
           options={[
-            { value: 'ALL', label: 'All Statuses' },
             { value: 'PLANNED', label: 'Planned (Unassigned)' },
             { value: 'ASSIGNED', label: 'Assigned' },
             { value: 'IN_PROGRESS', label: 'In Progress / On Route' },
@@ -233,42 +233,38 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({
 
         {/* Driver Filter */}
         <SearchableDropdown
-          value={driverFilter === 'ALL' ? '' : driverFilter}
-          onChange={(val) => setDriverFilter(String(val) || 'ALL')}
+          multiple
+          value={driverFilter}
+          onChange={(val) => setDriverFilter(val as string[])}
           placeholder="All Drivers"
           minWidth="170px"
-          options={[
-            { value: 'ALL', label: 'All Drivers' },
-            ...drivers.map((d) => ({
-              value: d.user_id || d.id,
-              label: d.name
-            }))
-          ]}
+          options={drivers.map((d) => ({
+            value: d.user_id || d.id,
+            label: d.name
+          }))}
         />
 
         {/* Vehicle Filter */}
         <SearchableDropdown
-          value={vehicleFilter === 'ALL' ? '' : vehicleFilter}
-          onChange={(val) => setVehicleFilter(String(val) || 'ALL')}
+          multiple
+          value={vehicleFilter}
+          onChange={(val) => setVehicleFilter(val as string[])}
           placeholder="All Vehicles"
           minWidth="170px"
-          options={[
-            { value: 'ALL', label: 'All Vehicles' },
-            ...vehicles.map((v) => ({
-              value: v.id,
-              label: `${v.vehicle_number} (${v.model || 'Fleet'})`
-            }))
-          ]}
+          options={vehicles.map((v) => ({
+            value: v.id,
+            label: `${v.vehicle_number} (${v.model || 'Fleet'})`
+          }))}
         />
 
-        {(statusFilter !== 'ALL' || driverFilter !== 'ALL' || vehicleFilter !== 'ALL' || searchQuery) && (
+        {(statusFilter.length > 0 || driverFilter.length > 0 || vehicleFilter.length > 0 || searchQuery) && (
           <button
             type="button"
             className="btn btn-outline"
             onClick={() => {
-              setStatusFilter('ALL');
-              setDriverFilter('ALL');
-              setVehicleFilter('ALL');
+              setStatusFilter([]);
+              setDriverFilter([]);
+              setVehicleFilter([]);
               setSearchQuery('');
             }}
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}

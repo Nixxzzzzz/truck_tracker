@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Share2, Route, ShieldAlert, PhoneCall, Check, MapPin } from 'lucide-react';
+import { Share2, Route, FileCheck, PhoneCall, Check, MapPin, ShieldAlert } from 'lucide-react';
 
 interface Props {
   onOpenTrip: () => void;
-  onOpenEmergency: () => void;
+  onOpenPapers?: () => void;
+  onOpenEmergency?: () => void;
   onOpenSupport: () => void;
   driverCoords?: { latitude: number; longitude: number };
 }
 
 export const QuickActionGrid: React.FC<Props> = ({
   onOpenTrip,
+  onOpenPapers,
   onOpenEmergency,
   onOpenSupport,
   driverCoords
@@ -181,26 +183,26 @@ export const QuickActionGrid: React.FC<Props> = ({
           </div>
         </button>
 
-        {/* Action 3: Emergency / Help */}
+        {/* Action 3: Vehicle Papers & Statutory Docs */}
         <button
           type="button"
           className="driver-quick-action-tile"
-          onClick={onOpenEmergency}
-          aria-label="Emergency Help"
+          onClick={onOpenPapers || onOpenEmergency}
+          aria-label="View Vehicle Papers & Compliance"
         >
           <div
             style={{
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              backgroundColor: 'var(--driver-danger-bg)',
-              color: 'var(--driver-danger)',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              color: 'var(--driver-success)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            <ShieldAlert size={19} />
+            <FileCheck size={19} />
           </div>
           <div>
             <div
@@ -211,7 +213,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 lineHeight: 1.2
               }}
             >
-              Emergency
+              Vehicle Papers
             </div>
             <div
               style={{
@@ -220,7 +222,7 @@ export const QuickActionGrid: React.FC<Props> = ({
                 marginTop: '2px'
               }}
             >
-              SOS & Hotline
+              RC, Fitness, PUC
             </div>
           </div>
         </button>

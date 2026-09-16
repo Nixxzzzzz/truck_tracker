@@ -117,6 +117,7 @@ export const ManagerView: React.FC<Props> = ({
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [vehicleStatusFilter, setVehicleStatusFilter] = useState<string[]>([]);
   const [driverSearch, setDriverSearch] = useState('');
+  const [driverStatusFilter, setDriverStatusFilter] = useState<string[]>([]);
   const [destinationSearch, setDestinationSearch] = useState('');
 
   // Modals & Manager Action State
@@ -803,6 +804,9 @@ export const ManagerView: React.FC<Props> = ({
   // Drivers Filtered & Sorted
   const sortedDrivers = useMemo(() => {
     const list = drivers.filter((d) => {
+      if (driverStatusFilter.length > 0 && !driverStatusFilter.includes(d.status)) {
+        return false;
+      }
       return (
         d.name.toLowerCase().includes(driverSearch.toLowerCase()) ||
         d.employee_id.toLowerCase().includes(driverSearch.toLowerCase()) ||
@@ -822,7 +826,7 @@ export const ManagerView: React.FC<Props> = ({
       default:
         return list;
     }
-  }, [drivers, driverSearch, driverSort]);
+  }, [drivers, driverSearch, driverStatusFilter, driverSort]);
 
   // Destinations Filtered & Sorted
   const sortedDestinations = useMemo(() => {
@@ -2112,6 +2116,21 @@ export const ManagerView: React.FC<Props> = ({
                 ]}
               />
             </div>
+
+            {/* Status Filter */}
+            <SearchableDropdown
+              multiple
+              value={driverStatusFilter}
+              onChange={(value) => setDriverStatusFilter(value as string[])}
+              placeholder="All Statuses"
+              minWidth="155px"
+              options={[
+                { value: 'AVAILABLE', label: 'Available' },
+                { value: 'ON_TRIP', label: 'On Trip' },
+                { value: 'OFF_DUTY', label: 'Off Duty' },
+                { value: 'INACTIVE', label: 'Inactive' }
+              ]}
+            />
 
             <span style={{ marginLeft: 'auto', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
               Showing <b>{sortedDrivers.length}</b> of <b>{drivers.length}</b> personnel

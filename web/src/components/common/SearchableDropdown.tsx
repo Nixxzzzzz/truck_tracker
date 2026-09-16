@@ -119,8 +119,16 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     if (selectedLabels.length === 0) return placeholder;
     if (selectedLabels.length === 1) return selectedLabels[0];
     if (selectedLabels.length === 2) return selectedLabels.join(', ');
-    return `${placeholder} (${selectedLabels.length})`;
+    return `${selectedLabels[0]}, +${selectedLabels.length - 1} more`;
   };
+
+  const selectedTooltip = useMemo(() => {
+    if (!multiple || selectedValues.length === 0) return undefined;
+    return selectedValues
+      .map((val) => options.find((option) => option.value === val)?.label)
+      .filter(Boolean)
+      .join(', ');
+  }, [multiple, selectedValues, options]);
 
   const handleSelectOption = (optionValue: string) => {
     if (multiple) {
@@ -170,6 +178,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="listbox"
+        title={selectedTooltip}
         style={{
           width: '100%',
           ...buttonStyle
@@ -187,9 +196,6 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           }}
         >
           {getDisplayLabel()}
-          {multiple && selectedValues.length > 2 && (
-            <span className="searchable-dropdown-badge">{selectedValues.length}</span>
-          )}
         </span>
 
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>

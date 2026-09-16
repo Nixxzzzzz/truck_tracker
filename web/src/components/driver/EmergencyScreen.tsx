@@ -475,19 +475,6 @@ export const EmergencyScreen: React.FC<Props> = ({
           </a>
         </div>
       </div>
-
-      {/* Incident Report CTA */}
-      {onReportIncident && (
-        <button
-          type="button"
-          className="driver-btn-secondary"
-          onClick={onReportIncident}
-          style={{ minHeight: '48px', marginTop: '6px' }}
-        >
-          <FileWarning size={17} />
-          <span>Report Non-Emergency Incident / Delay</span>
-        </button>
-      )}
     </div>
   );
 };

@@ -102,19 +102,37 @@ export const CurrentTripCard: React.FC<Props> = ({
           marginBottom: '12px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Truck size={16} color="#FFFFFF" />
-          <span
-            style={{
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'rgba(255, 255, 255, 0.9)'
-            }}
-          >
-            CURRENT TRIP
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Truck size={16} color="#FFFFFF" />
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255, 255, 255, 0.9)'
+              }}
+            >
+              CURRENT TRIP
+            </span>
+          </div>
+          {trip.id && (
+            <span
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                color: '#FFFFFF',
+                fontFamily: 'monospace'
+              }}
+            >
+              {trip.id}
+            </span>
+          )}
         </div>
 
         <span
