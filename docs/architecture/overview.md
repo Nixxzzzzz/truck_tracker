@@ -12,7 +12,7 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 │                    User Client Surface                      │
 │   ┌───────────────────────────┐ ┌─────────────────────────┐ │
 │   │ Manager Operations Web UI │ │ Driver Mobile Web/App   │ │
-│   │ (React 18 + TypeScript)   │ │ (PWA + Camera/GPS API)  │ │
+│   │ (React 19 + TypeScript)   │ │ (Compose + CameraX/GPS) │ │
 │   └─────────────┬─────────────┘ └────────────┬────────────┘ │
 └─────────────────┼────────────────────────────┼──────────────┘
                   │ HTTPS / JSON / Bearer JWT  │
@@ -28,11 +28,13 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 │   ┌──────────────────────────┴──────────────────────────┐   │
 │   │ Route Controllers                                   │   │
 │   │ ├── /api/auth       (Credentials & JWT Verification)│   │
-│   │ ├── /api/trips      (Manifests, Stops, Attention)   │   │
+│   │ ├── /api/trips      (Manifests, Stops, Safeguards)  │   │
 │   │ ├── /api/driver     (Driver Telematics & Geofences) │   │
-│   │ ├── /api/fleet      (Vehicles, Drivers, Documents)  │   │
-│   │ ├── /api/reports    (Daily & Periodic SLA Metrics)  │   │
+│   │ ├── /api/fleet      (Vehicles, Documents, Papers)   │   │
+│   │ ├── /api/reports    (Delay Attribution & SLA Trends)│   │
 │   │ ├── /api/photos     (Multer POD File Storage)       │   │
+│   │ ├── /api/app-version(Mobile Client Telemetry)       │   │
+│   │ ├── /api/google-sheets (Outbound Reporting Sync)    │   │
 │   │ └── /api/health     (Uptime Probe)                  │   │
 │   └──────────────────────────┬──────────────────────────┘   │
 │                              │                              │
@@ -56,6 +58,9 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 ## 3. Technology Stack & Runtime Decisions
 - **Backend Runtime**: Node.js `22.12.0+` with native `node:sqlite` enabled via `--experimental-sqlite`. Eliminates external native C++ binding compilation errors (`node-gyp`) during container builds.
 - **Backend Framework**: Express `4.21.2` with TypeScript `5.7.3`, providing end-to-end typed request/response contracts.
-- **Frontend Architecture**: React 18, Vite 6, Leaflet Maps for spatial geofence visualization, and Lucide React icons.
-- **Persistence Engine**: SQLite in WAL (`PRAGMA journal_mode = WAL;`) and Foreign Key (`PRAGMA foreign_keys = ON;`) mode.
+- **Frontend Architecture**: React 19, Vite 6, Leaflet Maps for spatial geofence visualization, and Lucide React icons.
+- **Mobile Client**: Native Android application engineered with Kotlin, Jetpack Compose, CameraX, and Google Play Services Location.
+- **Automated CI/CD**: GitHub Actions workflow compiles the Android APK via Temurin JDK 17 and publishes release packages to GitHub Releases on push.
+- **Persistence Engine**: SQLite in WAL (`PRAGMA journal_mode = WAL;`) and Foreign Key (`PRAGMA foreign_keys = ON;`) mode across 16 canonical relational tables.
 - **Authentication**: Stateless HMAC-SHA256 signed JSON Web Tokens (JWT) with 24-hour expiration. Passwords hashed using `bcryptjs` (work factor 10).
+

@@ -191,3 +191,16 @@ sequenceDiagram
     end
     App-->>Driver: Offline banner clears (0 pending events)
 ```
+
+---
+
+## 7. In-Cab Digital Vehicle Papers & Automated CI/CD
+
+### A. Digital Vehicle Papers Access
+Field drivers can view verified digital copies of their vehicle's statutory papers (Registration Certificate, Commercial Insurance, Road Fitness, PUC, and National Permit) directly from the mobile app. This allows drivers to immediately present verified credentials during police and RTO roadside checks.
+
+### B. Automated GitHub Actions Build & In-App Sync
+- `.github/workflows/deploy.yml` compiles `TruckTracker-Driver-v1.1.0-debug.apk` on every push to `main`.
+- The backend serves `GET /api/app-version` containing current release metadata and download URLs.
+- The mobile application checks this endpoint to alert drivers when a new release is available.
+

@@ -102,9 +102,26 @@ Authorization: Bearer <JWT_TOKEN>
 - **Role**: `MANAGER`
 - **Request Body**: `{ "vehicle_number": "DL01 TA 4920", "vehicle_type": "Refrigerated Express", "model": "Tata Ultra T.7" }`
 
+### `POST /api/fleet/vehicles/:id/documents`
+- **Role**: `MANAGER`
+- **Content-Type**: `multipart/form-data` or `application/json`
+- **Purpose**: Upload or update statutory vehicle compliance documents (RC, Commercial Insurance, Road Fitness, PUC, National Permit).
+- **Request Body**:
+  ```json
+  {
+    "document_type": "INSURANCE",
+    "document_number": "POL-2026-89210",
+    "issued_date": "2026-01-10",
+    "expiry_date": "2027-01-09",
+    "notes": "ICICI Lombard Comprehensive Commercial"
+  }
+  ```
+- **Response `200 OK`**: `{ "message": "Document registered successfully", "document": { ... } }`
+
 ### `GET /api/fleet/vehicles/:id/documents`
-- **Role**: Authenticated
-- **Response `200 OK`**: `{ "documents": [ ... ] }` (RC, Insurance, Fitness, PUC with status and expiry dates)
+- **Role**: Authenticated (`MANAGER` or `DRIVER`)
+- **Purpose**: Retrieve verified compliance certificates. Used by both the Manager Compliance Hub and the Driver In-Cab Vehicle Papers viewer.
+- **Response `200 OK`**: `{ "documents": [ ... ] }`
 
 ### `GET /api/fleet/vehicles/:id/maintenance`
 - **Role**: Authenticated
@@ -117,23 +134,43 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-## 4. Reports & Analytics
+## 4. Reports & Delay Attribution Analytics
 
 ### `GET /api/reports/daily?date=YYYY-MM-DD`
 - **Role**: `MANAGER`
 - **Response `200 OK`**:
   ```json
   {
-    "date": "2026-09-13",
+    "date": "2026-09-14",
     "overview": {
       "totalTrips": 3,
       "completedTrips": 1,
       "activeTrips": 2,
       "delayedTrips": 1,
       "totalDestinations": 8,
-      "totalDelayMinutes": 22,
-      "totalDelayFormatted": "0h 22m",
+      "totalDelayMinutes": 73,
+      "totalDelayFormatted": "1h 13m",
       "onTimePercentage": 88
+    },
+    "delayAttribution": {
+      "mgmtMins": 45,
+      "mgmtCount": 3,
+      "mgmtPct": 62,
+      "driverMins": 28,
+      "driverCount": 2,
+      "driverPct": 38,
+      "mgmtReasons": [
+        { "reason": "Customer Loading Bay Queue / Dock Wait", "count": 2, "total_minutes": 30 },
+        { "reason": "Gate Pass & E-Way Bill Verification", "count": 1, "total_minutes": 15 }
+      ],
+      "driverReasons": [
+        { "reason": "Corridor Traffic & Expressway Congestion", "count": 2, "total_minutes": 28 }
+      ],
+      "trend": [
+        { "time": "06:00 - 09:00", "management": 15, "driver": 8 },
+        { "time": "09:00 - 12:00", "management": 20, "driver": 12 },
+        { "time": "12:00 - 15:00", "management": 10, "driver": 8 }
+      ]
     },
     "trips": [ ... ],
     "delayReasons": [ ... ],
@@ -144,8 +181,42 @@ Authorization: Bearer <JWT_TOKEN>
 
 ### `GET /api/reports/periodic?period=weekly|monthly`
 - **Role**: `MANAGER`
-- **Response `200 OK`**: Rolling window metrics, aggregate throughput, driver summaries, and delay Pareto distributions.
+- **Response `200 OK`**: Rolling window metrics, aggregate throughput, driver summaries, and delay Pareto distributions with dual-series management vs driver attribution.
 
 ### `GET /api/reports/export?date=YYYY-MM-DD`
 - **Role**: `MANAGER`
 - **Response `200 OK`**: `Content-Type: text/csv` spreadsheet export.
+
+---
+
+## 5. System, Mobile Telemetry & Integrations
+
+### `GET /api/app-version`
+- **Role**: Public / Mobile Client
+- **Purpose**: Check the latest Android client release and trigger seamless in-app upgrade notifications.
+- **Response `200 OK`**:
+  ```json
+  {
+    "version": "1.1.0",
+    "versionCode": 2,
+    "downloadUrl": "https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.1.0/TruckTracker-Driver-v1.1.0-debug.apk",
+    "latestReleaseUrl": "https://github.com/Nixxzzzzz/truck_tracker/releases/latest",
+    "mandatoryUpdate": false
+  }
+  ```
+
+### `GET /api/health`
+- **Role**: Public (Uptime Probe)
+- **Response `200 OK`**:
+  ```json
+  {
+    "status": "healthy",
+    "timestamp": "2026-09-16T12:00:00.000Z",
+    "service": "TruckTracker Operational API"
+  }
+  ```
+
+### `GET /api/google-sheets/status` & `POST /api/google-sheets/sync`
+- **Role**: `MANAGER`
+- **Purpose**: Audit outbound Google Sheets sync status and trigger immediate manual retry synchronization.
+

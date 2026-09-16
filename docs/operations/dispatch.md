@@ -35,3 +35,20 @@ The dispatch workflow tracks delivery manifests from initial planning to complet
    - Driver records proof-of-delivery photos and recipient signature.
 3. **Delay Reporting**:
    - If congestion or dock queues exceed 15 minutes, driver submits a delay report specifying root cause.
+
+---
+
+## 4. Delivery Deletion Safeguards & Audit Integrity
+To prevent accidental data loss and protect financial audit trails:
+- **Irreversible Deletion Safeguard**: Any delivery or consignment that is `IN_PROGRESS`, `DELAYED`, or `COMPLETED` cannot be deleted from the system.
+- **Safe Edit Mode**: Dispatchers can edit trip notes, destination addresses, contact numbers, or cargo details via the **Edit Delivery** action, but the core execution history remains permanently locked.
+- **Unassigned/Draft Orders**: Only unassigned orders in `PLANNED` or `DRAFT` status that have not been dispatched can be removed.
+
+---
+
+## 5. Multi-Select Schedule Filtering
+The Schedule Board includes advanced multi-variable filtering:
+- **Checkbox Dropdowns**: Filter concurrently across multiple trip statuses (`PLANNED`, `IN_PROGRESS`, `COMPLETED`, `DELAYED`), multiple drivers, and vehicle types.
+- **Selection Count Badges**: Pill badges display the number of active filters with 1-click clear-all capability.
+- **Smart Edge Detection**: Dropdowns automatically flip leftward near browser or viewport borders to prevent menu clipping.
+
