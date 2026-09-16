@@ -235,11 +235,15 @@ export const ManagerView: React.FC<Props> = ({
   };
 
   const handleDeleteDestination = async (dest: Destination) => {
-    const hasDeliveries = (dest.total_deliveries || 0) > 0 || trips.some((t) =>
-      t.stops?.some((s) => s.destination_id === dest.id || (s.destination_name && s.destination_name.trim().toLowerCase() === dest.name.trim().toLowerCase()))
-    );
+    const hasDeliveries = (dest.total_deliveries || 0) > 0 ||
+      dest.name.toLowerCase().includes('depot') ||
+      dest.name.toLowerCase().includes('company') ||
+      trips.some((t) =>
+        (t.starting_location && t.starting_location.trim().toLowerCase() === dest.name.trim().toLowerCase()) ||
+        t.stops?.some((s) => s.destination_id === dest.id || (s.destination_name && s.destination_name.trim().toLowerCase() === dest.name.trim().toLowerCase()))
+      );
     if (hasDeliveries) {
-      alert(`Cannot delete destination "${dest.name}": Deliveries or orders have already been recorded for this facility. Deletion is disabled to protect delivery history. Only editing is permitted.`);
+      alert(`Cannot delete destination "${dest.name}": Deliveries, starting depot runs, or orders have already been recorded for this facility. Deletion is disabled to protect delivery history. Only editing is permitted.`);
       return;
     }
     if (!window.confirm(`Are you sure you want to deactivate destination "${dest.name}"?`)) {
@@ -2316,10 +2320,10 @@ export const ManagerView: React.FC<Props> = ({
                 className="btn btn-primary btn-sm"
                 onClick={() => setIsDestinationModalOpen(true)}
                 style={{
-                  backgroundColor: 'var(--accent-whatsapp)',
-                  borderColor: 'var(--accent-whatsapp)',
-                  color: '#0b141a',
-                  fontWeight: 600
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
                 <Plus size={14} />
@@ -2392,6 +2396,36 @@ export const ManagerView: React.FC<Props> = ({
             </span>
           </div>
 
+          {/* Multi-Select Action Banner */}
+          {selectedDestinationIds.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 16px',
+                backgroundColor: 'var(--brand-subtle)',
+                border: '1px solid var(--brand-border)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.8rem',
+                color: 'var(--brand-light)'
+              }}
+            >
+              <span>
+                <b>{selectedDestinationIds.length}</b> {selectedDestinationIds.length === 1 ? 'facility' : 'facilities'} selected
+              </span>
+              <button
+                type="button"
+                className="btn btn-subtle btn-sm"
+                onClick={() => setSelectedDestinationIds([])}
+                style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <X size={12} />
+                <span>Clear Selection</span>
+              </button>
+            </div>
+          )}
+
           <EnterpriseTable
             columns={[
               {
@@ -2406,12 +2440,13 @@ export const ManagerView: React.FC<Props> = ({
                       fontWeight: 700,
                       fontSize: '0.78rem',
                       color: 'var(--accent-primary)',
-                      letterSpacing: '0.02em',
+                      letterSpacing: '0.04em',
                       backgroundColor: 'var(--bg-secondary)',
                       padding: '3px 7px',
                       borderRadius: 'var(--radius-sm)',
                       border: '1px solid var(--border-subtle)',
-                      display: 'inline-block'
+                      display: 'inline-block',
+                      fontVariantNumeric: 'tabular-nums'
                     }}
                   >
                     {dest.area_code || '—'}
@@ -2444,7 +2479,8 @@ export const ManagerView: React.FC<Props> = ({
                       textDecoration: 'none',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      fontVariantNumeric: 'tabular-nums'
                     }}
                   >
                     <Compass size={11} />
@@ -2475,9 +2511,13 @@ export const ManagerView: React.FC<Props> = ({
                 header: 'Manager Actions',
                 align: 'right',
                 render: (dest) => {
-                  const hasDeliveries = (dest.total_deliveries || 0) > 0 || trips.some((t) =>
-                    t.stops?.some((s) => s.destination_id === dest.id || (s.destination_name && s.destination_name.trim().toLowerCase() === dest.name.trim().toLowerCase()))
-                  );
+                  const hasDeliveries = (dest.total_deliveries || 0) > 0 ||
+                    dest.name.toLowerCase().includes('depot') ||
+                    dest.name.toLowerCase().includes('company') ||
+                    trips.some((t) =>
+                      (t.starting_location && t.starting_location.trim().toLowerCase() === dest.name.trim().toLowerCase()) ||
+                      t.stops?.some((s) => s.destination_id === dest.id || (s.destination_name && s.destination_name.trim().toLowerCase() === dest.name.trim().toLowerCase()))
+                    );
                   return (
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
                       <button
