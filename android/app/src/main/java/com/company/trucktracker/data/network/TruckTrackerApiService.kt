@@ -94,4 +94,8 @@ interface TruckTrackerApiService {
         @Part("longitude") longitude: RequestBody?,
         @Part("gps_accuracy") accuracy: RequestBody?
     ): Response<ApiResponse<Photo>>
+
+    // Telemetry & Version Sync
+    @GET("api/app-version")
+    suspend fun getAppVersion(): Response<AppVersionInfo>
 }

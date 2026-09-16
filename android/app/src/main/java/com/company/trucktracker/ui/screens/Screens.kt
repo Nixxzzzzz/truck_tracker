@@ -215,6 +215,8 @@ fun DriverHomeScreen(
     driverName: String,
     activeTrip: Trip?,
     pendingQueueCount: Int,
+    updateInfo: AppVersionInfo? = null,
+    onDownloadUpdate: () -> Unit = {},
     isDarkTheme: Boolean = true,
     onToggleTheme: () -> Unit = {},
     onStartTrip: () -> Unit,
@@ -229,6 +231,9 @@ fun DriverHomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // App Update Banner (if newer version available from server)
+        AppUpdateBanner(updateInfo = updateInfo, onUpdateClick = onDownloadUpdate)
+
         // Offline Banner
         OfflineQueueBanner(pendingQueueCount)
 

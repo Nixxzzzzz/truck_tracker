@@ -4,10 +4,13 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.company.trucktracker.data.models.*
@@ -94,9 +97,26 @@ fun MainAppHost(
     var geofenceDistance by remember { mutableStateOf<Double?>(null) }
     var gpsAccuracy by remember { mutableStateOf<Float?>(null) }
 
+    // Context & App Version Telemetry Check
+    val context = LocalContext.current
+    var updateInfo by remember { mutableStateOf<AppVersionInfo?>(null) }
+
     // Offline queue counter
     val pendingQueueCount by app.driverRepository.getPendingEventCountFlow().collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
+
+    // Background App Version Check
+    LaunchedEffect(Unit) {
+        try {
+            val versionRes = app.apiClient.apiService.getAppVersion()
+            if (versionRes.isSuccessful) {
+                val info = versionRes.body()
+                if (info != null && info.versionCode > 2) {
+                    updateInfo = info
+                }
+            }
+        } catch (_: Exception) {}
+    }
 
     // Splash session check
     LaunchedEffect(Unit) {
@@ -149,6 +169,18 @@ fun MainAppHost(
                 driverName = currentUser?.name ?: "Driver",
                 activeTrip = activeTrip,
                 pendingQueueCount = pendingQueueCount,
+                updateInfo = updateInfo,
+                onDownloadUpdate = {
+                    updateInfo?.let { info ->
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl))
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Opening download link...", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
                 isDarkTheme = isDarkTheme,
                 onToggleTheme = onToggleTheme,
                 onStartTrip = {

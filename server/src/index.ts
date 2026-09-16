@@ -61,6 +61,17 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// App version & APK release telemetry for Android mobile clients
+app.get('/api/app-version', (_req, res) => {
+  res.json({
+    version: '1.1.0',
+    versionCode: 2,
+    downloadUrl: 'https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.1.0/TruckTracker-Driver-v1.1.0-debug.apk',
+    latestReleaseUrl: 'https://github.com/Nixxzzzzz/truck_tracker/releases/latest',
+    mandatoryUpdate: false
+  });
+});
+
 // Serve frontend client in production if built
 const webDist = path.resolve(__dirname, '../../web/dist');
 const clientDist = path.resolve(__dirname, '../../client/dist');

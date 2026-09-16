@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.SystemUpdate
+import com.company.trucktracker.data.models.AppVersionInfo
 import com.company.trucktracker.ui.theme.*
 
 @Composable
@@ -102,6 +105,47 @@ fun OfflineQueueBanner(pendingCount: Int) {
                 color = StatusAmber,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun AppUpdateBanner(
+    updateInfo: AppVersionInfo?,
+    onUpdateClick: () -> Unit
+) {
+    if (updateInfo != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1E3A8A))
+                .border(1.dp, Color(0xFF3B82F6))
+                .clickable { onUpdateClick() }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.SystemUpdate,
+                    contentDescription = "App Update",
+                    tint = Color(0xFF60A5FA),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "New Build Available: v${updateInfo.version}",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Text(
+                text = "DOWNLOAD ↗",
+                color = Color(0xFF93C5FD),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }

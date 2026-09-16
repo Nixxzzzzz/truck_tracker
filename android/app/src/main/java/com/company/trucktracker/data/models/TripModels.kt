@@ -172,3 +172,11 @@ data class ApiResponse<T>(
     val message: String? = null,
     val error: String? = null
 )
+
+data class AppVersionInfo(
+    val version: String,
+    val versionCode: Int,
+    val downloadUrl: String,
+    val latestReleaseUrl: String,
+    val mandatoryUpdate: Boolean = false
+)
