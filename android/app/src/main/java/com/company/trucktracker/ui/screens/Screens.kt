@@ -45,7 +45,7 @@ fun SplashScreen(isLoading: Boolean, onSessionChecked: (Boolean) -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text("TRUCKTRACKER", color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            Text("Corporate Logistics Fleet • v1.0.0", color = TextSecondary, fontSize = 13.sp)
+            Text("Corporate Logistics Fleet • v1.1.0", color = TextSecondary, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(32.dp))
             if (isLoading) {
                 CircularProgressIndicator(color = ChampagneGold, modifier = Modifier.size(32.dp))

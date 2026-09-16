@@ -7,7 +7,7 @@
 [![Stack](https://img.shields.io/badge/Stack-Node%2024%20%7C%20React%2019%20%7C%20TypeScript-2563eb.svg)](#)
 [![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(Versioned%20Migrations)-d97706.svg)](#)
 [![Integrity Suite](https://img.shields.io/badge/Integrity%20Tests-29%20Passed%20%7C%200%20Failed-059669.svg)](#)
-[![Release: v1.0.0](https://img.shields.io/badge/Android%20Driver%20Client-v1.0.0%20(Compose)-4f46e5.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.0.0)
+[![Release: v1.1.0](https://img.shields.io/badge/Android%20Driver%20Client-v1.1.0%20(Compose)-4f46e5.svg)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
 
 ---
 

@@ -350,7 +350,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
           {/* Android Mobile App Direct APK Link */}
           <div style={{ textAlign: 'center', marginTop: '16px' }}>
             <a
-              href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.0.0/TruckTracker-v1.0.0.apk"
+              href="https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.1.0/TruckTracker-Driver-v1.1.0-debug.apk"
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-subtle"
@@ -366,7 +366,7 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
               }}
             >
               <Smartphone size={13} />
-              <span>Download Native Android Driver App (APK v1.0.0)</span>
+              <span>Download Native Android Driver App (APK v1.1.0)</span>
             </a>
           </div>
         </div>
