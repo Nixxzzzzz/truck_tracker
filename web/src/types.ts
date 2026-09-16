@@ -29,9 +29,12 @@ export interface User {
   phone?: string;
 }
 
+export type VehicleDocType = 'RC' | 'INSURANCE' | 'FITNESS' | 'PUC' | 'PERMIT' | 'OTHER' | string;
+
 export interface VehicleDocument {
   id: string;
-  type: 'RC' | 'INSURANCE' | 'FITNESS' | 'PUC' | 'PERMIT' | 'OTHER';
+  type: VehicleDocType;
+  document_type?: string;
   title: string;
   document_number: string;
   issue_date: string;
@@ -41,6 +44,7 @@ export interface VehicleDocument {
   file_name?: string;
   file_size?: number;
   notes?: string;
+  issuing_authority?: string;
 }
 
 export interface VehicleChallan {

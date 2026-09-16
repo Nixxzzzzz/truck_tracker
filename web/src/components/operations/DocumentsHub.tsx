@@ -26,6 +26,36 @@ interface FlattenedDoc {
   vehicle: Vehicle;
 }
 
+export const normalizeDocTypeKey = (typeStr?: string): string => {
+  if (!typeStr) return 'OTHER';
+  const upper = String(typeStr).toUpperCase();
+  if (upper.includes('REGISTRATION') || upper === 'RC') return 'RC';
+  if (upper.includes('INSURANCE')) return 'INSURANCE';
+  if (upper.includes('FITNESS')) return 'FITNESS';
+  if (upper.includes('POLLUTION') || upper === 'PUC') return 'PUC';
+  if (upper.includes('PERMIT')) return 'PERMIT';
+  return upper;
+};
+
+export const getDocTypeDisplay = (doc: { type?: string; document_type?: string; title?: string }) => {
+  const raw = doc.document_type || doc.type || '';
+  const key = normalizeDocTypeKey(raw || doc.title);
+  switch (key) {
+    case 'RC':
+      return { key: 'RC', label: 'RC (Registration)', badgeColor: '#2563eb', bgColor: 'rgba(37, 99, 235, 0.12)' };
+    case 'INSURANCE':
+      return { key: 'INSURANCE', label: 'Insurance', badgeColor: '#059669', bgColor: 'rgba(5, 150, 105, 0.12)' };
+    case 'FITNESS':
+      return { key: 'FITNESS', label: 'Fitness', badgeColor: '#7c3aed', bgColor: 'rgba(124, 58, 237, 0.12)' };
+    case 'PUC':
+      return { key: 'PUC', label: 'PUC (Pollution)', badgeColor: '#d97706', bgColor: 'rgba(217, 119, 6, 0.12)' };
+    case 'PERMIT':
+      return { key: 'PERMIT', label: 'National Permit', badgeColor: '#0891b2', bgColor: 'rgba(8, 145, 178, 0.12)' };
+    default:
+      return { key: 'OTHER', label: raw || 'Document', badgeColor: '#64748b', bgColor: 'rgba(100, 116, 139, 0.12)' };
+  }
+};
+
 export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehiclePapers }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -37,7 +67,15 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
     vehicles.forEach((v) => {
       if (v.documents && v.documents.length > 0) {
         v.documents.forEach((d) => {
-          list.push({ doc: d, vehicle: v });
+          const typeKey = normalizeDocTypeKey(d.document_type || d.type || d.title);
+          list.push({
+            doc: {
+              ...d,
+              type: typeKey as any,
+              document_type: d.document_type || d.type || typeKey
+            },
+            vehicle: v
+          });
         });
       }
     });
@@ -49,28 +87,28 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
     let valid = 0;
     let expiringSoon = 0;
     let expired = 0;
-
     allDocs.forEach(({ doc }) => {
       if (doc.status === 'EXPIRED') expired++;
       else if (doc.status === 'EXPIRING_SOON') expiringSoon++;
       else valid++;
     });
-
     return { total: allDocs.length, valid, expiringSoon, expired };
   }, [allDocs]);
 
   // Filtered documents
   const filteredDocs = useMemo(() => {
     return allDocs.filter(({ doc, vehicle }) => {
+      const typeKey = normalizeDocTypeKey(doc.document_type || doc.type || doc.title);
       if (statusFilter.length > 0 && !statusFilter.includes(doc.status)) return false;
-      if (typeFilter.length > 0 && !typeFilter.includes(doc.type)) return false;
+      if (typeFilter.length > 0 && !typeFilter.includes(typeKey)) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesPlate = vehicle.vehicle_number.toLowerCase().includes(q);
-        const matchesTitle = doc.title.toLowerCase().includes(q);
-        const matchesNumber = doc.document_number.toLowerCase().includes(q);
-        if (!matchesPlate && !matchesTitle && !matchesNumber) return false;
+        const matchesTitle = (doc.title || '').toLowerCase().includes(q);
+        const matchesNumber = (doc.document_number || '').toLowerCase().includes(q);
+        const matchesType = typeKey.toLowerCase().includes(q);
+        if (!matchesPlate && !matchesTitle && !matchesNumber && !matchesType) return false;
       }
 
       return true;
@@ -325,18 +363,29 @@ export const DocumentsHub: React.FC<DocumentsHubProps> = ({ vehicles, onOpenVehi
                       </td>
 
                       <td style={{ padding: '14px 16px' }}>
-                        <span
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            backgroundColor: 'rgba(23, 100, 168, 0.1)',
-                            color: 'var(--brand-primary)',
-                            fontWeight: 700,
-                            fontSize: '0.76rem'
-                          }}
-                        >
-                          {doc.type}
-                        </span>
+                        {(() => {
+                          const display = getDocTypeDisplay(doc);
+                          return (
+                            <span
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                backgroundColor: display.bgColor,
+                                color: display.badgeColor,
+                                fontWeight: 700,
+                                fontSize: '0.76rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                letterSpacing: '0.2px',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              <FileCheck size={13} />
+                              {display.label}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       <td style={{ padding: '14px 16px' }}>

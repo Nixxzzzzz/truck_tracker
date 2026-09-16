@@ -11,6 +11,17 @@ const router = Router();
 // VEHICLES
 // ==========================================
 
+function normalizeDocTypeKey(typeStr?: string): string {
+  if (!typeStr) return 'OTHER';
+  const upper = String(typeStr).toUpperCase();
+  if (upper.includes('REGISTRATION') || upper === 'RC') return 'RC';
+  if (upper.includes('INSURANCE')) return 'INSURANCE';
+  if (upper.includes('FITNESS')) return 'FITNESS';
+  if (upper.includes('POLLUTION') || upper === 'PUC') return 'PUC';
+  if (upper.includes('PERMIT')) return 'PERMIT';
+  return upper;
+}
+
 router.get('/vehicles', requireAuth, (req, res) => {
   const vehicles = db.prepare(`
     SELECT v.*, u.name as assigned_driver_name,
@@ -24,7 +35,12 @@ router.get('/vehicles', requireAuth, (req, res) => {
   // Attach vehicle compliance documents
   const docStmt = db.prepare(`SELECT * FROM vehicle_documents WHERE vehicle_id = ? ORDER BY expiry_date ASC`);
   for (const v of vehicles) {
-    v.documents = docStmt.all(v.id);
+    const rawDocs = docStmt.all(v.id) as any[];
+    v.documents = rawDocs.map((d) => ({
+      ...d,
+      type: normalizeDocTypeKey(d.document_type || d.type),
+      document_type: d.document_type || d.type
+    }));
   }
 
   return res.json({ vehicles });
@@ -509,11 +525,16 @@ router.delete('/destinations/:id', requireAuth, requireRole('MANAGER'), (req: Au
 
 router.get('/vehicles/:id/documents', requireAuth, (req, res) => {
   const { id } = req.params;
-  const documents = db.prepare(`
+  const rawDocs = db.prepare(`
     SELECT * FROM vehicle_documents
     WHERE vehicle_id = ?
     ORDER BY expiry_date ASC
-  `).all(id);
+  `).all(id) as any[];
+  const documents = rawDocs.map((d) => ({
+    ...d,
+    type: normalizeDocTypeKey(d.document_type || d.type),
+    document_type: d.document_type || d.type
+  }));
 
   return res.json({ documents });
 });
