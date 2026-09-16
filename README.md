@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/hosexperts-logo.png" alt="HoseXperts — working with the flow" width="420" />
+</p>
+
 # 🚛 TruckTracker — Enterprise Fleet Operations & Logistics Tracking System
 
 > **A production-grade logistics management platform connecting dispatch operations managers and field drivers through an authoritative, high-integrity backend engine.**
