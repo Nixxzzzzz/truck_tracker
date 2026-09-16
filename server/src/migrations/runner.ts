@@ -439,6 +439,32 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
         db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_size INTEGER;`);
       }
     }
+  },
+  {
+    version: 7,
+    name: '007_add_vehicle_challans_and_proofs',
+    up: () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS vehicle_challans (
+          id TEXT PRIMARY KEY,
+          vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+          challan_number TEXT NOT NULL,
+          date TEXT NOT NULL,
+          violation_reason TEXT NOT NULL,
+          amount REAL NOT NULL,
+          status TEXT CHECK(status IN ('PENDING', 'PAID')) DEFAULT 'PENDING',
+          location TEXT,
+          payment_date TEXT,
+          receipt_number TEXT,
+          proof_url TEXT,
+          proof_name TEXT,
+          proof_size INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_vehicle_challans_vehicle ON vehicle_challans(vehicle_id, status);
+      `);
+    }
   }
 ];
 

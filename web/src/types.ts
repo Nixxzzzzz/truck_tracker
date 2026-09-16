@@ -57,6 +57,11 @@ export interface VehicleChallan {
   location?: string;
   payment_date?: string;
   receipt_number?: string;
+  proof_url?: string;
+  proof_name?: string;
+  proof_size?: number;
+  settlement_proof_url?: string;
+  settlement_proof_name?: string;
 }
 
 export interface Vehicle {

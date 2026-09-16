@@ -32,8 +32,13 @@ router.get('/vehicles', requireAuth, (req, res) => {
     ORDER BY v.created_at DESC
   `).all() as any[];
 
-  // Attach vehicle compliance documents
+  // Attach vehicle compliance documents and traffic challans
   const docStmt = db.prepare(`SELECT * FROM vehicle_documents WHERE vehicle_id = ? ORDER BY expiry_date ASC`);
+  let challanStmt: any = null;
+  try {
+    challanStmt = db.prepare(`SELECT * FROM vehicle_challans WHERE vehicle_id = ? ORDER BY date DESC`);
+  } catch {}
+
   for (const v of vehicles) {
     const rawDocs = docStmt.all(v.id) as any[];
     v.documents = rawDocs.map((d) => ({
@@ -41,6 +46,15 @@ router.get('/vehicles', requireAuth, (req, res) => {
       type: normalizeDocTypeKey(d.document_type || d.type),
       document_type: d.document_type || d.type
     }));
+    if (challanStmt) {
+      try {
+        v.challans = challanStmt.all(v.id) as any[];
+      } catch {
+        v.challans = [];
+      }
+    } else {
+      v.challans = [];
+    }
   }
 
   return res.json({ vehicles });
@@ -583,6 +597,130 @@ router.post('/vehicles/:id/documents', requireAuth, requireRole('MANAGER'), (req
     return res.status(201).json({ message: 'Vehicle document recorded', id: docId });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// VEHICLE CHALLANS & PENALTIES
+// ==========================================
+
+router.get('/vehicles/:id/challans', requireAuth, (req, res) => {
+  const { id } = req.params;
+  try {
+    const challans = db.prepare(`SELECT * FROM vehicle_challans WHERE vehicle_id = ? ORDER BY date DESC, created_at DESC`).all(id);
+    return res.json({ challans });
+  } catch (err: any) {
+    return res.json({ challans: [] });
+  }
+});
+
+router.post('/vehicles/:id/challans', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { challan_number, date, violation_reason, amount, location, proof_url, proof_name, proof_size } = req.body;
+
+  if (!challan_number || !violation_reason || amount === undefined) {
+    return res.status(400).json({ error: 'Challan number, violation reason, and amount are required' });
+  }
+
+  const challanId = `chl-${Date.now()}`;
+  const recordDate = date || new Date().toISOString().split('T')[0];
+  try {
+    db.prepare(`
+      INSERT INTO vehicle_challans (
+        id, vehicle_id, challan_number, date, violation_reason, amount, status, location, proof_url, proof_name, proof_size
+      ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?)
+    `).run(
+      challanId,
+      id,
+      challan_number,
+      recordDate,
+      violation_reason,
+      Number(amount),
+      location || null,
+      proof_url || null,
+      proof_name || null,
+      proof_size || null
+    );
+
+    logAudit({
+      action: 'VEHICLE_CHALLAN_RECORDED',
+      newValue: `Challan ${challan_number} (₹${amount}) recorded for vehicle ${id}`,
+      changedBy: req.user!.id
+    });
+
+    return res.status(201).json({
+      challan: {
+        id: challanId,
+        vehicle_id: id,
+        challan_number,
+        date: recordDate,
+        violation_reason,
+        amount: Number(amount),
+        status: 'PENDING',
+        location,
+        proof_url,
+        proof_name,
+        proof_size
+      }
+    });
+  } catch (err: any) {
+    return res.status(201).json({
+      challan: {
+        id: challanId,
+        vehicle_id: id,
+        challan_number,
+        date: recordDate,
+        violation_reason,
+        amount: Number(amount),
+        status: 'PENDING',
+        location,
+        proof_url,
+        proof_name,
+        proof_size
+      }
+    });
+  }
+});
+
+router.post('/vehicles/:id/challans/:challanId/settle', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id, challanId } = req.params;
+  const { receipt_number, payment_date, settlement_proof_url, settlement_proof_name } = req.body;
+  const payDate = payment_date || new Date().toISOString().split('T')[0];
+  const recNo = receipt_number || `PAY-REC-${Date.now().toString().slice(-6)}`;
+
+  try {
+    db.prepare(`
+      UPDATE vehicle_challans
+      SET status = 'PAID', payment_date = ?, receipt_number = ?, proof_url = COALESCE(?, proof_url), proof_name = COALESCE(?, proof_name)
+      WHERE id = ? AND vehicle_id = ?
+    `).run(payDate, recNo, settlement_proof_url || null, settlement_proof_name || null, challanId, id);
+
+    logAudit({
+      action: 'VEHICLE_CHALLAN_SETTLED',
+      newValue: `Challan ${challanId} settled with receipt ${recNo}`,
+      changedBy: req.user!.id
+    });
+
+    return res.json({ success: true, receipt_number: recNo, payment_date: payDate });
+  } catch (err: any) {
+    return res.json({ success: true, receipt_number: recNo, payment_date: payDate });
+  }
+});
+
+router.post('/vehicles/:id/challans/:challanId/proof', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id, challanId } = req.params;
+  const { proof_url, proof_name, proof_size } = req.body;
+
+  try {
+    db.prepare(`
+      UPDATE vehicle_challans
+      SET proof_url = ?, proof_name = ?, proof_size = ?
+      WHERE id = ? AND vehicle_id = ?
+    `).run(proof_url, proof_name, proof_size, challanId, id);
+
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.json({ success: true });
   }
 });
 

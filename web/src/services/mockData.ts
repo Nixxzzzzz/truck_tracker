@@ -529,12 +529,18 @@ const svgDelay = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
 
 const svgWarehouse = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#0f172a"/><rect x="20" y="20" width="760" height="460" rx="16" fill="#131b2e" stroke="#2a364f" stroke-width="2"/><line x1="120" y1="130" x2="120" y2="360" stroke="#38bdf8" stroke-width="4"/><line x1="260" y1="130" x2="260" y2="360" stroke="#38bdf8" stroke-width="4"/><line x1="100" y1="200" x2="300" y2="200" stroke="#0284c7" stroke-width="2"/><line x1="100" y1="280" x2="300" y2="280" stroke="#0284c7" stroke-width="2"/><rect x="135" y="160" width="40" height="36" rx="2" fill="#d97706"/><rect x="190" y="160" width="55" height="36" rx="2" fill="#d97706"/><rect x="140" y="240" width="50" height="36" rx="2" fill="#059669"/><rect x="360" y="130" width="370" height="230" rx="8" fill="#0f172a" stroke="#334155"/><text x="390" y="170" font-family="sans-serif" font-size="18" font-weight="800" fill="#ffffff">NOIDA SECTOR 62 MEGA HUB</text><text x="390" y="195" font-family="sans-serif" font-size="13" fill="#38bdf8">ELECTRONIC CITY FULFILLMENT CENTER</text><line x1="390" y1="208" x2="690" y2="208" stroke="#1e293b"/><text x="390" y="235" font-family="sans-serif" font-size="13" fill="#cbd5e1">BAY: Gate #4 (Inbound Logistics)</text><text x="390" y="260" font-family="sans-serif" font-size="13" fill="#cbd5e1">GEOFENCE RADIUS: 250 METERS</text><text x="390" y="285" font-family="sans-serif" font-size="13" fill="#cbd5e1">SUPERVISOR: Deepa Rastogi</text><rect x="390" y="305" width="160" height="34" rx="4" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8"/><text x="470" y="327" font-family="sans-serif" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">FACILITY VERIFIED</text><rect x="35" y="35" width="730" height="40" rx="6" fill="#0f172a"/><text x="50" y="60" font-family="sans-serif" font-size="14" font-weight="700" fill="#38bdf8">DESTINATION PROFILE: NOIDA SECTOR 62</text><rect x="35" y="425" width="730" height="40" rx="6" fill="#090d16"/><text x="50" y="450" font-family="monospace" font-size="12" fill="#cbd5e1">📍 28.6280° N, 77.3680° E • Block C, Sector 62, Noida (UP) • Bay 4 Active</text></svg>`;
 
+export const svgChallanNotice = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520"><rect width="800" height="520" fill="#0f172a"/><rect x="20" y="20" width="760" height="480" rx="12" fill="#1e293b" stroke="#334155" stroke-width="2"/><rect x="20" y="20" width="760" height="60" rx="12" fill="#0369a1"/><text x="400" y="45" font-family="sans-serif" font-size="16" font-weight="800" fill="#ffffff" text-anchor="middle">DELHI TRAFFIC POLICE — COMMERCIAL FREIGHT E-CHALLAN</text><text x="400" y="66" font-family="sans-serif" font-size="11" fill="#e0f2fe" text-anchor="middle">OFFICE OF THE SPECIAL COMMISSIONER OF POLICE (TRAFFIC)</text><rect x="40" y="100" width="720" height="90" rx="8" fill="#0f172a" stroke="#475569"/><text x="60" y="130" font-family="monospace" font-size="14" font-weight="700" fill="#38bdf8">NOTICE #: CH-DL-2026-9812</text><text x="540" y="130" font-family="sans-serif" font-size="14" font-weight="800" fill="#ef4444">FINE AMOUNT: ₹1,500</text><text x="60" y="155" font-family="sans-serif" font-size="12" fill="#cbd5e1">VEHICLE NO: DL01 TA 4920 (Tata Ultra T.7 Commercial Freight)</text><text x="60" y="175" font-family="sans-serif" font-size="12" fill="#cbd5e1">VIOLATION: Over-speeding (58 km/h in 50 km/h commercial freight zone)</text><rect x="40" y="205" width="720" height="155" rx="8" fill="#0f172a" stroke="#334155"/><text x="60" y="235" font-family="sans-serif" font-size="12" font-weight="700" fill="#94a3b8">INFRACTION EVIDENCE &amp; LOCATION</text><text x="60" y="260" font-family="sans-serif" font-size="12" fill="#e2e8f0">📍 Location: Ring Road Lajpat Nagar Overpass (Camera ASERS-DL-042)</text><text x="60" y="285" font-family="sans-serif" font-size="12" fill="#e2e8f0">📅 Date Issued: Today, 07:15 AM • Motor Vehicles Act Sec 183(1)</text><text x="60" y="310" font-family="sans-serif" font-size="12" fill="#e2e8f0">🏛️ Issuing Authority: Burari Transport Authority Commercial Enforcement</text><text x="60" y="335" font-family="sans-serif" font-size="12" fill="#ef4444">⚠️ STATUS: PENDING PAYMENT (Due within 30 days of notice)</text><rect x="40" y="375" width="720" height="85" rx="8" fill="#1e1b4b" stroke="#6366f1"/><text x="60" y="405" font-family="sans-serif" font-size="12" font-weight="700" fill="#a5b4fc">E-CHALLAN DIGITAL BARCODE &amp; PROOF OF NOTICE</text><text x="60" y="435" font-family="monospace" font-size="12" fill="#c7d2fe">||| |||| || ||||| ||||| || |||| |||| ||||| |||| || |||||  REF: DL01TA4920-CH9812-2026</text></svg>`;
+
+export const svgChallanReceipt = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520"><rect width="800" height="520" fill="#0f172a"/><rect x="20" y="20" width="760" height="480" rx="12" fill="#1e293b" stroke="#334155" stroke-width="2"/><rect x="20" y="20" width="760" height="60" rx="12" fill="#059669"/><text x="400" y="45" font-family="sans-serif" font-size="16" font-weight="800" fill="#ffffff" text-anchor="middle">PARIVAHAN SEWA — E-CHALLAN SETTLEMENT RECEIPT</text><text x="400" y="66" font-family="sans-serif" font-size="11" fill="#ecfdf5" text-anchor="middle">MINISTRY OF ROAD TRANSPORT AND HIGHWAYS (MORTH)</text><rect x="40" y="100" width="720" height="90" rx="8" fill="#0f172a" stroke="#475569"/><text x="60" y="130" font-family="monospace" font-size="14" font-weight="700" fill="#10b981">CHALLAN #: CH-UP-2026-4410</text><text x="540" y="130" font-family="sans-serif" font-size="14" font-weight="800" fill="#10b981">PAID: ₹500 (SETTLED)</text><text x="60" y="155" font-family="sans-serif" font-size="12" fill="#cbd5e1">RECEIPT NO: PAY-DL-8849102 • MODE: ONLINE NETBANKING</text><text x="60" y="175" font-family="sans-serif" font-size="12" fill="#cbd5e1">PAYMENT DATE: 2026-08-29 11:20 AM</text><rect x="40" y="205" width="720" height="155" rx="8" fill="#0f172a" stroke="#334155"/><text x="60" y="235" font-family="sans-serif" font-size="12" font-weight="700" fill="#94a3b8">SETTLEMENT AUDIT &amp; CLEARANCE DETAILS</text><text x="60" y="260" font-family="sans-serif" font-size="12" fill="#e2e8f0">📍 Location: Noida Sector 62 Hub • Obstruction in designated unloading bay</text><text x="60" y="285" font-family="sans-serif" font-size="12" fill="#e2e8f0">🏛️ Traffic Circle: UP Traffic Police Sector 14A Noida</text><text x="60" y="310" font-family="sans-serif" font-size="12" fill="#10b981">✓ AUDIT: PENALTY CLEARED — NO OUTSTANDING ARREARS ON VEHICLE</text><text x="60" y="335" font-family="sans-serif" font-size="12" fill="#cbd5e1">Cleared By: Authorized Commercial Fleet Operator HoseXperts / TrackTracker</text><rect x="40" y="375" width="720" height="85" rx="8" fill="#064e3b" stroke="#059669"/><text x="60" y="405" font-family="sans-serif" font-size="12" font-weight="700" fill="#6ee7b7">DIGITAL PAYMENT CONFIRMATION TOKEN</text><text x="60" y="435" font-family="monospace" font-size="12" fill="#a7f3d0">TXN-ID: TXN-UP8849102-MORTH-PAID-SUCCESS</text></svg>`;
+
 export const DEMO_PHOTOS_MAP: Record<string, string> = {
   'p-del-001': `data:image/svg+xml;utf8,${encodeURIComponent(svgOdometer)}`,
   'p-del-002': `data:image/svg+xml;utf8,${encodeURIComponent(svgDelivery)}`,
   'p-del-003': `data:image/svg+xml;utf8,${encodeURIComponent(svgSeal)}`,
   'p-del-004': `data:image/svg+xml;utf8,${encodeURIComponent(svgDelay)}`,
-  'p-del-005': `data:image/svg+xml;utf8,${encodeURIComponent(svgWarehouse)}`
+  'p-del-005': `data:image/svg+xml;utf8,${encodeURIComponent(svgWarehouse)}`,
+  'challan-proof-9812': `data:image/svg+xml;utf8,${encodeURIComponent(svgChallanNotice)}`,
+  'challan-receipt-4410': `data:image/svg+xml;utf8,${encodeURIComponent(svgChallanReceipt)}`
 };
 
 export const INITIAL_PHOTOS: Photo[] = [
@@ -1383,7 +1389,7 @@ class MockStore {
     return newChallan;
   }
 
-  settleVehicleChallan(vehicleId: string, challanId: string): boolean {
+  settleVehicleChallan(vehicleId: string, challanId: string, settlement?: { receipt_number?: string; settlement_proof_url?: string; settlement_proof_name?: string }): boolean {
     const vehicles = this.getVehicles();
     const v = vehicles.find((item) => item.id === vehicleId);
     if (v && v.challans) {
@@ -1391,7 +1397,27 @@ class MockStore {
       if (target) {
         target.status = 'PAID';
         target.payment_date = new Date().toISOString().split('T')[0];
-        target.receipt_number = `PAY-REC-${Date.now().toString().slice(-6)}`;
+        target.receipt_number = settlement?.receipt_number || `PAY-REC-${Date.now().toString().slice(-6)}`;
+        if (settlement?.settlement_proof_url) {
+          target.settlement_proof_url = settlement.settlement_proof_url;
+          target.settlement_proof_name = settlement.settlement_proof_name;
+        }
+        this.set('vehicles', vehicles);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  updateVehicleChallanProof(vehicleId: string, challanId: string, proof: { proof_url: string; proof_name?: string; proof_size?: number }): boolean {
+    const vehicles = this.getVehicles();
+    const v = vehicles.find((item) => item.id === vehicleId);
+    if (v && v.challans) {
+      const target = v.challans.find((c) => c.id === challanId);
+      if (target) {
+        target.proof_url = proof.proof_url;
+        target.proof_name = proof.proof_name;
+        target.proof_size = proof.proof_size;
         this.set('vehicles', vehicles);
         return true;
       }

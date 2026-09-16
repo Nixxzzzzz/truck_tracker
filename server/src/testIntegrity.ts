@@ -31,13 +31,15 @@ export async function runDatabaseIntegrityTests(): Promise<boolean> {
     assert(applied.some((m) => m.version === 2), 'Migration v2 Applied (Enterprise Documents & Maintenance)');
     assert(applied.some((m) => m.version === 3), 'Migration v3 Applied (ERP References & Indexes)');
     assert(applied.some((m) => m.version === 4), 'Migration v4 Applied (Destination Area Code)');
+    assert(applied.some((m) => m.version === 7), 'Migration v7 Applied (Vehicle Challans & Digital Proofs)');
 
-    // TEST 2: Schema Table Completeness (All 16 Canonical Tables)
+    // TEST 2: Schema Table Completeness (All 17 Canonical Tables)
     const requiredTables = [
       'users', 'vehicles', 'drivers', 'destinations', 'trips',
       'trip_stops', 'activities', 'delays', 'photos', 'trip_events',
       'vehicle_documents', 'maintenance_records', 'fuel_transactions',
-      'operational_exceptions', 'audit_logs', 'google_sheet_sync'
+      'operational_exceptions', 'audit_logs', 'google_sheet_sync',
+      'vehicle_challans'
     ];
     const existingTables = (db.prepare(`SELECT name FROM sqlite_master WHERE type='table'`).all() as any[]).map((t) => t.name);
     for (const table of requiredTables) {

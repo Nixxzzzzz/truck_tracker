@@ -721,11 +721,19 @@ export const api = {
         return { challan };
       }
     },
-    settleChallan: async (vehicleId: string, challanId: string) => {
+    attachChallanProof: async (vehicleId: string, challanId: string, proof: { proof_url: string; proof_name?: string; proof_size?: number }) => {
       try {
-        return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/settle`, { method: 'POST' });
+        return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/proof`, { method: 'POST', body: JSON.stringify(proof) });
       } catch {
-        const success = mockStore.settleVehicleChallan(vehicleId, challanId);
+        const success = mockStore.updateVehicleChallanProof(vehicleId, challanId, proof);
+        return { success };
+      }
+    },
+    settleChallan: async (vehicleId: string, challanId: string, settlement?: any) => {
+      try {
+        return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/settle`, { method: 'POST', body: JSON.stringify(settlement || {}) });
+      } catch {
+        const success = mockStore.settleVehicleChallan(vehicleId, challanId, settlement);
         return { success };
       }
     },

@@ -41,7 +41,9 @@ export const VehiclePapersModal: React.FC<Props> = ({
   const [isAddingDoc, setIsAddingDoc] = useState(false);
   const [isAddingChallan, setIsAddingChallan] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<VehicleDocument | null>(null);
+  const [previewChallan, setPreviewChallan] = useState<VehicleChallan | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const challanFileInputRef = useRef<HTMLInputElement>(null);
 
   // New Doc Form
   const [docType, setDocType] = useState<VehicleDocument['type']>('RC');
@@ -83,6 +85,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
   const [challanAmount, setChallanAmount] = useState<number>(500);
   const [challanLocation, setChallanLocation] = useState('Delhi Commercial Freight Corridor');
   const [challanDate, setChallanDate] = useState(new Date().toISOString().split('T')[0]);
+  const [challanProofFile, setChallanProofFile] = useState<{ url: string; name: string; size: number } | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -109,6 +112,54 @@ export const VehiclePapersModal: React.FC<Props> = ({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleChallanFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File must be smaller than 10MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setChallanProofFile({
+          url: reader.result as string,
+          name: file.name,
+          size: file.size
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAttachProofToExisting = async (challanId: string, file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File must be smaller than 10MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const proofPayload = {
+        proof_url: reader.result as string,
+        proof_name: file.name,
+        proof_size: file.size
+      };
+      try {
+        await api.fleet.attachChallanProof(currentVehicle.id, challanId, proofPayload);
+        const updatedChallans = challans.map((c) =>
+          c.id === challanId ? { ...c, ...proofPayload } : c
+        );
+        const updatedVehicle: Vehicle = { ...currentVehicle, challans: updatedChallans };
+        setCurrentVehicle(updatedVehicle);
+        onUpdate(updatedVehicle);
+        setMessage(`✓ Proof document attached to Challan.`);
+        setTimeout(() => setMessage(null), 3000);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveDoc = async (e: React.FormEvent) => {
@@ -158,7 +209,10 @@ export const VehiclePapersModal: React.FC<Props> = ({
       violation_reason: challanReason.trim(),
       amount: Number(challanAmount),
       location: challanLocation.trim(),
-      status: 'PENDING' as const
+      status: 'PENDING' as const,
+      proof_url: challanProofFile?.url,
+      proof_name: challanProofFile?.name,
+      proof_size: challanProofFile?.size
     };
 
     try {
@@ -168,6 +222,10 @@ export const VehiclePapersModal: React.FC<Props> = ({
       setCurrentVehicle(updatedVehicle);
       onUpdate(updatedVehicle);
       setIsAddingChallan(false);
+      setChallanProofFile(null);
+      setChallanNumber('');
+      setChallanReason('');
+      setChallanAmount(500);
       setMessage(`✓ Traffic Challan ${newChallanData.challan_number} logged.`);
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
@@ -211,7 +269,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
           }
         }
       `}</style>
-      <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '90vh' }}>
+      <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -313,7 +371,7 @@ export const VehiclePapersModal: React.FC<Props> = ({
         )}
 
         {/* Modal Body */}
-        <div className="modal-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="modal-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1 }}>
           {/* =========================================================
               TAB 1: OFFICIAL VEHICLE PAPERS
               ========================================================= */}
@@ -680,6 +738,90 @@ export const VehiclePapersModal: React.FC<Props> = ({
                     </div>
                   </div>
 
+                  {/* Upload Challan Proof Document / Scan */}
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>Attach Challan Notice Slip / Penalty Receipt Proof (Image or PDF)</span>
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Optional • Max 10MB</span>
+                    </label>
+                    <input
+                      ref={challanFileInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleChallanFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => challanFileInputRef.current?.click()}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: challanProofFile ? '1px solid var(--accent-whatsapp)' : '1px dashed var(--border-default)',
+                          backgroundColor: challanProofFile ? 'rgba(37, 211, 102, 0.08)' : 'var(--bg-primary)',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          color: challanProofFile ? 'var(--accent-whatsapp)' : 'var(--text-primary)',
+                          transition: 'all var(--transition-fast)'
+                        }}
+                      >
+                        <Upload size={14} />
+                        <span>{challanProofFile ? challanProofFile.name : 'Upload Notice / Slip File (JPG, PNG, PDF)'}</span>
+                      </button>
+
+                      {challanProofFile && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            ({(challanProofFile.size / 1024).toFixed(0)} KB)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setChallanProofFile(null)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--status-danger)',
+                              fontSize: '0.74rem',
+                              cursor: 'pointer',
+                              padding: '2px 6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <X size={12} /> Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {challanProofFile && (
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {challanProofFile.url.startsWith('data:image/') ? (
+                          <img
+                            src={challanProofFile.url}
+                            alt="Challan Proof Preview"
+                            style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}
+                          />
+                        ) : (
+                          <div style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(56, 189, 248, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                            <FileText size={22} />
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                          ✓ Notice document scan attached. Will be archived on vehicle compliance record.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAddingChallan(false)}>
                       Cancel
@@ -732,28 +874,63 @@ export const VehiclePapersModal: React.FC<Props> = ({
                           <span>📍 {c.location || 'Delhi-NCR'}</span>
                           <span>📅 {c.date}</span>
                           {c.receipt_number && <span>• Receipt: <b>{c.receipt_number}</b></span>}
+                          {c.proof_name && <span>• 📎 <b>{c.proof_name}</b></span>}
                         </div>
                       </div>
 
-                      {c.status === 'PENDING' && (
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleSettleChallan(c.id)}
-                          style={{
-                            backgroundColor: 'var(--accent-whatsapp)',
-                            borderColor: 'var(--accent-whatsapp)',
-                            color: '#0b141a',
-                            fontWeight: 700,
-                            padding: '5px 12px',
-                            fontSize: '0.76rem',
-                            gap: '4px'
-                          }}
-                        >
-                          <CreditCard size={13} />
-                          <span>Settle & Pay Fine</span>
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {c.proof_url ? (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setPreviewChallan(c)}
+                            style={{ padding: '5px 10px', fontSize: '0.74rem', gap: '4px' }}
+                          >
+                            <Eye size={12} />
+                            <span>View Proof</span>
+                          </button>
+                        ) : (
+                          <label style={{ margin: 0, cursor: 'pointer' }}>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleAttachProofToExisting(c.id, f);
+                              }}
+                            />
+                            <span
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '5px 10px', fontSize: '0.74rem', gap: '4px', borderStyle: 'dashed' }}
+                              title="Attach scanned notice slip or receipt photo"
+                            >
+                              <Upload size={12} />
+                              <span>Upload Proof</span>
+                            </span>
+                          </label>
+                        )}
+
+                        {c.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleSettleChallan(c.id)}
+                            style={{
+                              backgroundColor: 'var(--accent-whatsapp)',
+                              borderColor: 'var(--accent-whatsapp)',
+                              color: '#0b141a',
+                              fontWeight: 700,
+                              padding: '5px 12px',
+                              fontSize: '0.76rem',
+                              gap: '4px'
+                            }}
+                          >
+                            <CreditCard size={13} />
+                            <span>Settle & Pay Fine</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -851,6 +1028,165 @@ export const VehiclePapersModal: React.FC<Props> = ({
             )}
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreviewDoc(null)}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Challan Notice / Proof Preview Sub-Modal */}
+      {previewChallan && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 1100, backgroundColor: 'rgba(0,0,0,0.82)' }}
+          onClick={() => setPreviewChallan(null)}
+        >
+          <div
+            className="modal-content"
+            style={{ maxWidth: '560px', padding: '20px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '1rem' }}>Traffic Challan Record</div>
+                <span className={`challan-pill ${previewChallan.status === 'PENDING' ? 'pending' : 'paid'}`}>
+                  {previewChallan.status === 'PENDING' ? '● PENDING PAYMENT' : '✓ SETTLED'}
+                </span>
+              </div>
+              <button type="button" className="btn btn-subtle" onClick={() => setPreviewChallan(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Verification Card */}
+            <div
+              style={{
+                borderRadius: 'var(--radius-md)',
+                padding: '18px',
+                border: previewChallan.status === 'PENDING' ? '2px solid rgba(239, 68, 68, 0.7)' : '2px solid var(--accent-whatsapp)',
+                backgroundColor: '#0f172a',
+                color: '#f8fafc',
+                fontFamily: 'Inter, sans-serif'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#38bdf8', textTransform: 'uppercase', fontWeight: 700 }}>
+                    OFFICIAL TRANSPORT POLICE / E-CHALLAN PORTAL
+                  </div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800 }}>COMMERCIAL PENALTY AUDIT RECORD</div>
+                </div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: previewChallan.status === 'PENDING' ? '#ef4444' : '#10b981' }}>
+                  ₹{previewChallan.amount.toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ margin: '14px 0', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
+                <div>CHALLAN / NOTICE #: <b style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{previewChallan.challan_number}</b></div>
+                <div>VEHICLE REGISTRATION: <b style={{ fontFamily: 'monospace' }}>{currentVehicle.vehicle_number}</b> ({currentVehicle.model})</div>
+                <div>OFFENSE / VIOLATION: <b>{previewChallan.violation_reason}</b></div>
+                <div>LOCATION RECORDED: <b>{previewChallan.location || 'Delhi Commercial Freight Corridor'}</b></div>
+                <div>DATE OF NOTICE: <b>{previewChallan.date}</b></div>
+                {previewChallan.receipt_number && (
+                  <div style={{ color: '#10b981' }}>
+                    SETTLEMENT RECEIPT: <b>{previewChallan.receipt_number}</b> (Paid: {previewChallan.payment_date || 'Yes'})
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid #334155', paddingTop: '10px', fontSize: '0.68rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                <span>TruckTracker Compliance Vault</span>
+                <span>Challan ID: #{previewChallan.id}</span>
+              </div>
+            </div>
+
+            {/* Uploaded Notice Slip / Proof Section */}
+            {previewChallan.proof_url ? (
+              <div style={{ marginTop: '14px', padding: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FileText size={14} color="var(--accent-whatsapp)" />
+                    <span>Uploaded Proof Document {previewChallan.proof_name ? `(${previewChallan.proof_name})` : ''}</span>
+                  </span>
+                  <a
+                    href={previewChallan.proof_url}
+                    download={previewChallan.proof_name || `challan-${previewChallan.challan_number}.png`}
+                    style={{ color: 'var(--accent-whatsapp)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600 }}
+                  >
+                    <Download size={13} /> Download Proof
+                  </a>
+                </div>
+
+                {previewChallan.proof_url.startsWith('data:image/') ? (
+                  <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-subtle)', backgroundColor: '#090d16' }}>
+                    <img
+                      src={previewChallan.proof_url}
+                      alt="Challan Proof Document"
+                      style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', display: 'block' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)' }}>
+                    <FileText size={28} color="var(--accent-whatsapp)" />
+                    <div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{previewChallan.proof_name || 'Official Challan Slip (PDF)'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Click download to view original PDF scan</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ marginTop: '14px', padding: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-default)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  No physical scan or receipt photo attached to this challan yet.
+                </div>
+                <label style={{ cursor: 'pointer', margin: 0 }}>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f && previewChallan) {
+                        handleAttachProofToExisting(previewChallan.id, f);
+                        setPreviewChallan(null);
+                      }
+                    }}
+                  />
+                  <span className="btn btn-secondary btn-sm" style={{ gap: '6px', fontSize: '0.76rem', display: 'inline-flex' }}>
+                    <Upload size={13} />
+                    <span>Upload Proof Now</span>
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                {previewChallan.status === 'PENDING' && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      handleSettleChallan(previewChallan.id);
+                      setPreviewChallan(null);
+                    }}
+                    style={{
+                      backgroundColor: 'var(--accent-whatsapp)',
+                      borderColor: 'var(--accent-whatsapp)',
+                      color: '#0b141a',
+                      fontWeight: 700,
+                      gap: '6px'
+                    }}
+                  >
+                    <CreditCard size={13} />
+                    <span>Settle & Pay Fine (₹{previewChallan.amount.toLocaleString('en-IN')})</span>
+                  </button>
+                )}
+              </div>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreviewChallan(null)}>
                 Dismiss
               </button>
             </div>

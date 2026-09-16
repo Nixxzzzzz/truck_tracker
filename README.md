@@ -11,8 +11,8 @@
 [![Android APK Download](https://img.shields.io/badge/Android%20Driver%20APK-v1.1.0%20Download-4f46e5.svg?logo=android)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
 [![Health Check](https://img.shields.io/badge/Health%20Endpoint-200%20OK-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
 [![Stack](https://img.shields.io/badge/Stack-Node%2022%2B%20%7C%20React%2019%20%7C%20TypeScript-2563eb.svg)](#)
-[![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(16%20Tables)-d97706.svg)](#)
-[![Integrity Suite](https://img.shields.io/badge/Integrity%20Tests-31%20Passed%20%7C%200%20Failed-059669.svg)](#)
+[![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(17%20Tables)-d97706.svg)](#)
+[![Integrity Suite](https://img.shields.io/badge/Integrity%20Tests-33%20Passed%20%7C%200%20Failed-059669.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -128,6 +128,16 @@ TruckTracker is an internal enterprise logistics operations platform engineered 
 
 ---
 
+### 11. Traffic Challan Digital Proof Upload & Audit Vault
+*Statutory commercial infraction compliance system enabling dispatch operations managers to record citations, attach scanned physical notices, radar photos, or bank payment receipts (JPG, PNG, PDF up to 10MB), view digital e-challan audit certificates, and settle outstanding fines.*
+
+| 📝 Challan Logging with Proof Attachment | 📜 Official E-Challan & Proof Verification Modal |
+|:---:|:---:|
+| <img src="docs/images/17-challan-proof-upload.png" alt="Challan Logging with Proof Upload" width="480" /> | <img src="docs/images/18-challan-proof-preview.png" alt="Digital Notice Verification Modal" width="480" /> |
+| *Log commercial challan with attached notice slip photo or PDF.* | *Official E-Challan certificate with attached proof viewer and download.* |
+
+---
+
 ## 🚀 What's New in v1.1.0 & v1.2.0
 
 1. **Official HoseXperts Identity & Loading Screen**:
@@ -149,6 +159,12 @@ TruckTracker is an internal enterprise logistics operations platform engineered 
 5. **Offline Local Device Persistence & Automatic Server Sync**:
    - Instant offline storage for vehicle papers and dispatch updates with optimistic local state updates.
    - Automatic queue flushing to the central API when internet connectivity resumes, plus continuous 12s heartbeat sync.
+
+6. **Traffic Challans & Digital Proof Upload Vault**:
+   - Built-in file attachment dropzone (`image/*,.pdf`, up to 10MB) in `Log Commercial Traffic Challan` form for police slips, radar captures, or court notices.
+   - Inline `[Upload Proof]` action allowing managers to attach physical slips to any existing challan record at any time.
+   - Comprehensive E-Challan Verification sub-modal with official transport department credentials, fine amount, offense details, and proof viewer/download.
+   - Database Migration 7 (`vehicle_challans`) relational table ensuring full schema integrity and ACID persistence.
 
 ---
 
