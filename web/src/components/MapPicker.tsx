@@ -155,14 +155,33 @@ export const MapPicker: React.FC<Props> = ({
       });
 
       mapRef.current = map;
-    }
 
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
+      // Ensure Leaflet recalculates tile dimensions when rendered inside animated modal dialogs
+      const timer1 = setTimeout(() => map.invalidateSize(), 60);
+      const timer2 = setTimeout(() => map.invalidateSize(), 200);
+      const timer3 = setTimeout(() => map.invalidateSize(), 450);
+
+      let resizeObserver: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          if (mapRef.current) {
+            mapRef.current.invalidateSize();
+          }
+        });
+        resizeObserver.observe(containerRef.current);
       }
-    };
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        if (resizeObserver) resizeObserver.disconnect();
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      };
+    }
   }, []);
 
   // Update tile layer when activeLayer changes

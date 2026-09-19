@@ -547,7 +547,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
       {activeMapPickerStopIdx !== null && (
         <div
           className="modal-overlay"
-          style={{ zIndex: 1200, backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+          style={{ zIndex: 1200, backgroundColor: 'rgba(11, 16, 27, 0.65)', backdropFilter: 'blur(5px)' }}
           onClick={() => setActiveMapPickerStopIdx(null)}
         >
           <div
