@@ -387,10 +387,15 @@ export const ManagerView: React.FC<Props> = ({
 
       // 2. Conditionally poll active module data silently
       const shouldFetchTrips = ['overview', 'schedule', 'dispatch', 'trips'].includes(activeSection);
-      const shouldFetchVehicles = ['vehicles', 'drivers', 'destinations', 'map', 'documents'].includes(activeSection);
+      const shouldFetchVehicles = ['overview', 'vehicles', 'drivers', 'destinations', 'map', 'documents'].includes(activeSection);
       const shouldFetchReports = activeSection === 'reports';
 
+      let tripsIdx = -1;
+      let vehiclesIdx = -1;
+      let reportsIdx = -1;
+
       if (shouldFetchTrips) {
+        tripsIdx = promises.length;
         promises.push(
           api.manager.getTrips({
             date: selectedDate,
@@ -398,9 +403,13 @@ export const ManagerView: React.FC<Props> = ({
             search: searchQuery
           })
         );
-      } else if (shouldFetchVehicles) {
+      }
+      if (shouldFetchVehicles) {
+        vehiclesIdx = promises.length;
         promises.push(api.fleet.getVehicles());
-      } else if (shouldFetchReports) {
+      }
+      if (shouldFetchReports) {
+        reportsIdx = promises.length;
         if (reportsPeriod === 'weekly' || reportsPeriod === 'monthly') {
           promises.push(api.reports.getPeriodic(reportsPeriod));
         } else {
@@ -411,22 +420,24 @@ export const ManagerView: React.FC<Props> = ({
       const results = await Promise.allSettled(promises);
 
       // Attention metrics update
-      if (results[0].status === 'fulfilled' && results[0].value) {
+      if (results[0]?.status === 'fulfilled' && results[0].value) {
         setAttention(results[0].value);
       }
 
       // Exceptions & incident triage update
-      if (results[1].status === 'fulfilled' && results[1].value?.exceptions) {
-        setExceptions(results[1].value.exceptions);
+      if (results[1]?.status === 'fulfilled' && (results[1].value as any)?.exceptions) {
+        setExceptions((results[1].value as any).exceptions);
       }
 
       // Module-specific seamless data update
-      if (shouldFetchTrips && results[2]?.status === 'fulfilled' && results[2].value?.trips) {
-        setTrips(results[2].value.trips);
-      } else if (shouldFetchVehicles && results[2]?.status === 'fulfilled' && results[2].value?.vehicles) {
-        setVehicles(results[2].value.vehicles);
-      } else if (shouldFetchReports && results[2]?.status === 'fulfilled' && results[2].value) {
-        setDailyReport(results[2].value);
+      if (tripsIdx !== -1 && results[tripsIdx]?.status === 'fulfilled' && (results[tripsIdx] as any).value?.trips) {
+        setTrips((results[tripsIdx] as any).value.trips);
+      }
+      if (vehiclesIdx !== -1 && results[vehiclesIdx]?.status === 'fulfilled' && (results[vehiclesIdx] as any).value?.vehicles) {
+        setVehicles((results[vehiclesIdx] as any).value.vehicles);
+      }
+      if (reportsIdx !== -1 && results[reportsIdx]?.status === 'fulfilled' && (results[reportsIdx] as any).value) {
+        setDailyReport((results[reportsIdx] as any).value);
       }
 
       setLastRefresh(new Date());

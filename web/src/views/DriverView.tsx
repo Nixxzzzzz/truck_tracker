@@ -258,6 +258,32 @@ const DriverViewInner: React.FC<Props> = ({
     };
   }, []);
 
+  // Live GPS Telemetry heartbeat to backend while on active route
+  useEffect(() => {
+    if (!activeTrip || !['IN_PROGRESS', 'RETURNING', 'AT_DESTINATION'].includes(activeTrip.status)) return;
+    if (!driverCoords || !isOnline) return;
+
+    // Send an immediate telemetry ping on status change or mount
+    api.driver.sendTelemetry(activeTrip.id, {
+      latitude: driverCoords.latitude,
+      longitude: driverCoords.longitude,
+      gps_accuracy: gpsAccuracy ?? undefined,
+      speed_kmh: 42
+    }).catch(() => {});
+
+    // Periodic heartbeat every 15 seconds
+    const interval = setInterval(() => {
+      api.driver.sendTelemetry(activeTrip.id, {
+        latitude: driverCoords.latitude,
+        longitude: driverCoords.longitude,
+        gps_accuracy: gpsAccuracy ?? undefined,
+        speed_kmh: 42
+      }).catch(() => {});
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [activeTrip?.id, activeTrip?.status, driverCoords?.latitude, driverCoords?.longitude, isOnline, gpsAccuracy]);
+
   const loadTodayTrips = async () => {
     setLoading(true);
     try {

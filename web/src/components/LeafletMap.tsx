@@ -114,20 +114,21 @@ export const LeafletMap: React.FC<Props> = ({
         };
       case 'streets':
         return {
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
           options: {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 20
           }
         };
       case 'dark':
       default:
         return {
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
           options: {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &bull; Ola Maps Telematics',
-            className: 'map-tiles-dark',
-            maxZoom: 19
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> &bull; Ola Maps Telematics',
+            maxZoom: 20
           }
         };
     }
@@ -158,6 +159,10 @@ export const LeafletMap: React.FC<Props> = ({
       try {
         map.fitBounds(L.latLngBounds(points), { padding: [50, 50], maxZoom: 15 });
       } catch {}
+    } else {
+      const centerLat = baseLocation?.latitude || 28.5355;
+      const centerLng = baseLocation?.longitude || 77.2680;
+      map.setView([centerLat, centerLng], 13);
     }
   }, [baseLocation, stops, fleetVehicles]);
 

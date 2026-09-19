@@ -213,6 +213,37 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
 });
 
 /**
+ * POST /api/driver/trips/:id/telemetry
+ * Driver / mobile client sends real-time GPS telemetry ping (coordinates, accuracy, speed)
+ */
+router.post('/trips/:id/telemetry', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const tripId = String(req.params.id);
+  const { latitude, longitude, gps_accuracy, speed_kmh } = req.body;
+
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return res.status(400).json({ error: 'Valid numeric latitude and longitude are required' });
+  }
+
+  const trip = getAuthorizedTrip(tripId, req.user!);
+  if (!trip) return res.status(404).json({ error: 'Trip not found or unauthorized' });
+
+  const now = new Date().toISOString();
+  recordEvent({
+    tripId,
+    eventType: 'TELEMETRY_PING',
+    driverId: req.user!.id,
+    vehicleId: trip.vehicle_id,
+    latitude,
+    longitude,
+    gpsAccuracy: gps_accuracy ?? null,
+    details: speed_kmh ? `${Math.round(speed_kmh)} km/h` : 'Live Telematics Ping',
+    timestamp: now
+  });
+
+  return res.json({ success: true, timestamp: now });
+});
+
+/**
  * POST /api/driver/trips/:id/custom-stop
  * Driver adds an ad-hoc custom stop during transit
  */

@@ -44,20 +44,20 @@ export const MapPicker: React.FC<Props> = ({
         };
       case 'dark':
         return {
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          attribution: '&copy; OpenStreetMap contributors &bull; Telematics',
-          subdomains: undefined,
-          className: 'map-tiles-dark',
-          maxZoom: 19
+          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          className: '',
+          maxZoom: 20
         };
       case 'streets':
       default:
         return {
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          attribution: '&copy; OpenStreetMap contributors',
-          subdomains: undefined,
+          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
           className: '',
-          maxZoom: 19
+          maxZoom: 20
         };
     }
   };

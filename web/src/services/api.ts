@@ -299,6 +299,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(stopData)
       });
+    },
+    sendTelemetry: async (tripId: string, data: { latitude: number; longitude: number; gps_accuracy?: number | null; speed_kmh?: number }) => {
+      return await request(`/driver/trips/${tripId}/telemetry`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
     }
   },
 
