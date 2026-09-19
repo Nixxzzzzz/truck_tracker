@@ -340,7 +340,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. Tata Ultra T.7 (14ft High Deck)"
+                placeholder="e.g. Tata 407 / Eicher Pro 2049"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 required
@@ -477,7 +477,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="e.g. DL-01-2024-RC99"
+                        placeholder="e.g. RC-2024-XXXXX"
                         value={newDocNumber}
                         onChange={(e) => setNewDocNumber(e.target.value)}
                         style={{ padding: '6px 8px', fontSize: '0.8rem' }}

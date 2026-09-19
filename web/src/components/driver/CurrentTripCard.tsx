@@ -75,9 +75,9 @@ export const CurrentTripCard: React.FC<Props> = ({
   const progressPercent = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
 
   // Origin -> Destination summary
-  const origin = trip.starting_location || 'Delhi Depot';
-  const lastStop = trip.stops && trip.stops.length > 0 ? trip.stops[trip.stops.length - 1].destination_name : 'Okhla Industrial Area';
-  const vehicleModel = trip.vehicle_model || 'Tata Ultra T.7 (14ft)';
+  const origin = trip.starting_location || 'Origin';
+  const lastStop = trip.stops && trip.stops.length > 0 ? trip.stops[trip.stops.length - 1].destination_name : 'Destination';
+  const vehicleModel = trip.vehicle_model || 'Fleet Vehicle';
 
   // Status
   const isPlanned = trip.status === 'PLANNED' || trip.status === 'ASSIGNED';
