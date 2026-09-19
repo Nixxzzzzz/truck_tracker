@@ -1,8 +1,25 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ExternalLink, Navigation, Compass, MapPin, Maximize2 } from 'lucide-react';
+import {
+  ExternalLink,
+  Navigation,
+  Compass,
+  MapPin,
+  Play,
+  Pause,
+  RotateCcw,
+  Gauge,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  FastForward,
+  CheckCircle2,
+  Activity,
+  Eye
+} from 'lucide-react';
 import { TripStop, TripEvent, Vehicle } from '../types';
+import { fetchRoadRoute, RouteGeometryResult } from '../services/routing';
 
 interface Props {
   baseLocation?: { name: string; latitude?: number; longitude?: number };
@@ -28,7 +45,7 @@ export const LeafletMap: React.FC<Props> = ({
   fleetVehicles = [],
   onSelectVehicle,
   focusedLocation,
-  height = '420px',
+  height = '460px',
   theme = 'dark',
   showGoogleMapsButton = true,
   showToolbar = true
@@ -40,10 +57,25 @@ export const LeafletMap: React.FC<Props> = ({
   // Dedicated persistent layer groups to prevent DOM teardown & blinking
   const staticLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const vehicleLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const simulationLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const vehicleMarkersMapRef = useRef<Map<string, L.Marker>>(new Map());
   const driverMarkerRef = useRef<L.Marker | null>(null);
   const driverCircleRef = useRef<L.Circle | null>(null);
+  const simMarkerRef = useRef<L.Marker | null>(null);
   const hasFittedInitialBoundsRef = useRef(false);
+
+  // Road Route Geometry state
+  const [routeResult, setRouteResult] = useState<RouteGeometryResult | null>(null);
+  const [isFetchingRoute, setIsFetchingRoute] = useState(false);
+
+  // Ola Maps Simulation / Route Visualizer state
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simProgress, setSimProgress] = useState(0); // 0 to 1
+  const [simSpeed, setSimSpeed] = useState<1 | 2 | 4>(1);
+  const [simSpeedKmh, setSimSpeedKmh] = useState(42);
+  const [followVehicle, setFollowVehicle] = useState(false);
+  const [showWaypoints, setShowWaypoints] = useState(false);
+  const [showHud, setShowHud] = useState(true);
 
   const [mapLayer, setMapLayer] = useState<MapLayerType>(theme === 'light' ? 'streets' : 'dark');
 
@@ -93,7 +125,7 @@ export const LeafletMap: React.FC<Props> = ({
         return {
           url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           options: {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &bull; Fleet Telematics',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &bull; Ola Maps Telematics',
             className: 'map-tiles-dark',
             maxZoom: 19
           }
@@ -129,7 +161,7 @@ export const LeafletMap: React.FC<Props> = ({
     }
   }, [baseLocation, stops, fleetVehicles]);
 
-  // 1. INITIALIZE MAP ONCE (No destruction on data updates)
+  // 1. INITIALIZE MAP ONCE
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -154,8 +186,8 @@ export const LeafletMap: React.FC<Props> = ({
       // Create persistent layer groups
       staticLayerGroupRef.current = L.layerGroup().addTo(map);
       vehicleLayerGroupRef.current = L.layerGroup().addTo(map);
+      simulationLayerGroupRef.current = L.layerGroup().addTo(map);
 
-      // Single initial invalidateSize to ensure correct canvas geometry
       requestAnimationFrame(() => {
         try { map.invalidateSize(); } catch {}
       });
@@ -167,7 +199,34 @@ export const LeafletMap: React.FC<Props> = ({
     }
   }, [mapLayer]);
 
-  // 2. STATIC ROUTE, DEPOT HQ & STOPS (Only rebuilt when stops or base location actually change)
+  // 2. FETCH REAL ROAD ROUTE VIA OSRM
+  useEffect(() => {
+    const waypoints: Array<{ latitude: number; longitude: number }> = [];
+    if (baseLocation?.latitude && baseLocation?.longitude) {
+      waypoints.push({ latitude: Number(baseLocation.latitude), longitude: Number(baseLocation.longitude) });
+    }
+    stops.forEach((s) => {
+      if (s.latitude && s.longitude) {
+        waypoints.push({ latitude: Number(s.latitude), longitude: Number(s.longitude) });
+      }
+    });
+
+    if (waypoints.length >= 2) {
+      setIsFetchingRoute(true);
+      fetchRoadRoute(waypoints)
+        .then((res) => {
+          setRouteResult(res);
+          setIsFetchingRoute(false);
+        })
+        .catch(() => {
+          setIsFetchingRoute(false);
+        });
+    } else {
+      setRouteResult(null);
+    }
+  }, [baseLocation?.latitude, baseLocation?.longitude, stops.length]);
+
+  // 3. RENDER STATIC ROUTE, DEPOT HQ, STOPS & OLA MAPS NEON GLOW CORRIDOR
   const stopsHash = stops.map((s) => `${s.id}-${s.status}-${s.latitude}-${s.longitude}`).join('|');
   const baseHash = `${baseLocation?.latitude}-${baseLocation?.longitude}-${baseLocation?.name}`;
 
@@ -176,18 +235,17 @@ export const LeafletMap: React.FC<Props> = ({
     const staticGroup = staticLayerGroupRef.current;
     if (!map || !staticGroup) return;
 
-    // Clear only the static layer group
     staticGroup.clearLayers();
 
     const latLngs: L.LatLngExpression[] = [];
 
-    // 1. Base / Depot Marker (Golden HQ Badge)
+    // Base / Depot Marker (Golden HQ Badge)
     if (baseLocation?.latitude && baseLocation?.longitude) {
       const baseIcon = L.divIcon({
         className: 'custom-map-icon',
-        html: `<div style="background:linear-gradient(135deg, #c5a059, #e6c887);color:#0d0e11;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;border:2px solid #ffffff;box-shadow:0 0 16px rgba(197,160,89,0.9);letter-spacing:0.5px;">HQ</div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        html: `<div style="background:linear-gradient(135deg, #c5a059, #e6c887);color:#0d0e11;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;border:2.5px solid #ffffff;box-shadow:0 0 16px rgba(197,160,89,0.9);letter-spacing:0.5px;">HQ</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
       });
 
       const baseLat = Number(baseLocation.latitude || 28.5355);
@@ -196,9 +254,9 @@ export const LeafletMap: React.FC<Props> = ({
       L.marker(basePos, { icon: baseIcon })
         .addTo(staticGroup)
         .bindPopup(`
-          <div style="font-family:Inter,sans-serif;padding:4px;">
-            <div style="font-size:11px;font-weight:700;color:#c5a059;text-transform:uppercase;letter-spacing:0.5px;">Dispatch Headquarters</div>
-            <div style="font-size:14px;font-weight:700;color:#0f172a;margin:2px 0;">${baseLocation.name || 'Central Fleet Terminal'}</div>
+          <div style="font-family:Inter,sans-serif;padding:6px;min-width:180px;">
+            <div style="font-size:10px;font-weight:700;color:#c5a059;text-transform:uppercase;letter-spacing:0.5px;">Dispatch Operations Terminal</div>
+            <div style="font-size:13px;font-weight:800;color:#0f172a;margin:2px 0;">${baseLocation.name || 'Central Fleet Terminal'}</div>
             <div style="font-size:11px;color:#64748b;">GPS: ${baseLat.toFixed(4)}, ${baseLng.toFixed(4)}</div>
             <a href="https://www.google.com/maps/search/?api=1&query=${baseLat},${baseLng}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
               📍 Open Location in Google Maps &rarr;
@@ -208,7 +266,7 @@ export const LeafletMap: React.FC<Props> = ({
       latLngs.push(basePos);
     }
 
-    // 2. Destination Stop Markers with Sequence Numbers & Geofence Rings
+    // Destination Stop Markers with Geofence Rings
     stops.forEach((stop) => {
       if (stop.latitude && stop.longitude) {
         const isCompleted = stop.status === 'COMPLETED';
@@ -217,38 +275,38 @@ export const LeafletMap: React.FC<Props> = ({
           ? 'linear-gradient(135deg, #10b981, #059669)'
           : isArrived
           ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-          : 'linear-gradient(135deg, #0284c7, #0369a1)';
+          : 'linear-gradient(135deg, #0284c7, #38bdf8)';
 
         const stopIcon = L.divIcon({
           className: 'custom-map-icon',
-          html: `<div style="background:${bgGrad};color:#ffffff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #ffffff;box-shadow:0 3px 10px rgba(0,0,0,0.6);">${stop.stop_number}</div>`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
+          html: `<div style="background:${bgGrad};color:#ffffff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2.5px solid #ffffff;box-shadow:0 3px 12px rgba(0,0,0,0.6);">${stop.stop_number}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
         });
 
         const stopLat = Number(stop.latitude);
         const stopLng = Number(stop.longitude);
         const stopPos: [number, number] = [stopLat, stopLng];
 
-        // Draw Geofence Radius Circle
+        // Draw Geofence Radius Ring
         L.circle(stopPos, {
           radius: Number(stop.geofence_radius_meters || 150),
           color: isCompleted ? '#10b981' : '#38bdf8',
           fillColor: isCompleted ? '#10b981' : '#38bdf8',
           fillOpacity: 0.12,
-          weight: 1,
+          weight: 1.5,
           dashArray: '3, 4'
         }).addTo(staticGroup);
 
         L.marker(stopPos, { icon: stopIcon })
           .addTo(staticGroup)
           .bindPopup(`
-            <div style="font-family:Inter,sans-serif;padding:4px;min-width:180px;">
+            <div style="font-family:Inter,sans-serif;padding:6px;min-width:190px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                 <span style="font-size:10px;font-weight:700;color:#c5a059;text-transform:uppercase;">Stop #${stop.stop_number}</span>
                 <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${isCompleted ? '#d1fae5' : '#e0f2fe'};color:${isCompleted ? '#065f46' : '#0369a1'};font-weight:700;">${stop.status}</span>
               </div>
-              <div style="font-size:13px;font-weight:700;color:#0f172a;margin:3px 0;">${stop.destination_name}</div>
+              <div style="font-size:13px;font-weight:800;color:#0f172a;margin:3px 0;">${stop.destination_name}</div>
               <div style="font-size:11px;color:#64748b;margin-bottom:4px;">${stop.address}</div>
               <div style="font-size:11px;color:#334155;">Planned: <b>${stop.planned_arrival_time}</b> ${stop.actual_arrival_time ? `&bull; Actual: <b>${new Date(stop.actual_arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b>` : ''}</div>
               <a href="https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
@@ -260,17 +318,32 @@ export const LeafletMap: React.FC<Props> = ({
       }
     });
 
-    // 3. Planned Route Corridor Polyline (Connecting stops)
-    if (latLngs.length > 1) {
-      L.polyline(latLngs, {
-        color: '#38bdf8',
-        weight: 3,
-        opacity: 0.6,
-        dashArray: '8, 8'
+    // 4. OLA MAPS DUAL-LAYER ROAD POLYLINE (Road-snapped glow effect)
+    const polylineCoords = routeResult?.coordinates && routeResult.coordinates.length > 0
+      ? routeResult.coordinates
+      : (latLngs as [number, number][]);
+
+    if (polylineCoords.length > 1) {
+      // Layer A: Outer Neon Glow Halo (Ola Green / Cyan glow)
+      L.polyline(polylineCoords, {
+        color: '#00d084',
+        weight: 9,
+        opacity: 0.38,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(staticGroup);
+
+      // Layer B: Crisp Inner Navigation Core (High-contrast highway line)
+      L.polyline(polylineCoords, {
+        color: '#0284c7',
+        weight: 4.5,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(staticGroup);
     }
 
-    // 4. GPS Actual Breadcrumb Events & Active Vehicle
+    // 5. GPS Breadcrumb Trail (Real Historical Events)
     const validEvents = events.filter(
       (e) => typeof e.latitude === 'number' && typeof e.longitude === 'number'
     );
@@ -283,45 +356,130 @@ export const LeafletMap: React.FC<Props> = ({
 
       L.polyline(eventPoints, {
         color: '#c5a059',
-        weight: 4,
+        weight: 3.5,
         opacity: 0.9
       }).addTo(staticGroup);
-
-      const latest = validEvents[validEvents.length - 1];
-      const truckIcon = L.divIcon({
-        className: 'custom-map-icon',
-        html: `
-          <div style="position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
-            <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(56,189,248,0.4);animation:pulse 2s infinite;"></div>
-            <div style="background:linear-gradient(135deg, #0284c7, #38bdf8);color:#ffffff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;border:2px solid #ffffff;box-shadow:0 0 16px #38bdf8;z-index:2;">🚛</div>
-          </div>
-        `,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19]
-      });
-
-      L.marker([latest.latitude!, latest.longitude!], { icon: truckIcon })
-        .addTo(staticGroup)
-        .bindPopup(`
-          <div style="font-family:Inter,sans-serif;padding:4px;">
-            <div style="font-size:10px;font-weight:700;color:#0284c7;text-transform:uppercase;">Live Telematics Beacon</div>
-            <div style="font-size:13px;font-weight:700;color:#0f172a;margin:2px 0;">Active Vehicle Position</div>
-            <div style="font-size:11px;color:#334155;">Time: <b>${new Date(latest.timestamp).toLocaleTimeString()}</b></div>
-            <div style="font-size:11px;color:#334155;">GPS Accuracy: <b>&plusmn;${Math.round(latest.gps_accuracy || 8)}m</b></div>
-          </div>
-        `);
     }
 
-    // Auto-fit bounds ONLY ONCE on initial load to prevent window blinking
-    if (!hasFittedInitialBoundsRef.current && latLngs.length > 0) {
+    // Auto-fit bounds once on initial load
+    if (!hasFittedInitialBoundsRef.current && (polylineCoords.length > 0 || latLngs.length > 0)) {
+      const boundsCoords = polylineCoords.length > 0 ? polylineCoords : latLngs;
       try {
-        map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 15 });
+        map.fitBounds(L.latLngBounds(boundsCoords as [number, number][]), { padding: [45, 45], maxZoom: 15 });
         hasFittedInitialBoundsRef.current = true;
       } catch {}
     }
-  }, [stopsHash, baseHash, events.length]);
+  }, [stopsHash, baseHash, events.length, routeResult]);
 
-  // 3. SEAMLESS DYNAMIC FLEET VEHICLE UPDATES (In-place coordinate mutation with NO re-fits or layer teardowns)
+  // 4. ROUTE PLAYBACK SIMULATOR ANIMATION LOOP
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const simGroup = simulationLayerGroupRef.current;
+    if (!map || !simGroup) return;
+
+    const coords = routeResult?.coordinates;
+    if (!coords || coords.length < 2) return;
+
+    let animFrameId: number;
+    let lastTimestamp: number | null = null;
+
+    const stepSimulation = (timestamp: number) => {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const delta = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      setSimProgress((prev) => {
+        // Base simulation completes full route in 25 seconds at 1x
+        const increment = (delta / 25) * simSpeed;
+        const nextProgress = prev + increment;
+
+        if (nextProgress >= 1) {
+          setIsSimulating(false);
+          return 1;
+        }
+
+        // Calculate interpolated coordinate along polyline
+        const totalPoints = coords.length - 1;
+        const exactIndex = nextProgress * totalPoints;
+        const lowerIndex = Math.min(Math.floor(exactIndex), totalPoints - 1);
+        const upperIndex = Math.min(lowerIndex + 1, totalPoints);
+        const segmentProgress = exactIndex - lowerIndex;
+
+        const p1 = coords[lowerIndex];
+        const p2 = coords[upperIndex];
+
+        const lat = p1[0] + (p2[0] - p1[0]) * segmentProgress;
+        const lng = p1[1] + (p2[1] - p1[1]) * segmentProgress;
+        const currentPos: [number, number] = [lat, lng];
+
+        // Calculate heading in degrees
+        const dLng = p2[1] - p1[1];
+        const dLat = p2[0] - p1[0];
+        const angleDeg = (Math.atan2(dLng, dLat) * 180) / Math.PI;
+
+        // Dynamic realistic speed readout
+        const baseSpeed = 45;
+        const speedVariance = Math.sin(nextProgress * 20) * 8;
+        setSimSpeedKmh(Math.round(baseSpeed + speedVariance));
+
+        // Create or update 3D Ola-style simulation marker
+        if (!simMarkerRef.current) {
+          const simIcon = L.divIcon({
+            className: 'custom-sim-vehicle-marker',
+            html: `
+              <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
+                <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(0,208,132,0.35);animation:pulse 1.5s infinite;"></div>
+                <div style="background:linear-gradient(135deg, #0f172a, #1e293b);border:2.5px solid #00d084;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(0,208,132,0.8);z-index:3;">
+                  <span style="font-size:16px;">🚚</span>
+                </div>
+                <div id="sim-marker-heading" style="position:absolute;top:-4px;left:50%;transform:translateX(-50%) rotate(${angleDeg}deg);transform-origin:bottom center;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #00d084;z-index:4;"></div>
+              </div>
+            `,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+          });
+
+          simMarkerRef.current = L.marker(currentPos, { icon: simIcon, zIndexOffset: 2000 }).addTo(simGroup);
+        } else {
+          simMarkerRef.current.setLatLng(currentPos);
+          const headingElem = document.getElementById('sim-marker-heading');
+          if (headingElem) {
+            headingElem.style.transform = `translateX(-50%) rotate(${angleDeg}deg)`;
+          }
+        }
+
+        if (followVehicle) {
+          map.panTo(currentPos, { animate: true, duration: 0.25 });
+        }
+
+        return nextProgress;
+      });
+
+      if (isSimulating) {
+        animFrameId = requestAnimationFrame(stepSimulation);
+      }
+    };
+
+    if (isSimulating) {
+      animFrameId = requestAnimationFrame(stepSimulation);
+    }
+
+    return () => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    };
+  }, [isSimulating, simSpeed, followVehicle, routeResult]);
+
+  // Reset simulation handler
+  const handleResetSimulation = () => {
+    setIsSimulating(false);
+    setSimProgress(0);
+    if (simMarkerRef.current && simulationLayerGroupRef.current) {
+      simulationLayerGroupRef.current.removeLayer(simMarkerRef.current);
+      simMarkerRef.current = null;
+    }
+  };
+
+  // 5. DYNAMIC FLEET VEHICLES
   useEffect(() => {
     const map = mapInstanceRef.current;
     const vehicleGroup = vehicleLayerGroupRef.current;
@@ -363,12 +521,10 @@ export const LeafletMap: React.FC<Props> = ({
 
       const existingMarker = vehicleMarkersMapRef.current.get(vehicle.id);
       if (existingMarker) {
-        // SMOOTH POSITION UPDATE: In-place transition without removing layers or flashing tiles
         existingMarker.setLatLng(pos);
         existingMarker.setIcon(vehicleIcon);
         existingMarker.setZIndexOffset(isMoving ? 500 : 200);
       } else {
-        // Create new vehicle marker
         const marker = L.marker(pos, { icon: vehicleIcon, zIndexOffset: isMoving ? 500 : 200 })
           .addTo(vehicleGroup);
 
@@ -401,7 +557,6 @@ export const LeafletMap: React.FC<Props> = ({
       }
     });
 
-    // Prune vehicles no longer active
     vehicleMarkersMapRef.current.forEach((marker, id) => {
       if (!activeVehicleIds.has(id)) {
         vehicleGroup.removeLayer(marker);
@@ -410,7 +565,7 @@ export const LeafletMap: React.FC<Props> = ({
     });
   }, [fleetVehicles, onSelectVehicle]);
 
-  // 4. DRIVER LOCATION BEACON
+  // 6. DRIVER LOCATION BEACON
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !driverLocation?.latitude || !driverLocation?.longitude) return;
@@ -487,6 +642,8 @@ export const LeafletMap: React.FC<Props> = ({
     };
   }, []);
 
+  const totalStopsCount = stops.filter((s) => s.latitude && s.longitude).length;
+
   return (
     <div
       style={{
@@ -518,7 +675,7 @@ export const LeafletMap: React.FC<Props> = ({
                 style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
                 onClick={() => setMapLayer('dark')}
               >
-                🌙 Telematics Dark
+                🌙 Ola Dark
               </button>
               <button
                 type="button"
@@ -526,7 +683,7 @@ export const LeafletMap: React.FC<Props> = ({
                 style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
                 onClick={() => setMapLayer('streets')}
               >
-                🗺️ Streets (HD)
+                🗺️ Day Navigation
               </button>
               <button
                 type="button"
@@ -534,7 +691,7 @@ export const LeafletMap: React.FC<Props> = ({
                 style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
                 onClick={() => setMapLayer('satellite')}
               >
-                🛰️ Satellite (Esri)
+                🛰️ Satellite
               </button>
             </div>
 
@@ -544,11 +701,24 @@ export const LeafletMap: React.FC<Props> = ({
               className="btn btn-secondary btn-sm"
               onClick={handleRecenter}
               style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              title="Recenter and auto-fit all vehicles and stops"
+              title="Recenter and auto-fit route corridor"
             >
               <Compass size={13} />
-              <span>Recenter Fleet</span>
+              <span>Recenter</span>
             </button>
+
+            {/* Toggle Ola HUD */}
+            {totalStopsCount > 0 && (
+              <button
+                type="button"
+                className={`btn ${showHud ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                onClick={() => setShowHud(!showHud)}
+                style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Activity size={13} />
+                <span>{showHud ? 'Hide Visualizer' : 'Show Visualizer'}</span>
+              </button>
+            )}
           </div>
 
           {/* Google Maps External Routing Link */}
@@ -571,27 +741,268 @@ export const LeafletMap: React.FC<Props> = ({
               title="Open complete multi-stop turn-by-turn routing in Google Maps"
             >
               <Navigation size={13} />
-              <span>Open in Google Maps Directions</span>
+              <span>Google Maps Directions</span>
               <ExternalLink size={12} />
             </a>
           )}
         </div>
       )}
 
-      {/* Leaflet Map Canvas */}
-      <div
-        ref={mapContainerRef}
-        style={{
-          width: '100%',
-          height: showToolbar ? 'calc(100% - 44px)' : '100%',
-          flex: 1,
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border-subtle)',
-          overflow: 'hidden',
-          zIndex: 1,
-          minHeight: '350px'
-        }}
-      />
+      {/* Map Canvas & Ola Maps Route Visualizer Overlays */}
+      <div style={{ position: 'relative', flex: 1, width: '100%', minHeight: '360px', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1
+          }}
+        />
+
+        {/* =========================================================================
+            OLA MAPS FLOATING ROUTE VISUALIZER HUD (Glassmorphism Overlay)
+            ========================================================================= */}
+        {showHud && totalStopsCount > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              right: '12px',
+              maxWidth: '540px',
+              zIndex: 1000,
+              backgroundColor: 'rgba(15, 23, 42, 0.88)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+              padding: '12px 14px',
+              color: '#ffffff',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            {/* Header: Ola Road Badge & Metrics */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#00d084', boxShadow: '0 0 10px #00d084', animation: 'pulse 1.8s infinite' }} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.4px', textTransform: 'uppercase', color: '#00d084' }}>
+                  Ola Maps Route Visualizer
+                </span>
+                {routeResult?.isRealRoad && (
+                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px', backgroundColor: 'rgba(0, 208, 132, 0.15)', color: '#00d084', border: '1px solid rgba(0, 208, 132, 0.3)' }}>
+                    Road-Snapped
+                  </span>
+                )}
+              </div>
+
+              {/* Waypoints expand trigger */}
+              <button
+                type="button"
+                onClick={() => setShowWaypoints(!showWaypoints)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '0.74rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}
+              >
+                <span>{stops.length} Stops</span>
+                {showWaypoints ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+
+            {/* Distance, ETA, and Destination Badges */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>
+                  {routeResult ? `${routeResult.distanceKm}` : '--'}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>km total</span>
+              </div>
+
+              <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8' }}>
+                  {routeResult ? (routeResult.durationMinutes >= 60 ? `${Math.floor(routeResult.durationMinutes / 60)}h ${routeResult.durationMinutes % 60}m` : `${routeResult.durationMinutes} min`) : '--'}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>est. drive</span>
+              </div>
+
+              {isSimulating && (
+                <>
+                  <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(0, 208, 132, 0.12)', padding: '2px 8px', borderRadius: '8px', border: '1px solid rgba(0, 208, 132, 0.25)' }}>
+                    <Gauge size={13} color="#00d084" />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#00d084' }}>
+                      {simSpeedKmh} km/h
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Route Simulation Player Controls */}
+            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsSimulating(!isSimulating)}
+                  style={{
+                    backgroundColor: isSimulating ? '#f59e0b' : '#00d084',
+                    color: '#0f172a',
+                    fontWeight: 800,
+                    fontSize: '0.76rem',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '5px 12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {isSimulating ? <Pause size={13} /> : <Play size={13} />}
+                  <span>{isSimulating ? 'Pause Drive' : simProgress > 0 && simProgress < 1 ? 'Resume Drive' : 'Simulate Drive'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetSimulation}
+                  title="Reset route playback"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    color: '#cbd5e1',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '6px',
+                    padding: '5px 8px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <RotateCcw size={13} />
+                </button>
+
+                {/* Speed selector */}
+                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '6px', padding: '2px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {([1, 2, 4] as const).map((spd) => (
+                    <button
+                      key={spd}
+                      type="button"
+                      onClick={() => setSimSpeed(spd)}
+                      style={{
+                        background: simSpeed === spd ? 'rgba(0, 208, 132, 0.25)' : 'transparent',
+                        color: simSpeed === spd ? '#00d084' : '#94a3b8',
+                        border: 'none',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Follow vehicle toggle */}
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#cbd5e1', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={followVehicle}
+                  onChange={(e) => setFollowVehicle(e.target.checked)}
+                  style={{ accentColor: '#00d084', cursor: 'pointer' }}
+                />
+                <span>Follow Cab</span>
+              </label>
+            </div>
+
+            {/* Playback Progress Bar */}
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#94a3b8', marginBottom: '3px' }}>
+                <span>Route Progress</span>
+                <span>{Math.round(simProgress * 100)}%</span>
+              </div>
+              <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${simProgress * 100}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #00d084, #38bdf8)',
+                    transition: 'width 0.1s linear'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Expandable Turn-by-Turn Waypoints Drawer */}
+            {showWaypoints && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                  borderTop: '1px solid rgba(255,255,255,0.1)',
+                  paddingTop: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}
+              >
+                {baseLocation?.name && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', padding: '4px 6px', backgroundColor: 'rgba(197, 160, 89, 0.1)', borderRadius: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c5a059' }}>HQ</span>
+                      <span style={{ fontWeight: 600, color: '#f8fafc' }}>{baseLocation.name}</span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Origin</span>
+                  </div>
+                )}
+                {stops.map((stop) => (
+                  <div
+                    key={stop.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.75rem',
+                      padding: '4px 6px',
+                      backgroundColor: stop.status === 'COMPLETED' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.03)',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: stop.status === 'COMPLETED' ? '#10b981' : '#0284c7', color: '#fff', fontSize: '0.65rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {stop.stop_number}
+                      </span>
+                      <span style={{ fontWeight: 600, color: '#f8fafc' }}>{stop.destination_name}</span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: stop.status === 'COMPLETED' ? '#10b981' : '#38bdf8' }}>
+                      {stop.planned_arrival_time}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { DatabaseSync } from 'node:sqlite';
 
-const DB_DIR = path.resolve(__dirname, '../../data');
+const DB_DIR = process.env.DATA_DIR || path.resolve(__dirname, '../../data');
 const BACKUPS_DIR = path.join(DB_DIR, 'backups');
 const SOURCE_DB_PATH = path.join(DB_DIR, 'truck_tracker.sqlite');
 
