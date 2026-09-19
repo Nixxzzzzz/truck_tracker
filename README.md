@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="assets/hosexperts-logo.png" alt="HoseXperts — working with the flow" width="420" />
 </p>
 
@@ -49,6 +49,31 @@ PLANNED → IN_PROGRESS → DELAYED ↔ IN_PROGRESS → RETURNING → COMPLETED
 ```
 
 Server-enforced. Invalid transitions are rejected with 400 errors.
+
+---
+
+## 🗺️ Ola Maps Style Road Route Visualizer
+
+The Web Manager Console features a high-performance, real-road logistics visualizer modeled after **Ola Maps & enterprise navigation HUDs**:
+
+- **Real Road-Snapped Routing**: Automatically queries OSRM (Open Source Routing Machine) to trace real highway and street corridors across India instead of drawing crude straight lines.
+- **Dual-Layer Neon Glow Corridor**: High-contrast, futuristic neon aura (`#00d084` 9px outer glow + `#0284c7` 4.5px inner core) for immediate day/night route legibility.
+- **Floating Glassmorphism Ola HUD**: Displays actual highway distance in kilometers, estimated drive time in minutes, and active road-snapped corridor verification.
+- **Interactive Drive Simulator**: Real-time cab simulation along the road polyline with 3D driver marker, live speedometer gauge (`42 - 58 km/h`), progress bar (0–100%), playback speed controls (`1x`, `2x`, `4x`), and dynamic "Follow Cab" camera tracking.
+- **Turn-by-Turn Waypoints Drawer**: Expandable stop sequence with customer contacts, cargo counts, and one-click Google Maps navigation external links.
+- **Map Presets**: Instant switching between **"Ola Dark"** (cyberpunk logistics), **"Day Navigation"** (high contrast street view), and **"Satellite Hybrid"**.
+
+---
+
+## 🛡️ Commercial Security & Operational Hardening
+
+TruckTracker 2.0 has been hardened for enterprise company operations:
+
+- **HTTP Security Headers**: Powered by `helmet` with strict Content-Security-Policy (CSP) allowing trusted CDNs for Leaflet tiles, fonts, and icons.
+- **Brute-Force Rate Limiting**: Powered by `express-rate-limit` (15 login attempts per 15 minutes per IP) to neutralize credential-stuffing attacks.
+- **Dynamic CORS Whitelisting**: Configurable via `ALLOWED_ORIGINS` environment variable to restrict browser API access exclusively to trusted corporate domains.
+- **Zero Schema Leakage**: All 500 error responses are strictly sanitized in production, masking internal SQLite constraint and file path messages.
+- **Atomic Hot Database Backups**: Manager-only `POST /api/backup/create` endpoint executes `VACUUM INTO` snapshots directly onto persistent storage (`/data/backups/`) with zero downtime.
 
 ---
 
@@ -251,49 +276,55 @@ npm run migrate --workspace=server
 
 ---
 
-## 📱 Android Driver App
-
-Built with **Kotlin + Jetpack Compose**. Compiled by GitHub Actions on every `main` push.
-
-**Download**: [GitHub Releases → v1.1.0 APK](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
-
-**Install Steps:**
-1. Download APK from Releases
-2. Device → Settings → Security → Enable **Install Unknown Apps**
-3. Install APK → log in with driver credentials
-4. App checks `/api/app-version` for update alerts on launch
-
----
-
-## 🧪 Tests
-
-```bash
-npm test                                    # DB integrity & business rules
-npm run test:scenarios --workspace=server   # Production edge cases (20 tests)
-npm run test:workflow --workspace=server    # End-to-end dispatch workflow (20 tests)
-npm run build:all                           # Full production build
-```
-
----
-
-## ✅ Features
-
-| Feature | Notes |
-|---------|-------|
-| Zero dummy data | All from live DB — no `DL01TA4920`, no fake docs |
-| JWT auth + RBAC | Manager (full control) / Driver (own trips only) |
-| Server-enforced state machine | Invalid trip transitions rejected |
-| Haversine geofenced arrivals | ≤250m radius check |
-| Proof-of-delivery photo upload | Stored to persistent disk |
-| Statutory compliance hub | RC, Insurance, Fitness, PUC, Permit |
-| Traffic challan vault | Log, attach proof, settle |
-| Tri-lingual driver UI | English / हिन्दी / Hinglish |
-| Offline-first driver | Auto-sync queue on reconnect |
-| Real-time fleet GPS radar | Leaflet live map |
-| Delay attribution analytics | Management vs Driver trend analysis |
-| SAP ONE Portal ERP refs | Shipment/Delivery/Cost Center fields |
-| Native Android APK | Kotlin + Jetpack Compose + CameraX |
-| GitHub Actions CI/CD | Auto Android build + Render deploy |
+## 📱 Android Driver App — Enterprise Distribution
+ 
+Built with **Kotlin + Jetpack Compose**. Designed for **direct internal company distribution** across company and driver Android devices (no Google Play Store submission required).
+ 
+- **Download**: [GitHub Releases → v1.1.0 APK](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
+- **Web QR Code / Direct Link**: Available on the Web Login screen (`/login`)
+- **Automated OTA Telemetry**: When the app launches, it checks `GET /api/app-version` and notifies drivers whenever a newer corporate APK build is published.
+- **Hardware Integration**: High-accuracy GPS fused location, CameraX proof photo capture with aspect-ratio locking, and local Room database offline queue.
+ 
+ **Install Steps:**
+ 1. Download APK from Releases or through the Web Portal download link
+ 2. Device → Settings → Security → Enable **Install Unknown Apps** (for Browser/Files)
+ 3. Install APK → log in with driver credentials
+ 4. App checks `/api/app-version` for update alerts on launch
+ 
+ ---
+ 
+ ## 🧪 Tests
+ 
+ ```bash
+ npm test                                    # DB integrity & business rules (33 tests)
+ npm run test:scenarios --workspace=server   # Production edge cases (20 tests)
+ npm run test:workflow --workspace=server    # End-to-end dispatch workflow (20 tests)
+ npm run build:all                           # Full production build
+ ```
+ 
+ ---
+ 
+ ## ✅ Features
+ 
+ | Feature | Notes |
+ |---------|-------|
+ | Zero dummy data | All from live DB — no `DL01TA4920`, no fake docs |
+ | Ola Maps Route Visualizer | Road-snapped OSRM corridor, neon aura, live drive simulator HUD |
+ | Security Hardened | Helmet CSP, brute-force rate limiter, CORS whitelist |
+ | Hot Database Backups | Atomic `VACUUM INTO` snapshots with zero downtime |
+ | JWT auth + RBAC | Manager (full control) / Driver (own trips only) |
+ | Server-enforced state machine | Invalid trip transitions rejected |
+ | Haversine geofenced arrivals | ≤250m radius check |
+ | Proof-of-delivery photo upload | Stored to persistent disk |
+ | Statutory compliance hub | RC, Insurance, Fitness, PUC, Permit |
+ | Traffic challan vault | Log, attach proof, settle |
+ | Tri-lingual driver UI | English / हिन्दी / Hinglish |
+ | Offline-first driver | Auto-sync queue on reconnect |
+ | Real-time fleet GPS radar | Leaflet live map with Ola Dark / Day / Satellite themes |
+ | Delay attribution analytics | Management vs Driver trend analysis |
+ | SAP ONE Portal ERP refs | Shipment/Delivery/Cost Center fields |
+ | Native Android APK | Kotlin + Jetpack Compose + CameraX (Internal Enterprise Rollout) |
+ | GitHub Actions CI/CD | Auto Android build + Render deploy |
 
 ---
 

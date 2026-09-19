@@ -41,10 +41,19 @@ Primary Navigation:
 - Intuitive drag-and-drop or sequential reordering prior to dispatch.
 - Adding or deleting destination stops automatically re-indexes stop numbers (`stop_number: 1, 2, 3...`) with audit log preservation.
 
-### C. Interactive Route Map
-- Visualizes base depot (HQ marker), numbered destination stops, and vehicle breadcrumb GPS coordinates.
-- Displays destination geofence circles (100–250m radius) for visual verification.
-- Event markers for arrival points, departure points, and reported delay locations.
+### C. Interactive Route Map & Ola Maps Route Visualizer
+- **OSRM Road-Snapped Routing (`services/routing.ts`)**: Replaces simple straight lines with real-world Indian road network geometry fetched from Open Source Routing Machine with in-memory caching and haversine fallbacks.
+- **Dual-Layer Neon Glow Corridor**: High-visibility polyline combining an outer 9px emerald glow (`#00d084`) and an inner 4.5px cyan highway core (`#0284c7`).
+- **Floating Ola Maps Glassmorphism HUD**: Shows real road driving distance (km), estimated drive time (mins), and road-snapped corridor verification.
+- **Interactive Drive Simulator**: Real-time cab simulation along the road polyline featuring:
+  - Custom 3D cab marker with pulsing locator aura.
+  - Realistic live speedometer gauge (`42 - 58 km/h`).
+  - Interactive scrubbable progress bar (0–100%).
+  - Playback speed multipliers (`1x`, `2x`, `4x`).
+  - "Follow Cab" active camera centering toggle.
+- **Turn-by-Turn Waypoints Drawer**: Collapsible sidebar listing destination stops with customer names, delivery counts, and one-click Google Maps navigation external links.
+- **Multi-Theme Basemaps**: Instant toggle between **Ola Dark** (high-contrast night logistics), **Day Navigation** (clean street map), and **Satellite Hybrid** (aerial imagery).
+- **Geofence Verification Circles**: Visual representation of destination arrival geofences (100–250m radius).
 
 ### D. Operational Reports & Exports
 - Real-time aggregations calculated from SQLite database records:
@@ -54,3 +63,9 @@ Primary Navigation:
   - Vehicle fleet utilization and driver trip distribution.
   - Delay reason breakdowns (Traffic, Breakdown, Weather, Customer Unavailable, etc.).
 - Instant one-click export to CSV.
+
+### E. 100% Production Data Fidelity (Zero Mock Data)
+- **Elimination of Mock Data**: The legacy `mockData.ts` and `mockStore` layers have been completely removed.
+- All trips, vehicles, drivers, documents, and challans reflect the authoritative SQLite database state.
+- If no trips are assigned, the UI renders authentic empty states rather than fictitious fallback demo trucks.
+- Offline resilience is handled purely via `offlineQueue.ts` (localStorage queue that replays idempotent transactions once reconnected).

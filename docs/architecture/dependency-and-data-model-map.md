@@ -23,7 +23,7 @@ The primary relational persistence engine uses Node 22 native SQLite (`DatabaseS
 | **`photos`** | Tamper-evident proof-of-delivery (POD) and delay photo metadata | `id` (UUIDv4) | `trip_id` → `trips(id)`, `stop_id` → `trip_stops(id)`, `driver_id` → `users(id)` | `idx_photos_trip` | Immutable timestamped audit records linked to local storage path. |
 | **`trip_events`** | Granular chronological telemetry and status transition events | `id` (UUIDv4) | `trip_id` → `trips(id)`, `driver_id` → `users(id)`, `vehicle_id` → `vehicles(id)` | `idx_events_trip_time` (trip_id, timestamp) | Append-only event stream (e.g. `TRIP_DISPATCHED`, `GEOFENCE_ENTERED`). |
 | **`audit_logs`** | Managerial change audit trail (cancellations, status overrides, route reorders) | `id` (UUIDv4) | `changed_by` → `users(id)` | None | Append-only security audit log. |
-| **`google_sheet_sync`**| Synchronization status tracking SQLite records pushed to Google Sheets | `id` (UUIDv4) | None | `idx_sheet_sync` (sheet_name, sync_status) | Pending → Synced / Failed. |
+| **`google_sheet_sync`** | *Legacy Table (Deprecated)* Outbound sync status tracking (superseded by SQLite hot backups) | `id` (UUIDv4) | None | `idx_sheet_sync` (sheet_name, sync_status) | Deprecated in favor of direct ERP & hot backups. |
 
 ---
 
@@ -33,40 +33,34 @@ The primary relational persistence engine uses Node 22 native SQLite (`DatabaseS
 erDiagram
     users ||--o{ vehicles : "assigned driver"
     users ||--o{ drivers : "driver profile"
-    users ||--o{ trips : "assigned driver"
-    users ||--o{ audit_logs : "changed by"
-    vehicles ||--o{ trips : "manifest vehicle"
-    trips ||--|{ trip_stops : "consists of 1..N"
-    destinations ||--o{ trip_stops : "referenced facility"
-    trip_stops ||--o{ activities : "stop tasks"
-    trip_stops ||--o{ photos : "proof photos"
-    trips ||--o{ delays : "route delays"
-    trips ||--o{ trip_events : "chronological event stream"
-    trips ||--o{ photos : "all trip photos"
+    users ||--o{ trips : "dispatched manager / driver"
+    vehicles ||--o{ trips : "assigned vehicle"
+    destinations ||--o{ trip_stops : "destination waypoint"
+    trips ||--|{ trip_stops : "contains 1..N stops"
+    trips ||--o{ activities : "executed freight operations"
+    trips ||--o{ delays : "recorded bottlenecks"
+    trips ||--o{ photos : "proof-of-delivery photos"
+    trips ||--o{ trip_events : "audit event stream"
+    users ||--o{ audit_logs : "managerial actions"
 ```
 
 ---
 
-## 3. Existing API Routes & HTTP Contracts
+## 3. Existing Routes to Database Mutation Mapping
 
-| Endpoint | Method | Required Role | Request Contract | Response Contract | Primary Frontend Consumer |
-| :--- | :---: | :---: | :--- | :--- | :--- |
-| `/api/auth/login` | `POST` | Public | `{ email, password }` | `{ token, user: { id, name, email, role, phone } }` | `LoginView.tsx` |
-| `/api/auth/me` | `GET` | Authenticated | Bearer JWT | `{ user }` | App initialization |
-| `/api/trips/overview/attention` | `GET` | `MANAGER` | None | `{ delayedTrips, failedActivities, syncFailures, overdueTrips, maintenanceVehicles, totalAttentionCount }` | `ManagerView.tsx` (KPIs & Alert Feed) |
-| `/api/trips` | `GET` | `MANAGER` | Query: `date`, `driverId`, `vehicleId`, `status`, `search`, `limit`, `offset` | `{ trips: Trip[] }` | `ManagerView.tsx` (Dispatch Command table) |
-| `/api/trips/:id` | `GET` | `MANAGER` | None | `{ trip: TripWithDetails }` (stops, activities, photos, delays, events, auditLogs) | `TripDetailModal.tsx` |
-| `/api/trips` | `POST` | `MANAGER` | `{ date, driver_id, vehicle_id, starting_location, purpose, reference_number, planned_departure_time, notes, stops[] }` | `{ message, tripId }` | `TripCreatorModal.tsx` |
-| `/api/trips/:id` | `PUT` | `MANAGER` | Update payload | `{ message: 'Trip updated' }` | `ManagerView.tsx` |
-| `/api/trips/:id/cancel` | `POST` | `MANAGER` | `{ reason }` | `{ message: 'Trip cancelled' }` | `ManagerView.tsx` |
-| `/api/driver/trips/active` | `GET` | `DRIVER`/`MGR` | None | `{ trip: TripWithStops \| null }` | `DriverView.tsx` (Primary Route view) |
-| `/api/driver/trips/today` | `GET` | `DRIVER` | None | `{ trips: Trip[] }` | `DriverView.tsx` (Assigned Roster) |
-| `/api/driver/trips/:id/start` | `POST` | `DRIVER` | `{ latitude, longitude, gpsAccuracy, odometer }` | `{ message, status: 'IN_PROGRESS' }` | `DriverView.tsx` (Start Dispatch button) |
-| `/api/driver/trips/:id/stops/:stopId/arrive` | `POST` | `DRIVER` | `{ latitude, longitude, gpsAccuracy }` | `{ message, arrival_status, arrival_diff_minutes }` | `DriverView.tsx` (Geofence Arrival) |
-| `/api/driver/trips/:id/stops/:stopId/depart` | `POST` | `DRIVER` | None | `{ message, remainingStops }` | `DriverView.tsx` (Depart Destination) |
-| `/api/driver/trips/:id/delay` | `POST` | `DRIVER` | `{ reason, description, photoId }` | `{ message, delayId }` | `DelayModal.tsx` |
-| `/api/driver/trips/:id/delay/:delayId/resolve`| `POST`| `DRIVER` | None | `{ message: 'Delay resolved' }` | `DriverView.tsx` |
-| `/api/driver/trips/:id/complete` | `POST` | `DRIVER` | `{ latitude, longitude, odometer }` | `{ message: 'Trip completed successfully' }` | `DriverView.tsx` |
+| Route Pattern | Method | Minimum Role | Request Body | Response Shape | Primary UI Consumer |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/auth/login` | `POST` | Public | `{ email, password }` | `{ token, user: { id, name, email, role } }` | `LoginModal.tsx` |
+| `/api/auth/me` | `GET` | Authenticated | None | `{ user: { id, name, email, role } }` | `App.tsx` (Session Validation) |
+| `/api/trips` | `GET` | Authenticated | None | `{ trips: TripWithDetails[] }` | `ManagerView.tsx`, `DriverView.tsx` |
+| `/api/trips` | `POST` | `MANAGER` | `{ date, driver_id, vehicle_id, starting_location, planned_departure_time, stops }` | `{ message: 'Trip created', trip: { id, ... } }` | `CreateTripModal.tsx` |
+| `/api/trips/:id` | `GET` | Authenticated | None | `{ trip: TripWithDetails }` | `TripDetailsModal.tsx` |
+| `/api/trips/:id` | `PUT` | `MANAGER` | `{ driver_id, vehicle_id, planned_departure_time, ... }` | `{ message: 'Trip updated' }` | `EditTripModal.tsx` |
+| `/api/trips/:id/cancel` | `POST` | `MANAGER` | `{ reason }` | `{ message: 'Trip cancelled' }` | `CancelTripModal.tsx` |
+| `/api/driver/trips/active` | `GET` | `DRIVER` | None | `{ trip: TripWithDetails \| null }` | `DriverView.tsx` (Active Route) |
+| `/api/trips/:id/events` | `POST` | Authenticated | `{ event_type, stop_id, latitude, longitude, gps_accuracy, idempotency_key, metadata }` | `{ success: true, event_id }` | `DriverView.tsx`, `offlineQueue.ts` |
+| `/api/delays` | `POST` | Authenticated | `{ trip_id, stop_id, reason, notes, latitude, longitude }` | `{ message: 'Delay reported', id }` | `DelayModal.tsx` |
+| `/api/delays/:id/resolve` | `PUT` | Authenticated | `{ notes }` | `{ message: 'Delay resolved' }` | `DriverView.tsx` (Delay Banner) |
 | `/api/fleet/vehicles` | `GET` | Authenticated | None | `{ vehicles: Vehicle[] }` | `ManagerView.tsx` (Vehicle Registry) |
 | `/api/fleet/vehicles` | `POST` | `MANAGER` | `{ vehicle_number, vehicle_type, model, assigned_driver_id, status, notes }` | `{ message: 'Vehicle created', id }` | `VehicleModal.tsx` |
 | `/api/fleet/vehicles/:id` | `PUT` | `MANAGER` | `{ vehicle_number, vehicle_type, model, assigned_driver_id, status, notes }` | `{ message: 'Vehicle updated' }` | `VehicleModal.tsx` |
@@ -80,20 +74,24 @@ erDiagram
 | `/api/reports/periodic` | `GET` | `MANAGER` | Query: `period` (`weekly` \| `monthly`) | Unified schema: `{ period, daysAnalyzed, overview, metrics, trips, delayReasons, driverSummary, vehicleSummary }` | `ManagerView.tsx` (Rolling Audit View) |
 | `/api/reports/export` | `GET` | `MANAGER` | Query: `date` | `Content-Type: text/csv` (Formatted spreadsheet download) | `ManagerView.tsx` (Export Operational CSV) |
 | `/api/photos/upload` | `POST` | Authenticated | Multipart `FormData` (`photo`, `trip_id`, `stop_id`, `photo_type`) | `{ id, file_path, file_size, mime_type, timestamp }` | `CameraModal.tsx` |
+| `/api/backup/create` | `POST` | `MANAGER` | None | `{ success: true, backup: { filename, path, size, createdAt } }` | `SettingsView.tsx` (System Maintenance) |
 | `/api/health` | `GET` | Public | None | `{ status: 'healthy', timestamp, service }` | Render Health Check & Uptime monitoring |
 
 ---
 
-## 4. Existing Mock Data vs. Production Data Boundary
+## 4. 100% Production Data Architecture (Zero Mock Data)
 
-The repository maintains an intentional **dual-tier resilience architecture**:
-1. **Primary Production Tier**:
+The codebase strictly enforces production-grade data integrity:
+1. **Authoritative Backend Data Source**:
    - Web application interacts with `/api/*` backed by SQLite on the Node Express server.
-   - All manager dispatches, driver departures, photos, and delays write to SQLite relational tables and generate persistent audit logs.
-2. **Offline & Fallback Tier (`web/src/services/mockData.ts` & `offlineQueue.ts`)**:
-   - In low-connectivity freight corridors (e.g. Ghazipur border, industrial basements), `offlineQueue` intercepts network errors and stores pending events in `localStorage`.
-   - `mockStore` serves cached demo records when the development server is started without a database or when offline demonstration mode is toggled.
-   - **Boundary Enforcement**: The production server (`server/src/index.ts`) has zero dependency on `mockData.ts`. Mock data lives strictly inside `web/src/services/` and never writes to or corrupts the production SQLite tables.
+   - All manager dispatches, driver departures, photos, and delays write directly to SQLite relational tables and generate persistent audit logs.
+2. **Complete Elimination of Mock Data**:
+   - The legacy `mockData.ts` and `mockStore` layers have been **completely eliminated** from the codebase.
+   - No mock Tata trucks, fictitious challan records, or hardcoded driver manifests are injected into the frontend.
+   - If the backend returns an empty list, the UI renders clean, authentic empty states.
+3. **Offline Field Queueing (`web/src/services/offlineQueue.ts`)**:
+   - In low-connectivity freight corridors, `offlineQueue` intercepts network errors and stores pending events in `localStorage`.
+   - When network connectivity is restored, events are automatically flushed to the backend using UUID idempotency keys to ensure zero duplication.
 
 ---
 

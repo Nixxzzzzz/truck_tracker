@@ -1,4 +1,4 @@
-﻿# Contributing to TruckTracker 2.0
+# Contributing to TruckTracker 2.0
 
 Thank you for contributing to the HoseXperts TruckTracker platform.
 
@@ -76,10 +76,11 @@ npm run build:all                # Full TypeScript compilation check
 ```
 truck_tracker/
 ├── web/src/
-│   ├── components/      # Reusable UI components
-│   ├── views/           # Page-level components (DriverView, ManagerView)
-│   ├── services/api.ts  # All API calls (no mock fallbacks)
-│   └── services/mockData.ts  # Dev helpers only (not imported in production paths)
+│   ├── components/            # Reusable UI components (LeafletMap, Modals, etc.)
+│   ├── views/                 # Page-level components (DriverView, ManagerView)
+│   ├── services/api.ts        # All API calls (direct backend, no mock fallbacks)
+│   ├── services/routing.ts    # Ola Maps style OSRM road geometry engine
+│   └── services/offlineQueue.ts # LocalStorage offline event queue
 ├── server/src/
 │   ├── routes/          # Express API route handlers
 │   ├── migrations/      # Database schema migrations

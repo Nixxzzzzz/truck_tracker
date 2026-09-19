@@ -216,7 +216,22 @@ Authorization: Bearer <JWT_TOKEN>
   }
   ```
 
-### `GET /api/google-sheets/status` & `POST /api/google-sheets/sync`
+### `POST /api/backup/create`
 - **Role**: `MANAGER`
-- **Purpose**: Audit outbound Google Sheets sync status and trigger immediate manual retry synchronization.
+- **Purpose**: Execute an atomic SQLite WAL hot backup snapshot via `VACUUM INTO` onto persistent storage without taking the service offline.
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Backup created successfully",
+    "backup": {
+      "filename": "backup-2026-09-19T13-30-00-000Z.sqlite",
+      "path": "/data/backups/backup-2026-09-19T13-30-00-000Z.sqlite",
+      "size": 147456,
+      "sizeFormatted": "144.0 KB",
+      "createdAt": "2026-09-19T13:30:00.000Z"
+    }
+  }
+  ```
+
 

@@ -175,6 +175,7 @@ NODE_OPTIONS=--experimental-sqlite
 NODE_ENV=production
 PORT=10000
 JWT_SECRET=generate_a_random_64_character_hex_string_here
+ALLOWED_ORIGINS=https://fleet-managment-system-2-0.onrender.com,https://truck-tracker-api-9yhq.onrender.com
 AUTO_SEED=false
 
 # Initial Administrator Credentials (provisioned if database is brand new)
@@ -205,6 +206,14 @@ If deploying on Render Free Tier (which spins down after 15 minutes of idle):
    ```
 3. Set the monitoring interval to **every 10 minutes**.
 4. This ensures the container stays awake 24/7 and eliminates 50-second cold start delays.
+
+### 5.6 Automated Hot Database Backups
+Operations managers can trigger zero-downtime hot database backups directly from the REST API:
+```bash
+curl -X POST https://your-service.onrender.com/api/backup/create \
+  -H "Authorization: Bearer <MANAGER_JWT_TOKEN>"
+```
+This executes an atomic SQLite `VACUUM INTO` command, placing a clean snapshot into `/data/backups/` without locking live driver transactions. You can also configure an external cron job or Render Cron to call this endpoint on a daily schedule.
 
 ---
 

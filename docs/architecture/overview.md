@@ -22,7 +22,7 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 │               (Render All-in-One Container)                 │
 │                                                             │
 │   ┌─────────────────────────────────────────────────────┐   │
-│   │ Middleware: Auth / RBAC, CORS, Request Validation   │   │
+│   │ Middleware: Helmet, RateLimiter, Auth/RBAC, CORS   │   │
 │   └──────────────────────────┬──────────────────────────┘   │
 │                              │                              │
 │   ┌──────────────────────────┴──────────────────────────┐   │
@@ -33,8 +33,8 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 │   │ ├── /api/fleet      (Vehicles, Documents, Papers)   │   │
 │   │ ├── /api/reports    (Delay Attribution & SLA Trends)│   │
 │   │ ├── /api/photos     (Multer POD File Storage)       │   │
+│   │ ├── /api/backup     (Zero-Downtime Hot DB Snapshots)│   │
 │   │ ├── /api/app-version(Mobile Client Telemetry)       │   │
-│   │ ├── /api/google-sheets (Outbound Reporting Sync)    │   │
 │   │ └── /api/health     (Uptime Probe)                  │   │
 │   └──────────────────────────┬──────────────────────────┘   │
 │                              │                              │
@@ -42,7 +42,7 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 │   │ Service Layer                                       │   │
 │   │ ├── Geo Service     (Haversine geofence detection)  │   │
 │   │ ├── Migration Engine(Versioned ordered migrations)  │   │
-│   │ └── Sheets Service  (Outbound spreadsheet sync)     │   │
+│   │ └── Backup Service  (Atomic VACUUM INTO snapshots)  │   │
 │   └──────────────────────────┬──────────────────────────┘   │
 │                              │                              │
 │   ┌──────────────────────────┴──────────────────────────┐   │
