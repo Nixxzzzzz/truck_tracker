@@ -27,7 +27,8 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
   useEffect(() => {
     api.fleet.getDestinations()
       .then((res) => {
-        if (Array.isArray(res)) setExistingDestinations(res);
+        const list = Array.isArray(res) ? res : res?.destinations || [];
+        setExistingDestinations(list);
       })
       .catch(() => {});
   }, []);

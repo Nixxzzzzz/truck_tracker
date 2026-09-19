@@ -355,7 +355,7 @@ export const ManagerView: React.FC<Props> = ({
         api.manager.getAttention()
       ]);
 
-      setTrips(tripsRes.trips);
+      setTrips(Array.isArray(tripsRes?.trips) ? tripsRes.trips : (Array.isArray(tripsRes) ? tripsRes : []));
       setAttention(attentionRes);
       setLastRefresh(new Date());
     } catch (err) {
@@ -456,9 +456,9 @@ export const ManagerView: React.FC<Props> = ({
         api.fleet.getDrivers(),
         api.fleet.getDestinations()
       ]);
-      setVehicles(vRes.vehicles);
-      setDrivers(dRes.drivers);
-      setDestinations(destRes.destinations);
+      setVehicles(Array.isArray(vRes?.vehicles) ? vRes.vehicles : (Array.isArray(vRes) ? vRes : []));
+      setDrivers(Array.isArray(dRes?.drivers) ? dRes.drivers : (Array.isArray(dRes) ? dRes : []));
+      setDestinations(Array.isArray(destRes?.destinations) ? destRes.destinations : (Array.isArray(destRes) ? destRes : []));
       setLastRefresh(new Date());
     } catch (err) {
       console.error('Fleet error:', err);

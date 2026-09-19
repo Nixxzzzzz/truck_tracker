@@ -57,14 +57,16 @@ const PRESETS: ProfilePreset[] = [
 
 export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onToggleTheme }) => {
   const [selectedPresetId, setSelectedPresetId] = useState<'manager' | 'driver' | 'director'>('manager');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(PRESETS[0].email);
+  const [password, setPassword] = useState(PRESETS[0].password);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectPreset = (preset: ProfilePreset) => {
     setSelectedPresetId(preset.id);
+    setEmail(preset.email);
+    setPassword(preset.password);
     setError(null);
   };
 
@@ -196,7 +198,29 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
               <UserCheck size={14} color="var(--accent-primary)" />
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{activePreset.title}</span>
             </div>
-            <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{activePreset.roleBadge}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{activePreset.roleBadge}</span>
+              <button
+                type="button"
+                onClick={() => handleLogin(activePreset.email, activePreset.password)}
+                disabled={loading}
+                style={{
+                  padding: '3px 9px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                1-Click Login &rarr;
+              </button>
+            </div>
           </div>
         </div>
 
