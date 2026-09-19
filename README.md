@@ -1,388 +1,318 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/hosexperts-logo.png" alt="HoseXperts — working with the flow" width="420" />
 </p>
 
-# 🚛 TruckTracker — Enterprise Fleet Operations & Logistics Tracking System
+# 🚛 TruckTracker 2.0 — Enterprise Fleet Operations & Dispatch Logistics
 
-> **A production-grade logistics management platform connecting dispatch operations managers and field drivers through an authoritative, high-integrity backend engine.**
+> **Production-grade logistics management platform for HoseXperts fleet operators.**  
+> All data is **live from the company SQLite database** — no hardcoded vehicles, no fake plates, no dummy challans, no placeholder documents.
 
-[![Live Web Platform](https://img.shields.io/badge/Production%20Deployment-truck--tracker--api--9yhq.onrender.com-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
-[![CI/CD Build & Test](https://github.com/Nixxzzzzz/truck_tracker/actions/workflows/deploy.yml/badge.svg)](https://github.com/Nixxzzzzz/truck_tracker/actions)
-[![Android APK Download](https://img.shields.io/badge/Android%20Driver%20APK-v1.1.0%20Download-4f46e5.svg?logo=android)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
-[![Health Check](https://img.shields.io/badge/Health%20Endpoint-200%20OK-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
-[![Stack](https://img.shields.io/badge/Stack-Node%2022%2B%20%7C%20React%2019%20%7C%20TypeScript-2563eb.svg)](#)
-[![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(17%20Tables)-d97706.svg)](#)
-[![Integrity Suite](https://img.shields.io/badge/Integrity%20Tests-33%20Passed%20%7C%200%20Failed-059669.svg)](#)
+[![Live Production](https://img.shields.io/badge/Production-truck--tracker--api--9yhq.onrender.com-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
+[![Health Check](https://img.shields.io/badge/Health-200%20OK-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
+[![CI/CD Build](https://github.com/Nixxzzzzz/truck_tracker/actions/workflows/deploy.yml/badge.svg)](https://github.com/Nixxzzzzz/truck_tracker/actions)
+[![Android APK](https://img.shields.io/badge/Android%20APK-v1.1.0-4f46e5.svg?logo=android)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
+[![Stack](https://img.shields.io/badge/Stack-Node%2022%20%7C%20React%2019%20%7C%20TypeScript-2563eb.svg)](#)
+[![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(16%20Tables)-d97706.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 📌 Executive Summary
+## 📌 What Is TruckTracker 2.0?
 
-TruckTracker is an internal enterprise logistics operations platform engineered for commercial fleet operators, freight dispatchers, and field drivers. It provides single-pane-of-glass operational visibility across multi-stop dispatch scheduling, real-time GPS telemetry, delay logging and root cause attribution, fuel audits, maintenance lifecycles, and statutory vehicle compliance.
+TruckTracker is an **internal enterprise fleet operations platform** built exclusively for HoseXperts. It connects two types of users:
 
-### Core Capabilities:
-- **Centralized Dispatch & Route Builder**: Visual planning of multi-stop delivery and pickup runs with sequential ordering, cargo assignments, and geofenced checkpoints.
-- **Authoritative Trip State Machine**: Server-enforced lifecycles (`PLANNED` → `IN_PROGRESS` → `DELAYED` → `RETURNING` → `COMPLETED`) preventing invalid status progressions.
-- **Delivery Deletion Safeguards**: Dispatched and completed orders cannot be deleted, enforcing strict financial and operational audit trails while allowing safe detail edits.
-- **Delay Attribution & Root Cause Analytics**: Dual-series interactive intelligence distinguishing Management-caused delays (dock congestion, gate pass clearance, paperwork) from Driver transit delays (expressway bottlenecks, weather).
-- **Multi-Select Checkbox Dropdowns**: Multi-variable filtering across schedules, vehicles, and documents with counter badges and smart viewport edge auto-alignment.
-- **Statutory Vehicle Papers & Compliance Hub**: Comprehensive registry for Registration Certificates (RC), Commercial Insurance, Road Fitness, Pollution Under Control (PUC), and National Permits with document upload and expiry alerts.
-- **Native Android Field Application & In-Cab Cockpit**: Offline-first driver client built with Kotlin and Jetpack Compose, featuring hardware CameraX proof-of-delivery capture, FusedLocationProviderClient GPS geofence verification, and instant 1-tap digital vehicle papers access for highway checkposts.
-- **Automated CI/CD & In-App Sync**: GitHub Actions automated Android APK compiler pipeline paired with live in-app update telemetry (`/api/app-version`) synchronizing web and mobile deployments on every push.
+- **Dispatch Operations Managers** — Plan multi-stop routes, assign drivers and vehicles, monitor live GPS fleet positions, manage statutory vehicle compliance documents, handle challan records, and generate SLA/delay analytics reports.
+- **Field Route Drivers** — Receive trip manifests, log geofenced stop arrivals, capture proof-of-delivery photos, report delays, and access assigned vehicle papers — from the mobile web cockpit or Android APK.
+
+**Data source**: All vehicles, drivers, trips, documents, and challans come from the live **SQLite database** (backed by SAP ONE Portal ERP references). There is **no Google Sheets dependency**, no mock data, and no static demo records in production.
 
 ---
 
-## 📸 Platform Showcase & Visual Previews
+## 🏛️ Production Architecture
 
-### 1. Dispatch Operations Command Center
-*Comprehensive operational triage displaying real-time KPI metrics, active fleet runs, delayed trip alerts, unassigned manifests, and SLA compliance gauges.*
-
-<p align="center">
-  <img src="docs/images/01-operations-overview.png" alt="Dispatch Operations Command Center" width="100%" />
-</p>
-
----
-
-### 2. Multi-Select Schedule Board & Delivery Dispatcher
-*Advanced schedule management featuring multi-select checkbox dropdown filters (by multiple statuses, drivers, or vehicle types simultaneously), sequential route builder, and deletion safeguards for dispatched consignments.*
-
-<p align="center">
-  <img src="docs/images/02-dispatch-schedule-board.png" alt="Multi-Select Schedule Board" width="100%" />
-</p>
-
----
-
-### 3. Live GPS Fleet Radar & Spatial Telematics
-*Interactive geospatial command center powered by Leaflet, visualizing real-time driver coordinates, active delivery corridors across Delhi-NCR, geofence radii, and vehicle transit telemetry.*
-
-<p align="center">
-  <img src="docs/images/03-live-fleet-radar.png" alt="Live GPS Fleet Radar" width="100%" />
-</p>
-
----
-
-### 4. Vehicle Papers & Statutory Compliance Hub
-*Statutory vehicle document repository tracking Registration Certificates (RC), Commercial Insurance, Road Fitness, Pollution Under Control (PUC), and National Permits with normalized validity badges, expiry alerts, and direct upload capabilities.*
-
-<p align="center">
-  <img src="docs/images/04-compliance-documents-hub.png" alt="Vehicle Papers & Compliance Hub" width="100%" />
-</p>
-
----
-
-### 5. Dual-Series Delay Attribution & Root Cause Analytics
-*Interactive visual analytics comparing delays caused by Operational Management (loading dock wait times, dispatch paperwork, gate pass queues) against Driver transit delays (corridor congestion, weather), featuring hourly trendlines and Pareto distributions.*
-
-<p align="center">
-  <img src="docs/images/05-delay-attribution-chart.png" alt="Delay Attribution Analytics" width="100%" />
-</p>
-
----
-
-### 6. Driver Mobile Cockpit & Digital In-Cab Vehicle Papers
-*Ergonomic mobile experience for route drivers featuring turn-by-turn route manifests, distance/ETA telemetry, geofence auto-arrivals, and 1-tap digital vehicle papers access for traffic/RTO inspection checkpoints.*
-
-| 📱 In-Cab Driver Cockpit | 📄 Digital Vehicle Papers Hub |
-|:---:|:---:|
-| <img src="docs/images/06-driver-mobile-cockpit.png" alt="Driver Mobile Cockpit" width="380" /> | <img src="docs/images/07-vehicle-papers-compliance.png" alt="Digital Vehicle Papers" width="380" /> |
-| *Active manifest card, geofence arrival triggers, and quick action bar.* | *1-tap in-cab digital compliance papers for police & RTO checkposts.* |
-
----
-
-### 7. Official HoseXperts Brand Loading Screen & Unified Identity
-*Official corporate HoseXperts identity ("working with the flow") featured across application loading states on web and native Android, high-resolution vector emblem, and crisp dark/light themes.*
-
-<p align="center">
-  <img src="docs/images/16-app-loading-logo.png" alt="HoseXperts Official App Loading Screen" width="100%" />
-</p>
-
----
-
-### 8. Live Vehicle Tracking on Route & Anti-Flicker Map Command Center
-*Direct live tracking of any moving vehicle from the overview dashboard with auto-focused route corridor, driver telemetry HUD pill, and zero-flicker in-place coordinates updates.*
-
-<p align="center">
-  <img src="docs/images/10-overview-tracking.png" alt="Live Vehicle Tracking and Clean Header" width="100%" />
-</p>
-
----
-
-### 9. Document Registry Editing & Direct Update Actions
-*Documents Hub with direct `+ Register & Update Document` top bar button and per-row `[✏️ Update & Edit]` action, allowing immediate renewal of certificates, policy numbers, and validity dates.*
-
-| 📋 Documents Hub with Edit Actions | ✏️ Document Registration & Edit Modal |
-|:---:|:---:|
-| <img src="docs/images/11-documents-hub-edit.png" alt="Documents Hub with Edit Actions" width="480" /> | <img src="docs/images/12-document-update-modal.png" alt="Document Registration Modal" width="480" /> |
-| *Direct update and edit options for all compliance papers.* | *Pre-populated modal for seamless certificate renewals.* |
-
----
-
-### 10. Driver Tri-Lingual Cockpit (English, हिन्दी, Hinglish)
-*Driver interface fully localized into standard English, pure Hindi (हिन्दी), and conversational Hinglish for field drivers, complete with instant 1-tap header toggle and persistent language preference.*
-
-| 🇬🇧 English | 🇮🇳 हिन्दी (Hindi) | 🗣️ Hinglish |
-|:---:|:---:|:---:|
-| <img src="docs/images/13-driver-english.png" alt="Driver English Cockpit" width="280" /> | <img src="docs/images/14-driver-hindi.png" alt="Driver Hindi Cockpit" width="280" /> | <img src="docs/images/15-driver-hinglish.png" alt="Driver Hinglish Cockpit" width="280" /> |
-| *Standard enterprise English workflow.* | *Pure Devnagari script for Indian drivers.* | *Conversational phonetics for maximum ease of use.* |
-
----
-
-### 11. Traffic Challan Digital Proof Upload & Audit Vault
-*Statutory commercial infraction compliance system enabling dispatch operations managers to record citations, attach scanned physical notices, radar photos, or bank payment receipts (JPG, PNG, PDF up to 10MB), view digital e-challan audit certificates, and settle outstanding fines.*
-
-| 📝 Challan Logging with Proof Attachment | 📜 Official E-Challan & Proof Verification Modal |
-|:---:|:---:|
-| <img src="docs/images/17-challan-proof-upload.png" alt="Challan Logging with Proof Upload" width="480" /> | <img src="docs/images/18-challan-proof-preview.png" alt="Digital Notice Verification Modal" width="480" /> |
-| *Log commercial challan with attached notice slip photo or PDF.* | *Official E-Challan certificate with attached proof viewer and download.* |
-
----
-
-## 🚀 What's New in v1.1.0 & v1.2.0
-
-1. **Official HoseXperts Identity & Loading Screen**:
-   - Official high-resolution brand emblem and typography displayed across web initial splash, React authentication check, and native Android `SplashScreen`.
-   - Polished frosted glass container card with ambient blue glow and smooth pulse animations.
-
-2. **Zero-Flicker Map Telematics & Live Vehicle Tracking**:
-   - In-place marker coordinate animation and tab-guarded polling preventing map or window blinking during real-time 3s/5s telematics updates.
-   - Dedicated "Track Vehicle" selector on the dashboard and 1-click `[↗ Track]` button on active trips to focus the live corridor map.
-   - Removed bulky `TELEMATICS ONLINE` and `REAL-TIME LIVE` badges from the top bar for a clean, modern command header with live pulse dot.
-
-3. **Documents Hub Editing & Registration**:
-   - Direct `+ Register & Update Document` header action and per-row `[✏️ Update & Edit]` buttons to update registration numbers, validity periods, and uploaded certificates.
-
-4. **Tri-Lingual Driver Localization (English, हिन्दी, Hinglish)**:
-   - Complete localization across all driver workflow cards, greetings, trip status, quick actions, GPS states, and navigation tabs.
-   - Instant 1-tap toggle pill `[EN | हिन्दी | Hinglish]` in the mobile header with automatic `localStorage` persistence.
-
-5. **Offline Local Device Persistence & Automatic Server Sync**:
-   - Instant offline storage for vehicle papers and dispatch updates with optimistic local state updates.
-   - Automatic queue flushing to the central API when internet connectivity resumes, plus continuous 12s heartbeat sync.
-
-6. **Traffic Challans & Digital Proof Upload Vault**:
-   - Built-in file attachment dropzone (`image/*,.pdf`, up to 10MB) in `Log Commercial Traffic Challan` form for police slips, radar captures, or court notices.
-   - Inline `[Upload Proof]` action allowing managers to attach physical slips to any existing challan record at any time.
-   - Comprehensive E-Challan Verification sub-modal with official transport department credentials, fine amount, offense details, and proof viewer/download.
-   - Database Migration 7 (`vehicle_challans`) relational table ensuring full schema integrity and ACID persistence.
-
----
-
-## 🏛️ System Architecture
-
-```mermaid
-graph TD
-    subgraph Clients["Operational Clients"]
-        Web["💻 Dispatch Command Center<br/>(React 19 + TypeScript + Leaflet)"]
-        Mobile["📱 Native Android Driver Client<br/>(Kotlin + Jetpack Compose + CameraX)"]
-    end
-
-    subgraph CI["Automated CI/CD Pipeline (GitHub Actions)"]
-        Verify["Build Web & Test Backend<br/>(Node 22 + 31 Integrity Tests)"]
-        APKBuild["Compile Android APK<br/>(JDK 17 + Gradle Assemble)"]
-        ReleaseDeploy["Publish to GitHub Releases<br/>(v1.1.0 APK Artifacts)"]
-        Verify --> APKBuild --> ReleaseDeploy
-    end
-
-    subgraph API["Authoritative Backend (Express + TypeScript)"]
-        Auth["JWT Authentication & RBAC<br/>(Manager / Driver)"]
-        Dispatch["Trip & Route Dispatch Engine<br/>(State Machine & Deletion Guards)"]
-        Fleet["Fleet Compliance & Maintenance<br/>(Documents, Fuel, Exceptions)"]
-        Reports["Delay Attribution & Analytics<br/>(Management vs Driver Trends)"]
-        VersionCheck["App Version Telemetry<br/>(/api/app-version)"]
-        Uploads["Static Proof Asset Storage<br/>(Multer + Local Disk)"]
-    end
-
-    subgraph DB["Relational Persistence Layer"]
-        Migrations["Migration Runner<br/>(_schema_migrations table)"]
-        SQLite[("Authoritative SQLite WAL<br/>16 Canonical Tables")]
-    end
-
-    subgraph External["Enterprise Integration Ready"]
-        ERP["ERP / SAP References<br/>(Shipment Num, Delivery Doc, Cost Center)"]
-        Sheets["Google Sheets Sync<br/>(8 Operational Tabs)"]
-    end
-
-    Web -->|HTTPS / REST API| API
-    Mobile -->|HTTPS / REST API| API
-    Mobile -.->|Polls Version Updates| VersionCheck
-    API --> Migrations
-    Migrations --> SQLite
-    API --> SQLite
-    API -.-> ERP
-    API -.-> Sheets
+```
+Drivers (Android / Mobile Web)  ──► Render Web Service (Oregon)
+Managers (Web Command Center)   ──►   Express API :10000
+                                       • JWT Auth & RBAC
+                                       • State Machine Guard
+                                       • Geofence Validator
+                                       • Static SPA Server
+                                      ──► /data/truck_tracker.sqlite (WAL)
+                                      ──► /data/uploads/photos/
+                                ──► SAP ONE Portal (ERP Reference Sync)
 ```
 
-### Authoritative Trip State Machine
+### Trip Lifecycle
 
-```mermaid
-stateDiagram-v2
-    [*] --> PLANNED : Dispatcher creates trip & assigns driver/vehicle
-    PLANNED --> IN_PROGRESS : Driver confirms departure
-    
-    state IN_PROGRESS {
-        [*] --> Approaching_Stop
-        Approaching_Stop --> Arrived_At_Stop : Haversine Geofence Verified (<=250m)
-        Arrived_At_Stop --> Cargo_Handled : Loading/Unloading + Proof Photo
-        Cargo_Handled --> Departed_Stop : Driver marks stop departure
-        Departed_Stop --> Approaching_Stop : Subsequent stops remaining
-    }
-    
-    IN_PROGRESS --> DELAYED : Breakdown / Traffic / Dock Queue logged
-    DELAYED --> IN_PROGRESS : Delay resolved & operations resumed
-    
-    IN_PROGRESS --> RETURNING : All scheduled manifest stops completed
-    RETURNING --> COMPLETED : Vehicle returned to base depot & signed off
-    COMPLETED --> [*]
+```
+PLANNED → IN_PROGRESS → DELAYED ↔ IN_PROGRESS → RETURNING → COMPLETED
 ```
 
----
-
-## 🗄️ Relational Data Model & Migrations
-
-TruckTracker enforces strict relational integrity using SQLite in **Write-Ahead Logging (WAL)** mode with `PRAGMA foreign_keys = ON`.
-
-### Canonical Domain Model (16 Tables)
-
-| Domain Category | Table Name | Business Responsibility |
-|---|---|---|
-| **System & Migrations** | `_schema_migrations` | Tracks applied migration versions, checksums, and execution timestamps |
-| **Identity & Access** | `users` | Drivers and dispatch managers with hashed credentials and active status |
-| **Fleet Assets** | `vehicles` | Fleet inventory, registration, payload, capacity, and ERP references |
-| **Fleet Compliance** | `vehicle_documents` | Statutory RC, Fitness, Permits, Insurance, and PUC certificates |
-| **Fleet Maintenance** | `maintenance_records` | Preventive servicing, breakdown repairs, costs, and odometer logs |
-| **Fuel & Operations** | `fuel_transactions` | Fuel fills, liters, costs, fuel stations, and odometer metrics |
-| **Trip & Manifest** | `trips` | Master route runs, assignments, ERP shipment numbers, and status |
-| **Route Manifest** | `trip_stops` | Ordered pickup/delivery points, geofences, and execution timestamps |
-| **Audit & Telemetry** | `trip_events` | Immutable chronological operational event log with GPS coordinates |
-| **Delays & Disruptions**| `trip_delays` | Documented transit interruptions, categorization, and duration minutes |
-| **Exception Alerts** | `operational_exceptions` | Dispatcher escalations for off-geofence, document expiry, or breakdowns |
-| **Operational Proof** | `trip_photos` | Timestamped, geotagged cargo and odometer inspection photographs |
-| **Cargo Line Items** | `cargo_activities` | Quantity and delivery references handled at each stop |
-| **Offline Telemetry** | `offline_events` | Queue for events recorded by drivers when disconnected |
-| **Geofenced Hubs** | `locations` | Authorized company depots, customer warehouses, and distribution centers |
-| **External Reporting** | `sync_status` | Status tracking for Google Sheets and third-party operational replicas |
-
-### Version-Tracked Database Migrations
-
-Located at [`server/src/migrations/runner.ts`](file:///u:/tracktracker/server/src/migrations/runner.ts):
-- **`001_initial_core_schema`**: Foundational users, vehicles, trips, stops, events, delays, photos, locations, activities, offline queue.
-- **`002_add_enterprise_compliance_and_maintenance`**: Normalized statutory compliance (`vehicle_documents`), workshop servicing (`maintenance_records`), fuel entries (`fuel_transactions`), and alert triage (`operational_exceptions`).
-- **`003_add_erp_references_and_performance_indexes`**: ERP/SAP integration fields (`fleet_unit_id`, `sap_shipment_num`, `erp_delivery_doc`, `cost_center`) and compound query performance indexes.
-- **`004_add_destination_area_code`**: Facility area identifiers (`area_code` e.g. `DL-OKH-110020`, `UP-NOI-201301`) for regional grouping.
+Server-enforced. Invalid transitions are rejected with 400 errors.
 
 ---
 
-## 🚀 Quick Start & Development Setup
+## 🚀 Quick Start — Local Development
 
-### 1. Prerequisites
-- **Node.js**: v22.0.0+ or v24 LTS (`node -v`)
-- **NPM**: v10.0.0+ (`npm -v`)
-- **Git**: Standard CLI
-- **JDK 17 & Android SDK 34** *(Required only for local Android compilation; pre-built APKs are available in [Releases](https://github.com/Nixxzzzzz/truck_tracker/releases))*
+### Prerequisites
 
-### 2. Installation & Database Setup
+| Tool | Min Version | Check |
+|------|------------|-------|
+| Node.js | v22.0.0+ or v24 LTS | `node -v` |
+| npm | v10.0.0+ | `npm -v` |
+| Git | Any | `git --version` |
+
+### 1. Clone & Install
+
 ```bash
-# Clone the repository
 git clone https://github.com/Nixxzzzzz/truck_tracker.git
 cd truck_tracker
-
-# Install workspace dependencies
 npm install
+```
 
-# Apply database migrations
+### 2. Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+NODE_ENV=development
+PORT=5000
+JWT_SECRET=your-strong-random-secret-min-32-chars
+DB_PATH=./data/truck_tracker.sqlite
+UPLOAD_DIR=./uploads
+```
+
+### 3. Initialize Database
+
+```bash
+# Run migrations (creates all 16 tables)
 npm run migrate --workspace=server
 
-# Seed demonstration fleet, drivers, and Delhi-NCR routes
+# Seed initial demo users (development only)
 npm run seed --workspace=server
 ```
 
-### 3. Launch Development Servers
+> ⚠️ **Do NOT run seed in production.** Add real users and vehicles through the Manager interface.
+
+### 4. Start Development Servers
+
 ```bash
-# Terminal 1: Backend API Engine (Port 5000)
+# Terminal 1 — Backend API (Port 5000)
 npm run dev --workspace=server
 
-# Terminal 2: Web Dispatch Command Center (Port 5173)
+# Terminal 2 — Web Frontend (Port 5173)
 npm run dev --workspace=web
 ```
 
-- **Web Dispatch Console**: `http://localhost:5173`
-- **Backend API Health**: `http://localhost:5000/api/health`
-- **App Version Telemetry**: `http://localhost:5000/api/app-version`
-
-### 4. Demonstration Credentials
-
-| Role | Email | Password | Primary Interface |
-|---|---|---|---|
-| **Dispatch Operations Manager** | `manager@company.com` | `manager123` | Desktop / Tablet Command Center |
-| **Senior Route Driver (Rahul)** | `rahul@company.com` | `driver123` | Android App / Mobile Cockpit |
-| **Field Route Driver (Amit)** | `amit@company.com` | `driver123` | Android App / Mobile Cockpit |
-| **Executive Director** | `director@company.com` | `director123` | Executive KPI Reports |
+| Service | URL |
+|---------|-----|
+| Web Console | `http://localhost:5173` |
+| API Health | `http://localhost:5000/api/health` |
 
 ---
 
-## 🧪 Verification & Automated Testing
+## 🔐 Login & User Setup
 
-TruckTracker enforces comprehensive automated testing across database integrity, operational workflows, and real-world edge cases:
+### No Hardcoded Users in Production
+
+All users are stored in the **database**. You create them via the Manager UI or API — never via hardcoded credentials in code.
+
+### Add a Driver or Manager (Manager Web UI)
+
+1. Log in as Manager
+2. Go to **Team & Users** panel
+3. Click **+ Add User** → enter Name, Email, Password, Role (`DRIVER` or `MANAGER`)
+
+### Add via API
 
 ```bash
-# 1. Run database integrity and business invariant tests (31 Passed, 0 Failed)
-npm test
+curl -X POST https://your-app.onrender.com/api/auth/users \
+  -H "Authorization: Bearer <your-manager-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Driver Full Name",
+    "email": "driver@yourcompany.com",
+    "password": "SecurePassword@2025",
+    "role": "DRIVER",
+    "phone": "+91-XXXXX-XXXXX"
+  }'
+```
 
-# 2. Run real-world production edge case scenarios (20 tests)
-npm run test:scenarios --workspace=server
+### Development-Only Seed Credentials
 
-# 3. Run end-to-end operational dispatch workflow validation (20 tests)
-npm run test:workflow --workspace=server
+> These only exist after running `npm run seed`. **Change passwords before going live.**
 
-# 4. Execute full production build for both web and server
-npm run build:all
+| Role | Email | Password |
+|------|-------|----------|
+| Operations Manager | `manager@company.com` | `manager123` |
+| Driver | `rahul@company.com` | `driver123` |
+| Driver | `amit@company.com` | `driver123` |
+
+### Driver Login Behavior
+
+- Driver has **active trip assigned** → sees manifest, vehicle info, route stops (all from live DB)
+- Driver has **no trip assigned** → sees empty state ("No trip assigned") — no dummy vehicle, no fake plates
+- Vehicle papers shown to driver come from the **fleet compliance database** — only real documents managers have added
+
+---
+
+## ☁️ Production Deployment — Render
+
+Full guide: [`documentation/deployment.md`](documentation/deployment.md)
+
+### Required Environment Variables (Render Dashboard)
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `NODE_ENV` | `production` | Required |
+| `PORT` | `10000` | Render assigns automatically |
+| `JWT_SECRET` | 32+ random chars | Never expose |
+| `DB_PATH` | `/data/truck_tracker.sqlite` | Persistent disk |
+| `UPLOAD_DIR` | `/data/uploads` | Proof photo storage |
+
+### Render Config (`render.yaml` — already in repo)
+
+```yaml
+services:
+  - type: web
+    name: truck-tracker-api
+    env: node
+    region: oregon
+    buildCommand: npm ci --include=dev && npm run build:all
+    startCommand: npm run start
+    disk:
+      name: truck-tracker-data
+      mountPath: /data
+      sizeGB: 10
+```
+
+### Deploy Steps
+
+1. Push to `main` → Render auto-deploys via GitHub integration
+2. Monitor at: `https://dashboard.render.com`
+3. Verify: `GET /api/health` → `200 OK`
+4. Log in as Manager → create real users and vehicles
+5. Do NOT seed demo data on production
+
+---
+
+## 🏢 SAP ONE Portal Integration
+
+TruckTracker stores **SAP Business One ERP reference fields** on trips and vehicles. These link logistics records to SAP documents.
+
+### ERP Fields
+
+| Field | Table | SAP Reference |
+|-------|-------|--------------|
+| `sap_shipment_num` | `trips` | SAP TM Shipment Order |
+| `erp_delivery_doc` | `trips` | SAP SD Delivery (ODLN) |
+| `cost_center` | `trips` | SAP CO Cost Center |
+| `fleet_unit_id` | `vehicles` | SAP PM Equipment Number |
+
+### Configuration
+
+```env
+SAP_PORTAL_URL=https://oneportal.yourcompany.internal/api/v1
+SAP_SERVICE_LAYER_TOKEN=your-sap-session-token
+```
+
+Managers enter SAP reference numbers when creating trips. The system stores them alongside operational data. For full bi-directional live sync, configure the SAP Service Layer endpoint above.
+
+---
+
+## 🗄️ Database — 16 Tables
+
+| Category | Table | Purpose |
+|----------|-------|---------|
+| System | `_schema_migrations` | Migration version tracking |
+| Identity | `users` | Managers & drivers (bcrypt) |
+| Fleet | `vehicles` | Fleet inventory & registration |
+| Compliance | `vehicle_documents` | RC, Insurance, Fitness, PUC |
+| Maintenance | `maintenance_records` | Service history |
+| Fuel | `fuel_transactions` | Fuel fills & costs |
+| Trips | `trips` | Route runs with ERP references |
+| Stops | `trip_stops` | Ordered delivery/pickup waypoints |
+| Events | `trip_events` | Immutable GPS telemetry log |
+| Delays | `trip_delays` | Delay records with root-cause |
+| Exceptions | `operational_exceptions` | Escalations & alerts |
+| Photos | `trip_photos` | Proof-of-delivery photos |
+| Cargo | `cargo_activities` | Line items per stop |
+| Offline | `offline_events` | Driver offline action queue |
+| Hubs | `locations` | Depots, warehouses, hubs |
+| Sync | `sync_status` | ERP sync state |
+
+```bash
+npm run migrate --workspace=server
 ```
 
 ---
 
-## 📱 Android Client & Automated CI/CD Build Pipeline
+## 📱 Android Driver App
 
-The Android Driver application is built with modern **Kotlin** and **Jetpack Compose**:
-- **Continuous Compilation**: Every commit pushed to `main` triggers `.github/workflows/deploy.yml`, which executes `gradlew assembleDebug` in an Ubuntu runner with Temurin JDK 17.
-- **Automated Releases**: The compiled APK (`TruckTracker-Driver-v1.1.0-debug.apk`) is automatically uploaded to GitHub Releases and available for direct installation.
-- **In-App Version Telemetry**: The mobile app checks `GET /api/app-version` on launch to notify drivers when a new build is available, ensuring mobile and web versions remain synchronized.
+Built with **Kotlin + Jetpack Compose**. Compiled by GitHub Actions on every `main` push.
 
----
+**Download**: [GitHub Releases → v1.1.0 APK](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
 
-## 🌐 Production Deployment (Render All-in-One)
-
-TruckTracker is deployed on [Render](https://render.com) as a single unified service running both the Express API and Vite-compiled React 19 SPA:
-
-- **Live URL**: [`https://truck-tracker-api-9yhq.onrender.com/`](https://truck-tracker-api-9yhq.onrender.com/)
-- **Health Check Probe**: `/api/health`
-- **Build Command**: `npm ci --include=dev && npm run build:all`
-- **Start Command**: `npm run start` (Runs `node --experimental-sqlite dist/index.js`)
+**Install Steps:**
+1. Download APK from Releases
+2. Device → Settings → Security → Enable **Install Unknown Apps**
+3. Install APK → log in with driver credentials
+4. App checks `/api/app-version` for update alerts on launch
 
 ---
 
-## 📚 Technical Documentation Directory
+## 🧪 Tests
 
-Comprehensive engineering specifications, operational SOPs, and architectural guides are organized in the [`docs/`](docs/) directory:
-
-- [**System Architecture Overview**](docs/architecture/overview.md): Runtime topology, design principles, and component interactions.
-- [**Dependency & Data-Model Map**](docs/architecture/dependency-and-data-model-map.md): Full-stack architectural inventory and compatibility analysis.
-- [**Production Deployment Guide**](docs/architecture/deployment.md): Render All-in-One container configuration, blueprint, and monitoring.
-- [**SAP ERP & S/4HANA Integration Guide**](docs/architecture/sap-integration.md): End-to-end integration protocol for SAP TM, SD, and PM.
-- [**REST API Catalog & Endpoints**](docs/api/endpoints.md): Complete request/response contracts for all endpoints.
-- [**API Error Handling Protocols**](docs/api/error-handling.md): Canonical error envelopes and HTTP status taxonomy.
-- [**Database Schema Specification**](docs/database/schema.md): Complete data dictionary and constraints for all 16 tables.
-- [**Database Entity-Relationship Diagram**](docs/database/erd.md): Visual Mermaid ERD with relationships and cardinalities.
-- [**Database Migration Strategy**](docs/database/migrations.md): Migration runner specifications and upgrade protocols.
-- [**Dispatch Operations Manual**](docs/operations/dispatch.md): Manifest planning, execution, filtering, and deletion safeguards.
-- [**Performance Reporting & Delay Attribution**](docs/operations/reporting.md): SLA metrics, CSV export, and Dual-Series Delay Attribution analytics.
-- [**Fleet Management & Statutory Compliance**](docs/operations/fleet-management.md): Vehicle onboarding, papers management (RC, Insurance, Fitness, PUC, Permit), and driver in-cab access.
-- [**Exceptions & Escalation Matrix**](docs/operations/exceptions.md): Incident triage and acknowledgment workflows.
-- [**Local Engineering Setup Guide**](docs/development/local-setup.md): Complete development workstation configuration.
-- [**Testing & Quality Assurance**](docs/development/testing.md): Automated verification guidelines.
-- [**v1.1.0 Release Notes**](docs/releases/v1.1.0.md): Changelog and release deliverables.
+```bash
+npm test                                    # DB integrity & business rules
+npm run test:scenarios --workspace=server   # Production edge cases (20 tests)
+npm run test:workflow --workspace=server    # End-to-end dispatch workflow (20 tests)
+npm run build:all                           # Full production build
+```
 
 ---
 
-## 📄 License & Ownership
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+## ✅ Features
+
+| Feature | Notes |
+|---------|-------|
+| Zero dummy data | All from live DB — no `DL01TA4920`, no fake docs |
+| JWT auth + RBAC | Manager (full control) / Driver (own trips only) |
+| Server-enforced state machine | Invalid trip transitions rejected |
+| Haversine geofenced arrivals | ≤250m radius check |
+| Proof-of-delivery photo upload | Stored to persistent disk |
+| Statutory compliance hub | RC, Insurance, Fitness, PUC, Permit |
+| Traffic challan vault | Log, attach proof, settle |
+| Tri-lingual driver UI | English / हिन्दी / Hinglish |
+| Offline-first driver | Auto-sync queue on reconnect |
+| Real-time fleet GPS radar | Leaflet live map |
+| Delay attribution analytics | Management vs Driver trend analysis |
+| SAP ONE Portal ERP refs | Shipment/Delivery/Cost Center fields |
+| Native Android APK | Kotlin + Jetpack Compose + CameraX |
+| GitHub Actions CI/CD | Auto Android build + Render deploy |
+
+---
+
+## 📚 Documentation
+
+| File | Contents |
+|------|---------|
+| [`documentation/deployment.md`](documentation/deployment.md) | Render + GitHub + SAP ONE Portal rollout |
+| [`documentation/api.md`](documentation/api.md) | REST API endpoint reference |
+| [`documentation/architecture.md`](documentation/architecture.md) | System design & data model |
+| [`documentation/operations-manual.md`](documentation/operations-manual.md) | Manager & driver SOP |
+| [`documentation/android.md`](documentation/android.md) | Android build & install guide |
+| [`documentation/testing.md`](documentation/testing.md) | Test suite reference |
+| [`documentation/web.md`](documentation/web.md) | Web frontend guide |
+
+---
+
+## 📄 License
+
+MIT License. See [`LICENSE`](LICENSE) for details.
+
+© 2025 HoseXperts. Built for enterprise fleet operations excellence.

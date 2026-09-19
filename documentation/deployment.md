@@ -127,7 +127,7 @@ SAP_ONE_SYNC_ENABLED=true
 * **From Manager Dashboard:** Navigate to **Settings** &rarr; **SAP ONE Portal ERP Enterprise Synchronization** &rarr; click **Force Sync SAP ONE Portal**.
 * **Via REST API:**
   ```http
-  POST /api/google-sheets/sync-all
+  POST /api/sap/sync-all
   Authorization: Bearer <MANAGER_JWT_TOKEN>
   ```
   *(Returns JSON with the count of successfully synchronized trips, delivery documents, and fuel logs).*
@@ -296,4 +296,4 @@ After deployment, verify each milestone to confirm production readiness:
 - [ ] **5. Locations Master:** Navigate to **Locations Master** tab &rarr; renders without any `latitude.toFixed` crashes.
 - [ ] **6. Trip Creation:** Click **Create Trip** &rarr; select driver, vehicle, and add a stop &rarr; trip creates with HTTP 201 (`TR-2026-XXXXX`).
 - [ ] **7. Driver Login:** Open `/login` in mobile viewport &rarr; select **Driver** profile &rarr; sign in &rarr; assigned trip loads immediately.
-- [ ] **8. SAP ONE Portal Sync:** Navigate to **Settings** &rarr; verify **SAP ONE Portal ERP Enterprise Synchronization** shows *Connected & Active*.
+- [ ] **8. SAP ONE Portal Sync:** Navigate to **Settings** → verify SAP ERP reference fields (`sap_shipment_num`, `erp_delivery_doc`) are editable when creating a trip.
