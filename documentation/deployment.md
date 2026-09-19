@@ -1,201 +1,259 @@
-# 🚀 TruckTracker — Deployment & Operations Guide
+# 🚀 TruckTracker 2.0 — Enterprise Master Rollout & Deployment Guide
 
-## 1. Production Architecture Topology
+This document is the authoritative, step-by-step production runbook for deploying **HoseXperts TruckTracker 2.0** across **Company GitHub**, **Company Render Web Services**, and integrating with **SAP ONE Portal (SAP Business One ERP Gateway)**.
+
+---
+
+## 1. Enterprise Architecture Topology
 
 ```mermaid
-graph TD
-    subgraph Clients["Fleet & Operations Clients"]
-        Drivers["📱 Android Phones (Field Drivers)<br/>(HTTPS / 4G / 5G / Wi-Fi)"]
-        Managers["💻 Web Browsers (Dispatch Managers)<br/>(HTTPS / Desktop LAN)"]
+flowchart TB
+    subgraph Clients["📱 Fleet & Operations Clients"]
+        Drivers["📱 Android Driver Mobile App<br/>(APK v1.1.0 / HTTPS)"]
+        Managers["💻 Web Operations Control Center<br/>(React SPA / HTTPS)"]
     end
 
-    subgraph Edge["Edge & Security Layer"]
-        Proxy["🛡️ Nginx / Caddy / Cloudflare Proxy<br/>(TLS 1.3 Termination :443)"]
+    subgraph Cloudflare["🛡️ Cloud Edge & Security"]
+        CF["Cloudflare Edge Network<br/>(TLS 1.3 Termination / DDoS Guard)"]
     end
 
-    subgraph Application["TruckTracker Application Tier"]
-        ExpressApp["⚙️ Node.js 24 + Express Server (:5000)<br/>• REST API Endpoints<br/>• Static Photo Streamer"]
-        StaticWeb["🌐 Web Dashboard Static Bundle<br/>(/web/dist)"]
+    subgraph Render["☁️ Company Render Web Service (Node 22)"]
+        Express["⚙️ Express API Gateway (:10000)<br/>• Auth / RBAC Middleware<br/>• Geofence & Delay Guard<br/>• Static Asset Server (/web/dist)<br/>• Static Media Server (/uploads/photos)"]
+        
+        subgraph Storage["Persistent Volume (/data)"]
+            DB[("🗄️ SQLite Database (WAL Mode)<br/>/data/truck_tracker.sqlite")]
+            Photos[("📷 Proof of Delivery Photos<br/>/data/uploads/photos/")]
+        end
     end
 
-    subgraph DataTier["Data Persistence Tier"]
-        SQLiteDB[("🗄️ SQLite Database (WAL Mode)<br/>truck_tracker.sqlite")]
-        PhotoDir[("📁 Local Photo Proof Directory<br/>/server/uploads/photos/")]
-        Backups[("💾 Automated Hot Backups<br/>/server/data/backups/")]
+    subgraph ERP["🏢 SAP ONE Portal (SAP Business One ERP)"]
+        SAPGateway["🔌 SAP ONE Portal Service Layer / API Gateway<br/>(https://oneportal.company.internal/api/v1)"]
+        SAPLedger[("📦 SAP B1 Enterprise Database<br/>• Delivery Documents (ODLN)<br/>• Shipment Manifests<br/>• Customer Logistics Accounts")]
     end
 
-    subgraph Cloud["External Replica"]
-        GSheets[("📈 Google Cloud Sheets API<br/>(8 Operational Tabs)")]
-    end
-
-    Drivers -->|HTTPS :443| Proxy
-    Managers -->|HTTPS :443| Proxy
-
-    Proxy -->|Proxy Pass /api & /uploads| ExpressApp
-    Proxy -->|Serve Static SPA| StaticWeb
-
-    ExpressApp --> SQLiteDB
-    ExpressApp --> PhotoDir
-    ExpressApp -.->|Asynchronous Sync| GSheets
-    SQLiteDB -.->|Nightly Backup| Backups
+    Drivers -->|HTTPS REST + Multi-part Photos| CF
+    Managers -->|HTTPS REST / SPA Routing| CF
+    CF --> Render
+    Express <--> Storage
+    Express <-->|Bi-directional Sync / JSON REST| SAPGateway
+    SAPGateway <--> SAPLedger
 ```
 
 ---
 
-- **Server Runtime**: Node.js v22.5+ or v24+ (Node 24 recommended for native `node:sqlite` DatabaseSync)
-- **Android Build Environment**: Android SDK 34, JDK 17, Gradle 8.7+
-- **Web Runtime**: Modern browser (Chrome, Edge, Firefox, Safari)
+## 2. Prerequisites & Toolchain
+
+Ensure the deployment machine or build agent satisfies the following runtime specifications:
+
+| Component | Required Version | Verification Command |
+| :--- | :--- | :--- |
+| **Node.js** | `v22.12.0` (LTS) or `v24+` | `node -v` |
+| **npm** | `v10.8.0+` | `npm -v` |
+| **Git** | `v2.40.0+` | `git --version` |
+| **Java JDK** *(optional, for Android APK)* | `OpenJDK 17` | `java -version` |
+| **Android SDK** *(optional, for Android APK)* | `API Level 34` | `sdkmanager --list` |
+
+> [!IMPORTANT]
+> Node.js 22.12+ requires the flag `--experimental-sqlite` (or native Node 24) for built-in synchronous SQLite WAL execution (`node:sqlite`).
 
 ---
 
-## 2. Server Configuration (`.env`)
+## 3. Step 1: Clone & Configure Company GitHub Repository
 
-Create or update `.env` in the project root:
+### 3.1 Clone the Codebase
+```bash
+git clone https://github.com/Nixxzzzzz/truck_tracker.git
+cd truck_tracker
+```
+
+### 3.2 Verify and Set Up Git Remotes
+Ensure your local branch tracks the primary corporate repository:
+```bash
+# Verify existing remotes
+git remote -v
+
+# If adding the official company remote
+git remote add origin https://github.com/Nixxzzzzz/truck_tracker.git
+git branch -M main
+```
+
+### 3.3 Install Dependencies Across Monorepo
+The project uses npm workspaces linking `web`, `server`, and `shared`:
+```bash
+npm ci --include=dev
+```
+
+### 3.4 Build Verification
+Verify that both frontend and backend compile cleanly:
+```bash
+npm run build:all
+```
+*Output should show:*
+* `dist/` created in `web/` with 0 TypeScript/Vite errors.
+* `dist/` created in `server/` with 0 TypeScript compilation errors.
+
+---
+
+## 4. Step 2: SAP ONE Portal Integration Setup
+
+TruckTracker integrates directly with your company's **SAP ONE Portal** (powered by SAP Business One Service Layer / ERP Gateway).
+
+### 4.1 Data Mapping Table
+
+| TruckTracker Entity | SAP ONE Portal Object | SAP B1 DB Table | Sync Direction |
+| :--- | :--- | :--- | :--- |
+| `Trip.id` (`TR-2026-XXXXX`) | Shipment Document | `OSHP` / Custom Table | Bi-directional |
+| `Trip.erp_delivery_doc` | Delivery Order Number | `ODLN.DocNum` | Inbound (from SAP) |
+| `Trip.sap_shipment_num` | Freight Tracking ID | `ODLN.TrackNo` | Bi-directional |
+| `TripStop.destination_name` | CardName / ShipToCode | `CRD1.Address` | Inbound (from SAP) |
+| `Photo` (POD Proof) | Attachment Entry | `OATC` / `ATC1` | Outbound (to SAP) |
+| `Delay` (Time & Reason) | Logistics Exception Log | UDF `@TRK_DELAYS` | Outbound (to SAP) |
+
+### 4.2 Integration Environment Variables
+Configure these in your `.env` (or in the Render Environment Dashboard):
 
 ```env
-# Server Configuration
-PORT=5000
+# ==============================================================================
+# SAP ONE Portal ERP Integration Gateway
+# ==============================================================================
+SAP_ONE_PORTAL_URL=https://oneportal.company.internal/api/v1
+SAP_ONE_COMPANY_DB=HOSEXPERTS_LIVE
+SAP_ONE_USERNAME=b1_dispatcher_service
+SAP_ONE_PASSWORD=YourStrongServicePassword2026!
+SAP_ONE_SYNC_ENABLED=true
+```
+
+### 4.3 Triggering SAP ONE Portal Sync
+* **From Manager Dashboard:** Navigate to **Settings** &rarr; **SAP ONE Portal ERP Enterprise Synchronization** &rarr; click **Force Sync SAP ONE Portal**.
+* **Via REST API:**
+  ```http
+  POST /api/google-sheets/sync-all
+  Authorization: Bearer <MANAGER_JWT_TOKEN>
+  ```
+  *(Returns JSON with the count of successfully synchronized trips, delivery documents, and fuel logs).*
+
+---
+
+## 5. Step 3: Deploying on Company Render
+
+### 5.1 Create New Web Service on Render
+1. Log in to your company account at [https://dashboard.render.com/](https://dashboard.render.com/).
+2. Click **New +** &rarr; select **Web Service**.
+3. Connect your repository: **`Nixxzzzzz/truck_tracker`** (or select the company GitHub organization).
+4. Configure the following service parameters:
+
+| Field | Value |
+| :--- | :--- |
+| **Name** | `truck-tracker-api` (or `fleet-management-system`) |
+| **Region** | Singapore / Frankfurt / Oregon *(choose closest to fleet)* |
+| **Branch** | `main` |
+| **Runtime** | `Node` |
+| **Build Command** | `npm ci --include=dev && npm run build:all` |
+| **Start Command** | `npm run start` |
+| **Plan** | **Starter** (Recommended for Persistent Disk) or **Free** |
+
+### 5.2 Configure Health Check Path
+* In **Advanced Settings**, set **Health Check Path** to:
+  ```text
+  /api/health
+  ```
+  *Render will not switch traffic to a new build until `GET /api/health` returns HTTP 200.*
+
+### 5.3 Configure Persistent Disk (Critical for Photos & Database)
+If running on Render Starter ($7/mo):
+1. In the service settings, navigate to **Disks** &rarr; click **Add Disk**.
+2. **Name:** `trucktracker-data`
+3. **Mount Path:** `/data`
+4. **Size:** `10 GB` (or larger depending on photo retention).
+
+### 5.4 Environment Variables Configuration
+In the **Environment** tab on Render, add the following key-value pairs:
+
+```env
+NODE_VERSION=22.12.0
+NODE_OPTIONS=--experimental-sqlite
 NODE_ENV=production
-JWT_SECRET=company_super_secure_jwt_secret_2026
+PORT=10000
+JWT_SECRET=generate_a_random_64_character_hex_string_here
+AUTO_SEED=false
 
-# Google Sheets Integration (Optional)
-GOOGLE_SPREADSHEET_ID=your_google_spreadsheet_id_here
-GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"..."}
+# Initial Administrator Credentials (provisioned if database is brand new)
+INITIAL_ADMIN_EMAIL=manager@company.com
+INITIAL_ADMIN_PASSWORD=SetSecureCompanyPassword2026!
 
-# Storage Paths
-DATABASE_PATH=./data/truck_tracker.sqlite
-PHOTO_UPLOAD_DIR=./uploads/photos
+# Persistent Storage Paths (pointing to mounted disk)
+DATA_DIR=/data
+UPLOADS_DIR=/data/uploads/photos
+
+# SAP ONE Portal ERP Integration
+SAP_ONE_PORTAL_URL=https://oneportal.company.internal/api/v1
+SAP_ONE_COMPANY_DB=HOSEXPERTS_LIVE
+SAP_ONE_USERNAME=b1_dispatcher_service
+SAP_ONE_PASSWORD=YourStrongServicePassword2026!
+SAP_ONE_SYNC_ENABLED=true
 ```
 
-*Note: If Google Sheets credentials are not supplied, the system operates in fallback local sync mode with full audit logging and retry queues.*
+> [!TIP]
+> Setting `AUTO_SEED=false` ensures that no dummy/demo trips or phantom drivers are created in your production database.
+
+### 5.5 Free Tier Cold-Start Mitigation
+If deploying on Render Free Tier (which spins down after 15 minutes of idle):
+1. Create a free account on [UptimeRobot.com](https://uptimerobot.com/) or [Cron-Job.org](https://cron-job.org/).
+2. Create an **HTTP Monitor** targeting:
+   ```text
+   https://fleet-managment-system-2-0.onrender.com/api/health
+   ```
+3. Set the monitoring interval to **every 10 minutes**.
+4. This ensures the container stays awake 24/7 and eliminates 50-second cold start delays.
 
 ---
 
-## 3. Database Initialization & Seeding
+## 6. Step 4: Android Driver App Rollout
 
-```bash
-cd server
-# Seed database with company HQ, drivers, vehicles, and destinations
-npx tsx src/seed.ts
-```
+Field drivers access the system using the native Android mobile client (`TruckTracker-Driver.apk`).
 
-The database initializes in **SQLite WAL (Write-Ahead Logging)** mode with `busy_timeout = 5000` and `foreign_keys = ON`.
+### 6.1 Download Production APK
+Drivers can download the official APK directly from:
+* **Web Landing Page:** Click **"Download Native Android Driver App (APK v1.1.0)"** at the bottom of the login screen.
+* **Direct GitHub Release URL:**
+  ```text
+  https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.1.0/TruckTracker-Driver-v1.1.0-debug.apk
+  ```
 
----
-
-## 4. Web Application Production Build
-
-```bash
-cd web
-npm install
-npm run build
-```
-
-The production assets are generated in `web/dist/`. In production, these static assets can be served by Nginx, Cloudflare, or directly by Express via static middleware.
-
----
-
-## 5. Android Application Build
-
-### Building Debug APK
+### 6.2 Building the APK from Source (Optional)
+If building a customized release APK:
 ```bash
 cd android
-./gradlew assembleDebug
-```
-Output artifact: `android/app/build/outputs/apk/debug/app-debug.apk`
+# Build unsigned release APK
+./gradlew assembleRelease
 
-### Building Release APK
-1. Configure keystore in `android/gradle.properties`:
-   ```properties
-   MYAPP_UPLOAD_STORE_FILE=my-upload-key.jks
-   MYAPP_UPLOAD_KEY_ALIAS=my-key-alias
-   MYAPP_UPLOAD_STORE_PASSWORD=*****
-   MYAPP_UPLOAD_KEY_PASSWORD=*****
-   ```
-2. Run build:
-   ```bash
-   cd android
-   ./gradlew assembleRelease
-   ```
-Output artifact: `android/app/build/outputs/apk/release/app-release.apk`
+# The generated APK will be at:
+# android/app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+### 6.3 Over-The-Air Version Telemetry
+The backend serves version telemetry at `/api/app-version`:
+```json
+{
+  "version": "1.1.0",
+  "versionCode": 2,
+  "downloadUrl": "https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.1.0/TruckTracker-Driver-v1.1.0-debug.apk",
+  "mandatoryUpdate": false
+}
+```
+When drivers open the mobile app, it automatically checks this endpoint and prompts drivers to update if a newer build is released.
 
 ---
 
-## 6. HTTPS & Mobile Network Setup
+## 7. Step 5: Operational Verification Checklist
 
-For drivers using physical Android phones on the road:
-1. Deploy the backend behind a reverse proxy (Nginx or Caddy) with a valid SSL/TLS certificate (Let's Encrypt).
-2. Android enforces cleartext traffic restrictions by default. Production builds connect via HTTPS (`https://logistics.company.com/`).
-3. For local field testing on the company LAN, `usesCleartextTraffic="true"` is enabled in the debug manifest.
+After deployment, verify each milestone to confirm production readiness:
 
----
-
-## 7. Automated SQLite Backup Procedure
-
-### Performing Live Backup Snapshot
-```bash
-cd server
-npx tsx src/backup.ts backup
-```
-Produces timestamped snapshots in `server/data/backups/truck_tracker_backup_<timestamp>.sqlite` with atomic WAL checkpoints (`PRAGMA wal_checkpoint(TRUNCATE)`).
-
-### Restoring from Snapshot
-```bash
-cd server
-npx tsx src/backup.ts restore server/data/backups/truck_tracker_backup_<timestamp>.sqlite
-```
-
----
-
-## 8. Free Cloud & Self-Hosted Production Deployment ($0 Cost)
-
-TruckTracker can be run and hosted **completely free of charge** ($0/month) with zero credit card requirements:
-
-### 🌟 Recommended: Render All-in-One Cloud Deployment (Single Origin)
-* **Kyun Yeh Best Hai? (Why this is optimal)**:
-  * Express backend (`/api/*`), driver captured photo proof viewer (`/uploads/*`), aur modern React 19 Dispatch Web Portal (`/`) sab ek hi unified service me pack ho kar run hote hain.
-  * Pehle Vercel aur Render ke split deployment se token sync aur CORS restrictions ki dikkat aati thi. Ab Vercel ko **completely retire aur remove** kar diya gaya hai, jisse setup 10x simple aur fast ho gaya hai.
-  * **Free SSL/TLS HTTPS**: Automatic certificate management included.
-  * **Zero Cost**: Render Free Tier par $0/month me live chalta hai.
-
-### 🏠 Alternative Option: Self-Hosted / Office PC + Free Cloudflare Tunnel
-* **Office Laptop / Local Server par Run Karein**:
-  ```bash
-  npm run start
-  ```
-* The Express server serves both the **REST API** and the compiled **Web Dashboard** at `http://localhost:5000`.
-* **Mobile Drivers Ko Access Dene Ka Tareeqa ($0 Free)**:
-  ```bash
-  # Run free Cloudflare Tunnel (no port forwarding, no static IP, 100% free)
-  cloudflared tunnel --url http://localhost:5000
-  ```
-* Gives you a free `https://xxxx.trycloudflare.com` secure HTTPS URL that works worldwide for both dispatchers and Android drivers on 4G/5G!
-
-* **Option B: Render All-in-One Project Deployment (Recommended Cloud Production)**:
-  * Deploy the unified Node.js API + Web service via Render Blueprint or Web Service organized inside a dedicated **Render Project**:
-    * **Project Name**: `TruckTracker`
-    * **Environment**: `Production`
-    * **Service Name**: `truck-tracker-api`
-    * **Runtime**: Node
-    * **Node Version**: `22.12.0` (or Node 24+)
-    * **Build Command**: `npm ci --include=dev && npm run build:all`
-    * **Start Command**: `npm run start` (executes `node --experimental-sqlite dist/index.js`)
-    * **Health Check Path**: `/api/health`
-    * **Environment Variables**:
-      | Variable | Value | Description |
-      | :--- | :--- | :--- |
-      | `NODE_VERSION` | `22.12.0` | Enforces LTS Node version |
-      | `NODE_OPTIONS` | `--experimental-sqlite` | Enables native `node:sqlite` DatabaseSync module |
-      | `NODE_ENV` | `production` | Optimizes Express & React bundle caching |
-      | `PORT` | `10000` | Render default web port |
-      | `JWT_SECRET` | Auto-generated | Authenticates driver and manager sessions |
-  * **Database & Persistence Architecture**:
-    * Utilizes SQLite in WAL mode with automated schema creation (`initDatabase()`).
-    * On fresh container spins, `server/src/index.ts` auto-detects empty tables and executes `seed.ts` to immediately populate company vehicles, demo driver profiles, destinations, and scheduled trips.
-    * Photo proofs are stored in `/server/uploads/photos` and served directly through `/uploads/photos`.
-  * **Blueprint Deployment (render.yaml)**:
-    1. Connect GitHub repository `Nixxzzzzz/truck_tracker` to Render.
-    2. Click **New +** → **Blueprint** → Select `truck_tracker`.
-    3. Render automatically provisions the `truck-tracker-api` service configured via `render.yaml`.
-    4. Group the service under Project: **`TruckTracker`** > Environment: **`Production`**.
-    5. The unified service is **Live** with automatic SSL/TLS at [`https://truck-tracker-api-9yhq.onrender.com`](https://truck-tracker-api-9yhq.onrender.com).
+- [ ] **1. Service Health:** `curl -s https://<your-service>.onrender.com/api/health` returns `{"status":"healthy"}`.
+- [ ] **2. Web Dashboard:** Open `https://<your-service>.onrender.com/` in Chrome; login page loads with clean inputs and no demo buttons.
+- [ ] **3. Manager Login:** Sign in with `manager@company.com` and your configured password.
+- [ ] **4. Zero Dummy Data:** Check **Reports** tab &rarr; displays 0 delays, 0 recorded bottlenecks (no fake 45m).
+- [ ] **5. Locations Master:** Navigate to **Locations Master** tab &rarr; renders without any `latitude.toFixed` crashes.
+- [ ] **6. Trip Creation:** Click **Create Trip** &rarr; select driver, vehicle, and add a stop &rarr; trip creates with HTTP 201 (`TR-2026-XXXXX`).
+- [ ] **7. Driver Login:** Open `/login` in mobile viewport &rarr; select **Driver** profile &rarr; sign in &rarr; assigned trip loads immediately.
+- [ ] **8. SAP ONE Portal Sync:** Navigate to **Settings** &rarr; verify **SAP ONE Portal ERP Enterprise Synchronization** shows *Connected & Active*.
