@@ -24,7 +24,6 @@ import {
   Info
 } from 'lucide-react';
 import { api, getCurrentGpsPosition } from '../services/api';
-import { mockStore } from '../services/mockData';
 import { Trip, TripStop, User, Destination, Vehicle } from '../types';
 import { CameraModal } from '../components/CameraModal';
 import { DelayModal } from '../components/DelayModal';
@@ -125,13 +124,13 @@ const DriverViewInner: React.FC<Props> = ({
   const [isRefreshingGps, setIsRefreshingGps] = useState(false);
 
   // Fleet destinations for area codes and radar
-  const [fleetDestinations, setFleetDestinations] = useState<Destination[]>(() => {
-    try {
-      return mockStore.getDestinations();
-    } catch {
-      return [];
-    }
-  });
+  const [fleetDestinations, setFleetDestinations] = useState<Destination[]>([]);
+
+  useEffect(() => {
+    api.fleet.getDestinations().then((res: any) => {
+      if (res?.destinations) setFleetDestinations(res.destinations);
+    }).catch(() => {});
+  }, []);
 
   // Driver GPS coordinates state
   const [driverCoords, setDriverCoords] = useState<{ latitude: number; longitude: number }>(() => {

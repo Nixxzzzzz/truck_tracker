@@ -18,12 +18,32 @@ dotenv.config();
 // Initialize database schema
 initDatabase();
 
-// Auto-seed demo data if database is fresh
+// Ensure clean initial credentials if database is empty, without seeding dummy trips or data
 try {
   const userCountRow = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number } | undefined;
   if (!userCountRow || userCountRow.count === 0) {
-    console.log('🌱 Fresh database detected — auto-seeding fleet and demo routes...');
-    import('./seed').then(({ seed }) => seed()).catch((e) => console.error('[Auto-Seed Failed]', e));
+    if (process.env.AUTO_SEED === 'true') {
+      console.log('🌱 AUTO_SEED=true — seeding demo routes and test fleet...');
+      import('./seed').then(({ seed }) => seed()).catch((e) => console.error('[Auto-Seed Failed]', e));
+    } else {
+      console.log('🔒 Production mode: Provisioning initial manager credentials without dummy data...');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const bcrypt = require('bcryptjs');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { v4: uuidv4 } = require('uuid');
+      const managerPasswordHash = bcrypt.hashSync(process.env.INITIAL_ADMIN_PASSWORD || 'manager123', 10);
+      db.prepare(`
+        INSERT INTO users (id, name, email, password_hash, role, phone)
+        VALUES (?, ?, LOWER(?), ?, 'MANAGER', ?)
+      `).run(
+        uuidv4(),
+        'Operations Manager',
+        process.env.INITIAL_ADMIN_EMAIL || 'manager@company.com',
+        managerPasswordHash,
+        '+91 98100 00000'
+      );
+      console.log('✅ Initial manager user ready (0 dummy trips, 0 dummy fleet data).');
+    }
   }
 } catch (e) {
   console.error('[DB Init Check Failed]', e);

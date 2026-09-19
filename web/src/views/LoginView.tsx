@@ -57,16 +57,14 @@ const PRESETS: ProfilePreset[] = [
 
 export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onToggleTheme }) => {
   const [selectedPresetId, setSelectedPresetId] = useState<'manager' | 'driver' | 'director'>('manager');
-  const [email, setEmail] = useState('manager@company.com');
-  const [password, setPassword] = useState('manager123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectPreset = (preset: ProfilePreset) => {
     setSelectedPresetId(preset.id);
-    setEmail(preset.email);
-    setPassword(preset.password);
     setError(null);
   };
 
@@ -288,64 +286,8 @@ export const LoginView: React.FC<Props> = ({ onLoginSuccess, theme = 'dark', onT
           </button>
         </form>
 
-        {/* 1-Click Launch Presets Section */}
+        {/* Production Corporate Notice & Direct APK Link */}
         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-              Quick 1-Click Direct Launch
-            </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--accent-operational)', fontWeight: 600 }}>
-              Instant Demo Access
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {PRESETS.map((preset) => {
-              const Icon = preset.icon;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{
-                    justifyContent: 'space-between',
-                    padding: '10px 12px',
-                    fontSize: '0.82rem',
-                    textAlign: 'left'
-                  }}
-                  onClick={() => {
-                    selectPreset(preset);
-                    handleLogin(preset.email, preset.password);
-                  }}
-                  disabled={loading}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'var(--bg-surface-elevated)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--accent-primary)'
-                      }}
-                    >
-                      <Icon size={15} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{preset.title}</div>
-                      <div style={{ fontSize: '0.71rem', color: 'var(--text-muted)' }}>{preset.email}</div>
-                    </div>
-                  </div>
-                  <span style={{ color: 'var(--accent-primary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                    Launch &rarr;
-                  </span>
-                </button>
-              );
-            })}
-          </div>
 
           {/* Android Mobile App Direct APK Link */}
           <div style={{ textAlign: 'center', marginTop: '16px' }}>
