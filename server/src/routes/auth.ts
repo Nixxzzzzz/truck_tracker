@@ -46,7 +46,8 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Authentication failed', details: err.message });
+    console.error('[Auth Error] Login failure:', err);
+    return res.status(500).json({ error: 'Authentication failed. Please try again.' });
   }
 });
 
@@ -83,7 +84,8 @@ router.get('/users', requireAuth, requireRole('MANAGER'), (_req, res) => {
     `).all();
     return res.json({ users });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to retrieve users', details: err.message });
+    console.error('[Auth Error] Retrieve users failure:', err);
+    return res.status(500).json({ error: 'Failed to retrieve users.' });
   }
 });
 
@@ -127,7 +129,8 @@ router.post('/users', requireAuth, requireRole('MANAGER'), async (req: Authentic
       }
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create user', details: err.message });
+    console.error('[Auth Error] Create user failure:', err);
+    return res.status(500).json({ error: 'Failed to create user.' });
   }
 });
 
@@ -169,7 +172,8 @@ router.put('/users/:id', requireAuth, requireRole('MANAGER'), async (req: Authen
 
     return res.json({ message: 'User updated successfully' });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update user', details: err.message });
+    console.error('[Auth Error] Update user failure:', err);
+    return res.status(500).json({ error: 'Failed to update user.' });
   }
 });
 
@@ -204,7 +208,8 @@ router.delete('/users/:id', requireAuth, requireRole('MANAGER'), (req: Authentic
 
     return res.json({ message: `Account for ${target.name} has been removed` });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete user', details: err.message });
+    console.error('[Auth Error] Delete user failure:', err);
+    return res.status(500).json({ error: 'Failed to delete user.' });
   }
 });
 

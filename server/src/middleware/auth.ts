@@ -4,7 +4,16 @@ import { db } from '../db';
 import { UserRole } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'truck_tracker_luxury_secret_jwt_2026';
+import dotenv from 'dotenv';
+dotenv.config();
+
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in Render Environment Variables.');
+  }
+  return secret;
+}
 
 export interface AuthenticatedUser {
   id: string;
@@ -20,8 +29,8 @@ export interface AuthenticatedRequest extends Request {
 export function generateToken(user: AuthenticatedUser): string {
   return jwt.sign(
     { id: user.id, name: user.name, email: user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '30d' }
+    getJwtSecret(),
+    { expiresIn: '7d' }
   );
 }
 
@@ -33,8 +42,6 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
     token = authHeader.split(' ')[1];
   } else if (req.cookies && req.cookies.token) {
     token = req.cookies.token;
-  } else if (req.query && typeof req.query.token === 'string') {
-    token = req.query.token;
   }
 
   if (!token) {
@@ -42,7 +49,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
+    const decoded = jwt.verify(token, getJwtSecret()) as AuthenticatedUser;
     req.user = decoded;
     next();
   } catch (err) {

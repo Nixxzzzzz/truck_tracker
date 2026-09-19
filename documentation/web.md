@@ -24,7 +24,7 @@ Primary Navigation:
 - **Vehicles**: Fleet vehicle registry, maintenance flags, and odometer tracking.
 - **Destinations**: Pre-configured customer warehouses, retail stores, and depot coordinates.
 - **Reports**: Daily, weekly, and monthly operational summaries with CSV and Excel export.
-- **Google Sheets**: Real-time sync console across 8 operational sheets with retry triggers.
+- **Settings & ERP**: System administration, driver/manager user access control, and SAP ONE Portal integration gateway.
 - **Audit**: Comprehensive historical audit log tracking state modifications, cancellations, and user actions.
 
 ---

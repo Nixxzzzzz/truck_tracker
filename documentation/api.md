@@ -6,7 +6,6 @@ flowchart LR
     Gateway --> Auth["🔐 Auth & RBAC Middleware<br/>(verifyToken & requireRole)"]
     Auth --> Guard["🛡️ State Machine Guard<br/>(Transition & Geofence Validator)"]
     Guard --> DB[("🗄️ SQLite WAL Database<br/>(Authoritative Write)")]
-    Guard -.-> Sheets["📊 Google Sheets Sync Queue<br/>(Asynchronous Replica)"]
     DB --> Response["JSON Operational Response<br/>(200 OK / 201 Created)"]
     Response --> Client
 ```
@@ -188,25 +187,16 @@ Soft-deactivates a destination (sets `is_active = 0`). **Refuses if any currentl
 
 ---
 
-## 6. Reports & Google Sheets
+## 6. Reports & Operational Analytics
 
 ### `GET /api/reports/daily?date=YYYY-MM-DD`
-Retrieves aggregated fleet operational metrics for a specific date.
+Retrieves aggregated fleet operational metrics for a specific date (trips, delays, on-time arrivals).
 
 ### `GET /api/reports/periodic?period=weekly|monthly`
 Aggregated metrics across the last 7 or 30 days.
 
 ### `GET /api/reports/export?date=YYYY-MM-DD`
-Streams a formatted CSV operational report.
-
-### `GET /api/google-sheets/status`
-Returns synchronization status across all 8 sheets (*Trips, Stops, Events, Delays, Activities, Photos, Drivers, Vehicles*).
-
-### `POST /api/google-sheets/sync-all`
-Triggers immediate synchronization of pending records to Google Sheets.
-
-### `POST /api/google-sheets/retry`
-Retries failed Google Sheets synchronization records.
+Streams a formatted CSV operational report for dispatch and accounting records.
 
 ---
 

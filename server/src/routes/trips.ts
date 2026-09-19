@@ -1,7 +1,6 @@
 import { Router, Response } from 'express';
 import { db } from '../db';
 import { requireAuth, requireRole, logAudit, AuthenticatedRequest } from '../middleware/auth';
-import { googleSheetsService } from '../services/googleSheets';
 import { v4 as uuidv4 } from 'uuid';
 import { Trip, TripStop } from '../types';
 
@@ -43,12 +42,6 @@ router.get('/overview/attention', requireAuth, requireRole('MANAGER'), (_req, re
     WHERE a.status = 'FAILED'
     ORDER BY a.created_at DESC LIMIT 10
   `).all();
-
-  // 3. Failed Google Sheets Sync items
-  const syncFailures = db.prepare(`
-    SELECT * FROM google_sheet_sync WHERE sync_status = 'FAILED' ORDER BY created_at DESC LIMIT 10
-  `).all();
-
   // 4. Overdue unstarted trips (Planned departure was > 30 mins ago and trip is still ASSIGNED)
   const overdueTrips = db.prepare(`
     SELECT t.id, t.planned_departure_time, t.date, u.name as driver_name, v.vehicle_number
@@ -66,10 +59,9 @@ router.get('/overview/attention', requireAuth, requireRole('MANAGER'), (_req, re
   return res.json({
     delayedTrips,
     failedActivities,
-    syncFailures,
     overdueTrips,
     maintenanceVehicles,
-    totalAttentionCount: delayedTrips.length + failedActivities.length + syncFailures.length + maintenanceVehicles.length
+    totalAttentionCount: delayedTrips.length + failedActivities.length + maintenanceVehicles.length
   });
 });
 
@@ -280,10 +272,10 @@ router.post('/', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest
 
   try {
     insertTrip();
-    googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
     return res.status(201).json({ message: 'Trip created successfully', tripId });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create trip', details: err.message });
+    console.error('[Trips Error] Failed to create trip:', err);
+    return res.status(500).json({ error: 'Failed to create trip' });
   }
 });
 
@@ -357,7 +349,6 @@ router.put('/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedReque
     tripId
   );
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Trip updated successfully' });
 });
@@ -403,7 +394,8 @@ router.put('/:id/stops/reorder', requireAuth, requireRole('MANAGER'), (req: Auth
     reorderTx();
     return res.json({ message: 'Stops reordered successfully' });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to reorder stops', details: err.message });
+    console.error('[Trips Error] Failed to reorder stops:', err);
+    return res.status(500).json({ error: 'Failed to reorder stops' });
   }
 });
 
@@ -453,7 +445,6 @@ router.post('/:id/stops', requireAuth, requireRole('MANAGER'), (req: Authenticat
     changedBy: userId
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.status(201).json({ message: 'Stop added successfully', stopId, stop_number: nextStopNumber });
 });
@@ -509,7 +500,6 @@ router.put('/:id/stops/:stopId', requireAuth, requireRole('MANAGER'), (req: Auth
     reason: 'Manager edited stop details'
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Stop updated successfully' });
 });
@@ -556,10 +546,10 @@ router.delete('/:id/stops/:stopId', requireAuth, requireRole('MANAGER'), (req: A
 
   try {
     deleteTx();
-    googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
     return res.json({ message: 'Stop removed successfully' });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to remove stop', details: err.message });
+    console.error('[Trips Error] Failed to remove stop:', err);
+    return res.status(500).json({ error: 'Failed to remove stop' });
   }
 });
 
@@ -586,7 +576,6 @@ router.post('/:id/cancel', requireAuth, requireRole('MANAGER'), (req: Authentica
     reason: reason || 'Manager cancelled trip'
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Trip cancelled' });
 });

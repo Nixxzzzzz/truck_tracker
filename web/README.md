@@ -33,9 +33,9 @@ The Web application is the primary desktop and tablet interface for company disp
    - Total trips, delay durations, average trip duration, on-time arrival %, vehicle utilization.
    - One-click CSV and Excel export.
 
-6. **Google Sheets Sync Console**:
-   - Live monitoring across all 8 operational sheets (*Trips, Stops, Events, Delays, Activities, Photos, Drivers, Vehicles*).
-   - Retry trigger for failed synchronization attempts.
+6. **SAP ONE Portal / Enterprise ERP Integration**:
+   - Direct integration mapping for central operational records (*Trips, Stops, Proof of Delivery, Events, Delays*).
+   - Enterprise cost center and shipment tracking linkage.
 
 ---
 

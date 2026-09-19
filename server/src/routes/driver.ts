@@ -2,7 +2,6 @@ import { Router, Response } from 'express';
 import { db } from '../db';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 import { isWithinGeofence, calculateCumulativeDistanceKm } from '../services/geo';
-import { googleSheetsService } from '../services/googleSheets';
 import { v4 as uuidv4 } from 'uuid';
 import { Trip, TripStop } from '../types';
 
@@ -43,7 +42,6 @@ function recordEvent(params: {
     params.details || null
   );
 
-  googleSheetsService.syncEvent(eventId).catch((e) => console.error('[Sync]', e.message));
   return eventId;
 }
 
@@ -210,7 +208,6 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
     timestamp: now
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Trip started successfully', actual_start_time: now, status: 'IN_PROGRESS' });
 });
@@ -268,7 +265,8 @@ router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, r
     const createdStop = db.prepare(`SELECT * FROM trip_stops WHERE id = ?`).get(stopId);
     return res.status(201).json({ message: 'Custom stop added successfully', stop: createdStop });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to add custom stop: ' + err.message });
+    console.error('[Driver Error] Failed to add custom stop:', err);
+    return res.status(500).json({ error: 'Failed to add custom stop' });
   }
 });
 
@@ -361,7 +359,6 @@ router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedR
     timestamp: nowIso
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({
     message: 'Arrival recorded successfully',
@@ -494,7 +491,6 @@ router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedR
     timestamp: now
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({
     message: 'Departure recorded',
@@ -553,7 +549,7 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
   db.prepare(`UPDATE trips SET status = 'DELAYED', updated_at = ? WHERE id = ?`).run(now, tripId);
 
   const gpsNotice = hasGps
-    ? (isPoorAccuracy ? ` (Poor GPS accuracy: ±${Math.round(gps_accuracy!)}m)` : '')
+    ? (isPoorAccuracy ? ` (Poor GPS accuracy: Â±${Math.round(gps_accuracy!)}m)` : '')
     : ' (GPS UNAVAILABLE)';
 
   recordEvent({
@@ -565,11 +561,10 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
     latitude: hasGps ? latitude : undefined,
     longitude: hasGps ? longitude : undefined,
     gpsAccuracy: hasGps ? gps_accuracy : undefined,
-    details: `Delay reported: ${reason}${description ? ` — ${description}` : ''}${gpsNotice}`,
+    details: `Delay reported: ${reason}${description ? ` â€” ${description}` : ''}${gpsNotice}`,
     timestamp: now
   });
 
-  googleSheetsService.syncDelay(delayId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Delay reported', delayId, start_time: now });
 });
@@ -642,7 +637,6 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
     timestamp: nowIso
   });
 
-  googleSheetsService.syncDelay(delayId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({
     message: 'Delay resolved',
@@ -714,7 +708,6 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
     timestamp: now
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Return journey started', status: 'RETURNING' });
 });
@@ -769,7 +762,6 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
     timestamp: now
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({ message: 'Base arrival recorded', base_arrival_time: now });
 });
@@ -839,7 +831,6 @@ router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res:
     timestamp: now
   });
 
-  googleSheetsService.syncTrip(tripId).catch((e) => console.error('[Sync]', e.message));
 
   return res.json({
     message: 'Trip completed successfully',

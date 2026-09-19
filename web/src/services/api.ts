@@ -775,37 +775,5 @@ export const api = {
         return emptyPeriodicReport;
       }
     }
-  },
-
-  googleSheets: {
-    getStatus: async () => {
-      try {
-        return await request('/google-sheets/status');
-      } catch {
-        return {
-          status: {
-            configured: false,
-            spreadsheetId: null,
-            totalQueued: 0,
-            totalFailed: 0,
-            lastSyncedAt: new Date().toISOString()
-          }
-        };
-      }
-    },
-    retry: async () => {
-      try {
-        return await request('/google-sheets/retry', { method: 'POST' });
-      } catch {
-        return { message: 'Retry completed successfully', retried: 0 };
-      }
-    },
-    syncAll: async () => {
-      try {
-        return await request('/google-sheets/sync-all', { method: 'POST' });
-      } catch {
-        return { message: 'Operational records synchronized with central ERP ledger', synced: 0 };
-      }
-    }
   }
 };

@@ -4,7 +4,6 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
 import { PhotoType } from '../types';
-import { googleSheetsService } from './googleSheets';
 
 export const UPLOADS_DIR = process.env.UPLOADS_DIR || path.resolve(__dirname, '../../uploads/photos');
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -79,11 +78,6 @@ export async function savePhotoRecord(params: {
     params.longitude ?? null,
     params.gpsAccuracy ?? null
   );
-
-  // Trigger non-blocking Google Sheets sync
-  googleSheetsService.syncPhoto(id).catch((err) => {
-    console.error('[GoogleSheets] Photo sync error:', err.message);
-  });
 
   return db.prepare(`SELECT * FROM photos WHERE id = ?`).get(id);
 }

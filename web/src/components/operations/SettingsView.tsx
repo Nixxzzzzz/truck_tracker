@@ -43,17 +43,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onRefresh,
   refreshing = false
 }) => {
-  const [syncStatus, setSyncStatus] = useState<any>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
-
   // Team & Manager Management
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [showAddManagerModal, setShowAddManagerModal] = useState(false);
   const [managerName, setManagerName] = useState('');
   const [managerEmail, setManagerEmail] = useState('');
-  const [managerPassword, setManagerPassword] = useState('manager123');
+  const [managerPassword, setManagerPassword] = useState('');
   const [managerPhone, setManagerPhone] = useState('+91 ');
   const [showManagerPassword, setShowManagerPassword] = useState(false);
   const [creatingManager, setCreatingManager] = useState(false);
@@ -61,12 +57,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [teamSuccess, setTeamSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSyncStatus();
     loadTeamMembers();
-    const interval = setInterval(() => {
-      loadSyncStatus();
-    }, 6000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadTeamMembers = async () => {
@@ -80,21 +71,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       console.warn('Failed to load team members:', e);
     } finally {
       setLoadingTeam(false);
-    }
-  };
-
-  const loadSyncStatus = async () => {
-    try {
-      const data = await api.googleSheets.getStatus();
-      setSyncStatus(data.status);
-    } catch {
-      setSyncStatus({
-        configured: true,
-        spreadsheetId: '1HX-HOSEXPERTS-LOGISTICS-LEDGER-2026',
-        totalQueued: 0,
-        totalFailed: 0,
-        lastSyncedAt: new Date().toISOString()
-      });
     }
   };
 
@@ -145,33 +121,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleTriggerSync = async () => {
-    setSyncing(true);
-    setSyncFeedback(null);
-    try {
-      const res = await api.googleSheets.syncAll();
-      setSyncFeedback(res.message || 'Ledger synchronization successful');
-      await loadSyncStatus();
-    } catch (err: any) {
-      setSyncFeedback('Sync completed with cached ledger items');
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
-      {/* Enterprise Unified Header with Real-Time Pulse */}
+      {/* Enterprise Unified Header */}
       <PageHeader
         breadcrumbs={[{ label: 'System' }, { label: 'System Settings' }]}
         title="Operations & System Settings"
-        subtitle="Manage external cloud ledger synchronizations, diagnostics, and testing personas"
+        subtitle="Manage team accounts, system diagnostics, and ERP configuration"
         lastUpdated={lastUpdated}
-        onRefresh={onRefresh || loadSyncStatus}
-        refreshing={refreshing || syncing}
+        onRefresh={onRefresh || loadTeamMembers}
+        refreshing={refreshing}
       />
 
-      {/* 1. SAP ONE Portal ERP Integration */}
+      {/* 1. SAP ONE Portal ERP Reference */}
       <div
         className="card-elevation-1"
         style={{
@@ -181,19 +144,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           border: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '14px'
+          gap: '12px'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Cloud size={20} color="var(--brand-primary)" />
           <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            SAP ONE Portal ERP Enterprise Synchronization
+            SAP ONE Portal ERP Integration
           </h3>
         </div>
         <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: 0 }}>
-          HoseXperts trips, stops, delivery manifests, fuel consumption, and audit trail records sync directly with the enterprise SAP ONE Portal ERP database.
+          TruckTracker stores SAP Business One ERP reference fields on trips and vehicles.
+          Managers enter SAP shipment numbers, delivery document numbers, and cost centers when creating trips.
+          These are stored alongside operational data in the fleet database.
         </p>
-
         <div
           style={{
             padding: '12px 14px',
@@ -201,55 +165,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             borderRadius: 'var(--radius-sm)',
             fontSize: '0.82rem',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '10px'
           }}
         >
           <div>
-            <span style={{ color: 'var(--text-secondary)' }}>Status: </span>
-            <strong style={{ color: '#10b981' }}>Connected & Active</strong>
+            <span style={{ color: 'var(--text-secondary)' }}>SAP Field: </span>
+            <strong>sap_shipment_num</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>(Shipment Order)</span>
           </div>
           <div>
-            <span style={{ color: 'var(--text-secondary)' }}>Queue: </span>
-            <strong>{syncStatus?.totalQueued || 0} pending</strong>
+            <span style={{ color: 'var(--text-secondary)' }}>SAP Field: </span>
+            <strong>erp_delivery_doc</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>(Delivery ODLN)</span>
           </div>
           <div>
-            <span style={{ color: 'var(--text-secondary)' }}>Last Synced: </span>
-            <strong>{syncStatus?.lastSyncedAt ? new Date(syncStatus.lastSyncedAt).toLocaleTimeString() : 'Recent'}</strong>
+            <span style={{ color: 'var(--text-secondary)' }}>SAP Field: </span>
+            <strong>cost_center</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>(CO Cost Center)</span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--text-secondary)' }}>SAP Field: </span>
+            <strong>fleet_unit_id</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>(PM Equipment No.)</span>
           </div>
         </div>
-
-        {syncFeedback && (
-          <div
-            style={{
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid #10b981',
-              color: '#10b981',
-              fontSize: '0.82rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <CheckCircle2 size={16} />
-            <span>{syncFeedback}</span>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleTriggerSync}
-            disabled={syncing}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
-          >
-            <RefreshCw size={14} className={syncing ? 'spin' : ''} />
-            <span>{syncing ? 'Syncing SAP Portal...' : 'Force Sync SAP ONE Portal'}</span>
-          </button>
-        </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+          Configure <code>SAP_PORTAL_URL</code> and <code>SAP_SERVICE_LAYER_TOKEN</code> in Render environment variables to enable live bi-directional sync.
+        </p>
       </div>
 
       {/* 2. Operations Team & Manager Access Control */}

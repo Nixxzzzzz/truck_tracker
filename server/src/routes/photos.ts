@@ -73,7 +73,8 @@ router.post(
         photo
       });
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to record photo', details: err.message });
+      console.error('[Photos Error] Failed to record photo:', err);
+      return res.status(500).json({ error: 'Failed to record photo' });
     }
   }
 );

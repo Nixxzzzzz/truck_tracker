@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './db';
-import { googleSheetsService } from './services/googleSheets';
 
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
 
@@ -364,26 +363,19 @@ async function runProductionHardeningTests() {
     record(14, 'Trip cancellation and audit log', cancelRes.status === 200 && t3Cancelled.status === 'CANCELLED', `Trip ${t3Id} cancelled with reason recorded`);
 
     // -------------------------------------------------------------
-    // TEST 15: Google Sheets synchronization failure logging
+    // TEST 15: Audit log verification (immutable ledger of mutations)
     // -------------------------------------------------------------
-    // Insert a simulated failed sync item
-    const failSyncId = uuidv4();
-    db.prepare(`
-      INSERT INTO google_sheet_sync (id, sheet_name, record_id, sync_status, error_message)
-      VALUES (?, 'Trips', ?, 'FAILED', 'Temporary Google API quota limit reached')
-    `).run(failSyncId, t1Id);
-    const syncStatus = await (await fetch(`${BASE_URL}/google-sheets/status`, { headers: { Authorization: `Bearer ${mgrToken}` } })).json();
-    record(15, 'Google Sheets sync failure logging', syncStatus.counts.FAILED > 0, `Captured ${syncStatus.counts.FAILED} failed sync records without corrupting DB`);
+    const auditLogs = db.prepare(`SELECT * FROM audit_logs WHERE trip_id = ? ORDER BY timestamp DESC`).all(t3Id) as any[];
+    record(15, 'Audit log verification', auditLogs.length > 0 && auditLogs.some((l) => l.action === 'TRIP_CANCELLED'), `Captured ${auditLogs.length} audit trail records for trip ${t3Id}`);
 
     // -------------------------------------------------------------
-    // TEST 16: Google Sheets retry
+    // TEST 16: Periodic operational report calculation
     // -------------------------------------------------------------
-    const retryRes = await fetch(`${BASE_URL}/google-sheets/retry`, {
-      method: 'POST',
+    const periodicRes = await fetch(`${BASE_URL}/reports/periodic?period=weekly`, {
       headers: { Authorization: `Bearer ${mgrToken}` }
     });
-    const retryData = await retryRes.json();
-    record(16, 'Google Sheets retry mechanism', retryRes.status === 200 && retryData.retried > 0, `Retried ${retryData.retried} records with ${retryData.succeeded} successful`);
+    const periodicData = await periodicRes.json();
+    record(16, 'Periodic operational report calculation', periodicRes.status === 200 && typeof periodicData.totalTrips === 'number', `Successfully generated weekly report (${periodicData.totalTrips} trips logged)`);
 
     // -------------------------------------------------------------
     // TEST 17: Manager edits trip before start

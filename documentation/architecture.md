@@ -6,7 +6,7 @@ TruckTracker is an internal logistics operational platform designed for company 
 1. **Native Android Driver Application (`android/`)**: Primary mobile field client for drivers built with Kotlin, Jetpack Compose, CameraX, and Room.
 2. **Web Manager Application (`web/`)**: Desktop/tablet dispatch command center for fleet managers built with React 19, TypeScript, and Leaflet.
 3. **Shared Contracts & Models (`shared/`)**: Canonical data models, event definitions, and API contracts ensuring consistency across all layers.
-4. **Authoritative Shared Backend (`server/`)**: Express + Node.js 24 + SQLite (WAL mode) enforcing all business rules, authentication, event integrity, photo storage, reporting, and Google Sheets synchronization.
+4. **Authoritative Shared Backend (`server/`)**: Express + Node.js 24 + SQLite (WAL mode) enforcing all business rules, authentication, event integrity, photo storage, reporting, and SAP ONE Portal / ERP integration.
 
 ---
 
@@ -29,17 +29,13 @@ graph TD
         EventEngine["⏱️ Event & Audit Engine<br/>(Authoritative Timestamps)"]
         GeoService["📍 Geofence & GPS Validator<br/>(Haversine 100-250m)"]
         PhotoService["📷 Photo Proof Service<br/>(Disk Storage & Metadata)"]
-        SyncEngine["📊 Google Sheets 8-Tab Sync<br/>(Queue & Retry)"]
+        ErpGateway["🏢 SAP ONE Portal Gateway<br/>(Shipment, Cost Center, PM)"]
         BackupService["💾 Hot Backup Service<br/>(SQLite VACUUM INTO)"]
     end
 
     subgraph Storage["Authoritative Single Source of Truth"]
         SQLiteDB[("🗄️ SQLite Database (WAL Mode)<br/>truck_tracker.sqlite")]
         PhotoStorage[("📁 Photo Proof Storage<br/>/server/uploads/photos/")]
-    end
-
-    subgraph External["External Reporting Replica"]
-        GoogleSheets[("📈 Google Sheets Spreadsheet<br/>(8 Dedicated Operational Tabs)")]
     end
 
     AndroidApp -->|HTTPS / REST API| AuthModule
@@ -55,12 +51,11 @@ graph TD
 
     TripEngine --> GeoService
     TripEngine --> SQLiteDB
+    TripEngine --> ErpGateway
     EventEngine --> SQLiteDB
     PhotoService --> PhotoStorage
     PhotoService --> SQLiteDB
 
-    EventEngine --> SyncEngine
-    SyncEngine -.->|Asynchronous Sync| GoogleSheets
     BackupService --> SQLiteDB
 ```
 
@@ -183,7 +178,6 @@ sequenceDiagram
     participant AndroidApp as Android Driver App
     participant Backend as Express + Engine
     participant DB as SQLite WAL DB
-    participant Sheets as Google Sheets Replica
 
     Note over Manager,WebApp: Dispatch Phase
     Manager->>WebApp: Create Trip TR-2026-0001 (Stops 1..N)
@@ -202,7 +196,6 @@ sequenceDiagram
     Driver->>AndroidApp: Tap "START TRIP"
     AndroidApp->>Backend: POST /api/trips/:id/events (TRIP_START)
     Backend->>DB: UPDATE trips (Status: IN_PROGRESS, actual_start_time)
-    Backend->>Sheets: Async Sync Queue (Trips tab)
 
     loop For Each Assigned Destination Stop (1..N)
         Driver->>AndroidApp: Arrive at Stop location
@@ -245,7 +238,6 @@ sequenceDiagram
     Driver->>AndroidApp: Tap "COMPLETE TRIP"
     AndroidApp->>Backend: POST /api/trips/:id/events (TRIP_COMPLETE)
     Backend->>DB: UPDATE trips (Status: COMPLETED, trip_completion_time)
-    Backend->>Sheets: Final Synchronize (Trips, Stops, Events, Delays)
 
     Manager->>WebApp: Open Completed Trip Detail & View Generated CSV Report
 ```
@@ -302,4 +294,4 @@ sequenceDiagram
 1. **Anti-Tampering Timestamps**: Operational timestamps (`actual_start_time`, `actual_arrival_time`, `actual_departure_time`, `trip_completion_time`) are generated strictly by the server. Manipulating device clocks has zero impact on records.
 2. **Planned vs. Actual Immutability**: Planned arrival schedules are immutable baseline targets. Real-world differences are logged as variance metrics (+/- minutes) and never overwrite planned targets.
 3. **Strict RBAC & Driver Isolation**: Drivers can query and mutate only trips assigned to their `driver_id`. Cross-driver access attempts return HTTP 404/403.
-4. **Resilient Google Sheets Integration**: The local SQLite WAL database is the primary authoritative source of truth. Google Sheets operates as an asynchronous reporting replica; network outages or missing GCP credentials never block field driver operations.
+4. **Authoritative SQLite WAL & ERP Gateway**: The local SQLite WAL database is the primary authoritative source of truth. All operational metrics, route logs, and proof records are persistently recorded with atomic transactions, while enterprise fields provide seamless integration with central ERP systems (e.g. SAP Business One).

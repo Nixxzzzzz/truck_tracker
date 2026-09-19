@@ -41,8 +41,8 @@ npx tsx src/testProductionScenarios.ts
 12. **TEST 12**: Failed activity flagged in manager's Attention Required feed
 13. **TEST 13**: Invalid driver action state machine rejections (blocks premature departure, double completion, delay after completion)
 14. **TEST 14**: Trip cancellation with mandatory audit log reason
-15. **TEST 15**: Google Sheets sync failure logging (DB remains unaffected source of truth)
-16. **TEST 16**: Google Sheets retry mechanism (retries and resolves failed syncs)
+15. **TEST 15**: Audit log verification (immutable ledger of mutations)
+16. **TEST 16**: Periodic operational report calculation (weekly & monthly metrics)
 17. **TEST 17**: Manager edits trip before start with audit log tracking
 18. **TEST 18**: Manager reorders destinations before start with automatic stop renumbering
 19. **TEST 19**: Unauthorized driver access security guard (Driver A cannot access Driver B's trips)

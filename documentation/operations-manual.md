@@ -101,13 +101,13 @@ flowchart TD
     
     CheckException -- Normal Operations --> RouteCompleted[5. Driver Completes All Stops & Returns]
     RouteCompleted --> AuditReport[6. Review Final Timeline & Report<br/>Actual vs Planned Timestamps]
-    AuditReport --> ExportCSV[7. Export Daily Operational CSV<br/>Verify Google Sheets Sync]
+    AuditReport --> ExportCSV[7. Export Daily Operational CSV<br/>Verify Operational Integrity]
 ```
 
 ### Detailed Dispatch Procedures
 
 #### 1. Creating a Multi-Stop Route
-1. Log in to the Web Manager Dashboard at `http://localhost:5173`.
+1. Log in to the Web Manager Dashboard.
 2. Click **Create Trip** (`+ New Trip`).
 3. Select an available **Driver** and **Vehicle**.
 4. Set the planned departure time and base depot.
@@ -124,9 +124,9 @@ flowchart TD
 1. Navigate to **Reports**.
 2. Select the timeframe (**Daily**, **Weekly**, or **Monthly**).
 3. Review total trip counts, on-time arrival %, average trip duration, and delay reasons.
-4. Click **Export CSV** to download a spreadsheet for company accounting.
+4. Click **Export CSV** to download a spreadsheet for company accounting and dispatch records.
 
-#### 4. Google Sheets Synchronization
-1. Navigate to **Google Sheets Console**.
-2. Monitor synchronization across all 8 operational tabs (*Trips, Stops, Events, Delays, Activities, Photos, Drivers, Vehicles*).
-3. If any rows indicate `FAILED` (e.g. due to temporary Google API downtime), click **Retry Failed Sync**.
+#### 4. SAP ONE Portal & Access Control Administration
+1. Navigate to **Settings** in the Operations Manager view.
+2. Review the **SAP Business One Gateway** parameters (`sap_shipment_num`, `cost_center`, `fleet_unit_id`).
+3. Under **Operations Team & Manager Access Control**, provision, edit, or remove dispatch supervisor credentials.
