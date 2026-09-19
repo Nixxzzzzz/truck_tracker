@@ -109,6 +109,7 @@ export const LeafletMap: React.FC<Props> = ({
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           options: {
             attribution: 'Tiles &copy; Esri &mdash; Telematics Satellite Imagery',
+            subdomains: 'abc',
             maxZoom: 19
           }
         };
@@ -117,6 +118,7 @@ export const LeafletMap: React.FC<Props> = ({
           url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
           options: {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            subdomains: 'abc',
             maxZoom: 19
           }
         };
@@ -127,6 +129,7 @@ export const LeafletMap: React.FC<Props> = ({
           options: {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &bull; Ola Maps Telematics',
             className: 'map-tiles-dark',
+            subdomains: 'abc',
             maxZoom: 19
           }
         };
@@ -192,14 +195,35 @@ export const LeafletMap: React.FC<Props> = ({
       vehicleLayerGroupRef.current = L.layerGroup().addTo(map);
       simulationLayerGroupRef.current = L.layerGroup().addTo(map);
 
-      requestAnimationFrame(() => {
-        try { map.invalidateSize(); } catch {}
-      });
+      // Ensure map recalculates tile dimensions when layout finishes or containers resize
+      const timer1 = setTimeout(() => { try { map.invalidateSize(); } catch {} }, 80);
+      const timer2 = setTimeout(() => { try { map.invalidateSize(); } catch {} }, 250);
+      const timer3 = setTimeout(() => { try { map.invalidateSize(); } catch {} }, 600);
+
+      let resizeObserver: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          if (mapInstanceRef.current) {
+            try { mapInstanceRef.current.invalidateSize(); } catch {}
+          }
+        });
+        resizeObserver.observe(mapContainerRef.current);
+      }
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        if (resizeObserver) resizeObserver.disconnect();
+      };
     } else if (tileLayerRef.current) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
       const { url, options } = getTileUrl(mapLayer);
       const tiles = L.tileLayer(url, options).addTo(mapInstanceRef.current);
       tileLayerRef.current = tiles;
+      requestAnimationFrame(() => {
+        try { mapInstanceRef.current?.invalidateSize(); } catch {}
+      });
     }
   }, [mapLayer]);
 
