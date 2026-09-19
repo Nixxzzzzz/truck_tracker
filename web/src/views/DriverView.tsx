@@ -183,7 +183,7 @@ const DriverViewInner: React.FC<Props> = ({
         setIsRealGps(fix.isReal);
         setGeofenceFeedback(
           fix.isReal
-            ? `Live GPS Acquired: ${fix.latitude.toFixed(4)}°, ${fix.longitude.toFixed(4)}° (±${fix.gps_accuracy}m)`
+            ? `Live GPS Acquired: ${Number(fix.latitude || 0).toFixed(4)}°, ${Number(fix.longitude || 0).toFixed(4)}° (±${fix.gps_accuracy}m)`
             : (fix.error || 'Using route corridor position')
         );
         setTimeout(() => setGeofenceFeedback(null), 4000);

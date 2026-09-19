@@ -79,7 +79,7 @@ export const AddCustomStopModal: React.FC<Props> = ({
         setLatitude(coords.latitude);
         setLongitude(coords.longitude);
         if (!address) {
-          setAddress(`Current GPS Fix: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)} (±${coords.gps_accuracy}m)`);
+          setAddress(`Current GPS Fix: ${Number(coords.latitude || 0).toFixed(4)}, ${Number(coords.longitude || 0).toFixed(4)} (±${coords.gps_accuracy}m)`);
         }
       }
     } catch {

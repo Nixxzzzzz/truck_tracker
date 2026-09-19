@@ -280,8 +280,8 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
                       {ev.latitude && ev.longitude && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <MapPin size={12} />
-                          GPS: {ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)}
-                          {ev.gps_accuracy && ` (±${Math.round(ev.gps_accuracy)}m)`}
+                          GPS: {Number(ev.latitude || 0).toFixed(4)}, {Number(ev.longitude || 0).toFixed(4)}
+                          {ev.gps_accuracy && ` (±${Math.round(Number(ev.gps_accuracy))}m)`}
                         </div>
                       )}
                     </div>
@@ -607,7 +607,7 @@ export const TripDetailModal: React.FC<Props> = ({ tripId, onClose, onRefresh, t
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', background: 'var(--bg-secondary)', padding: '14px', borderRadius: 'var(--radius-md)', fontSize: '0.82rem', border: '1px solid var(--border-subtle)' }}>
               <div>
                 <span style={{ color: 'var(--text-muted)' }}>GPS Telemetry:</span><br />
-                <b>{previewPhoto.latitude ? `${previewPhoto.latitude.toFixed(4)}° N, ${previewPhoto.longitude?.toFixed(4)}° E` : 'Logged from Cabin'}</b>
+                <b>{previewPhoto.latitude ? `${Number(previewPhoto.latitude || 0).toFixed(4)}° N, ${Number(previewPhoto.longitude || 0).toFixed(4)}° E` : 'Logged from Cabin'}</b>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)' }}>GPS Accuracy:</span><br />

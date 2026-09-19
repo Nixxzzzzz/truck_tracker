@@ -190,15 +190,17 @@ export const LeafletMap: React.FC<Props> = ({
         iconAnchor: [16, 16]
       });
 
-      const basePos: [number, number] = [baseLocation.latitude, baseLocation.longitude];
+      const baseLat = Number(baseLocation.latitude || 28.5355);
+      const baseLng = Number(baseLocation.longitude || 77.2680);
+      const basePos: [number, number] = [baseLat, baseLng];
       L.marker(basePos, { icon: baseIcon })
         .addTo(staticGroup)
         .bindPopup(`
           <div style="font-family:Inter,sans-serif;padding:4px;">
             <div style="font-size:11px;font-weight:700;color:#c5a059;text-transform:uppercase;letter-spacing:0.5px;">Dispatch Headquarters</div>
             <div style="font-size:14px;font-weight:700;color:#0f172a;margin:2px 0;">${baseLocation.name || 'Central Fleet Terminal'}</div>
-            <div style="font-size:11px;color:#64748b;">GPS: ${baseLocation.latitude.toFixed(4)}, ${baseLocation.longitude.toFixed(4)}</div>
-            <a href="https://www.google.com/maps/search/?api=1&query=${baseLocation.latitude},${baseLocation.longitude}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
+            <div style="font-size:11px;color:#64748b;">GPS: ${baseLat.toFixed(4)}, ${baseLng.toFixed(4)}</div>
+            <a href="https://www.google.com/maps/search/?api=1&query=${baseLat},${baseLng}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;font-weight:600;margin-top:6px;text-decoration:none;">
               📍 Open Location in Google Maps &rarr;
             </a>
           </div>
@@ -224,11 +226,13 @@ export const LeafletMap: React.FC<Props> = ({
           iconAnchor: [14, 14]
         });
 
-        const stopPos: [number, number] = [stop.latitude, stop.longitude];
+        const stopLat = Number(stop.latitude);
+        const stopLng = Number(stop.longitude);
+        const stopPos: [number, number] = [stopLat, stopLng];
 
         // Draw Geofence Radius Circle
         L.circle(stopPos, {
-          radius: stop.geofence_radius_meters || 150,
+          radius: Number(stop.geofence_radius_meters || 150),
           color: isCompleted ? '#10b981' : '#38bdf8',
           fillColor: isCompleted ? '#10b981' : '#38bdf8',
           fillOpacity: 0.12,

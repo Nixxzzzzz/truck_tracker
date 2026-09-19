@@ -53,29 +53,29 @@ function processDelayAttribution(delayReasons: any[], isPeriodic: boolean, daysC
     }
   }
 
-  // If no delays yet, populate realistic baseline based on operational averages
-  if (mgmtMins === 0 && driverMins === 0) {
-    const scale = isPeriodic ? (daysCount > 10 ? 4 : 2) : 1;
-    mgmtMins = 45 * scale;
-    mgmtCount = 3 * scale;
-    driverMins = 28 * scale;
-    driverCount = 2 * scale;
-    mgmtReasons.push(
-      { reason: 'Customer Loading Bay Queue / Dock Wait', count: 2 * scale, total_minutes: 30 * scale },
-      { reason: 'Gate Pass & E-Way Bill Verification', count: 1 * scale, total_minutes: 15 * scale }
-    );
-    driverReasons.push(
-      { reason: 'Corridor Traffic & Expressway Congestion', count: 2 * scale, total_minutes: 28 * scale }
-    );
-  }
-
-  const totalMins = Math.max(1, mgmtMins + driverMins);
-  const mgmtPct = Math.round((mgmtMins / totalMins) * 100);
-  const driverPct = 100 - mgmtPct;
+  const totalMins = mgmtMins + driverMins;
+  const mgmtPct = totalMins > 0 ? Math.round((mgmtMins / totalMins) * 100) : 0;
+  const driverPct = totalMins > 0 ? 100 - mgmtPct : 0;
 
   // Trend data points for dual-series line graph
   let trend: any[] = [];
-  if (!isPeriodic) {
+  if (totalMins === 0) {
+    const labels = !isPeriodic
+      ? ['06:00 - 09:00', '09:00 - 12:00', '12:00 - 15:00', '15:00 - 18:00', '18:00 - 21:00']
+      : daysCount <= 7
+      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+
+    trend = labels.map((lbl) => ({
+      label: lbl,
+      managementMinutes: 0,
+      driverMinutes: 0,
+      managementIncidents: 0,
+      driverIncidents: 0,
+      topManagementReason: 'No Delays',
+      topDriverReason: 'On Schedule'
+    }));
+  } else if (!isPeriodic) {
     // Daily intervals
     const labels = ['06:00 - 09:00', '09:00 - 12:00', '12:00 - 15:00', '15:00 - 18:00', '18:00 - 21:00'];
     const mgmtSplits = [0.15, 0.40, 0.20, 0.15, 0.10];
@@ -85,10 +85,10 @@ function processDelayAttribution(delayReasons: any[], isPeriodic: boolean, daysC
       label: lbl,
       managementMinutes: Math.round(mgmtMins * mgmtSplits[idx]),
       driverMinutes: Math.round(driverMins * driverSplits[idx]),
-      managementIncidents: Math.max(1, Math.round(mgmtCount * mgmtSplits[idx])),
-      driverIncidents: Math.max(0, Math.round(driverCount * driverSplits[idx])),
-      topManagementReason: idx === 1 ? 'Warehouse Loading Dock Delay' : 'Gate Pass / Manifest Clearance',
-      topDriverReason: idx === 1 ? 'Ring Road Peak Congestion' : 'Rest Break / Route Diversion'
+      managementIncidents: Math.round(mgmtCount * mgmtSplits[idx]),
+      driverIncidents: Math.round(driverCount * driverSplits[idx]),
+      topManagementReason: mgmtReasons[0]?.reason || 'Operational Queue',
+      topDriverReason: driverReasons[0]?.reason || 'Transit Bottleneck'
     }));
   } else if (daysCount <= 7) {
     // Weekly (7 days)
@@ -100,10 +100,10 @@ function processDelayAttribution(delayReasons: any[], isPeriodic: boolean, daysC
       label: lbl,
       managementMinutes: Math.round(mgmtMins * mgmtWeights[idx]),
       driverMinutes: Math.round(driverMins * driverWeights[idx]),
-      managementIncidents: Math.max(1, Math.round(mgmtCount * mgmtWeights[idx])),
-      driverIncidents: Math.max(0, Math.round(driverCount * driverWeights[idx])),
-      topManagementReason: 'Loading Bay & Manifest Clearance',
-      topDriverReason: idx === 4 ? 'Weekend Highway Bottleneck' : 'Transit Congestion'
+      managementIncidents: Math.round(mgmtCount * mgmtWeights[idx]),
+      driverIncidents: Math.round(driverCount * driverWeights[idx]),
+      topManagementReason: mgmtReasons[0]?.reason || 'Facility Turnaround',
+      topDriverReason: driverReasons[0]?.reason || 'Highway Stoppages'
     }));
   } else {
     // Monthly (4-5 weeks / periods)
@@ -115,10 +115,10 @@ function processDelayAttribution(delayReasons: any[], isPeriodic: boolean, daysC
       label: lbl,
       managementMinutes: Math.round(mgmtMins * mgmtWeights[idx]),
       driverMinutes: Math.round(driverMins * driverWeights[idx]),
-      managementIncidents: Math.max(1, Math.round(mgmtCount * mgmtWeights[idx])),
-      driverIncidents: Math.max(0, Math.round(driverCount * driverWeights[idx])),
-      topManagementReason: 'Depot Turnaround & Dock Queue',
-      topDriverReason: 'Intercity Expressway Stoppages'
+      managementIncidents: Math.round(mgmtCount * mgmtWeights[idx]),
+      driverIncidents: Math.round(driverCount * driverWeights[idx]),
+      topManagementReason: mgmtReasons[0]?.reason || 'Depot Processing',
+      topDriverReason: driverReasons[0]?.reason || 'Intercity Transit'
     }));
   }
 

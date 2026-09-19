@@ -184,6 +184,8 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
         driver_id: driverId,
         vehicle_id: vehicleId,
         starting_location: startingLocation,
+        starting_latitude: 28.5355,
+        starting_longitude: 77.2680,
         planned_departure_time: plannedDepartureTime,
         purpose,
         reference_number: referenceNumber || undefined,
@@ -193,9 +195,9 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
           stop_number: idx + 1,
           destination_name: s.destination_name,
           address: s.address,
-          latitude: s.latitude,
-          longitude: s.longitude,
-          geofence_radius_meters: s.geofence_radius_meters,
+          latitude: Number(s.latitude || 28.5355),
+          longitude: Number(s.longitude || 77.2680),
+          geofence_radius_meters: Number(s.geofence_radius_meters || 150),
           planned_arrival_time: s.planned_arrival_time,
           notes: s.notes
         }))
@@ -514,7 +516,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                     </div>
 
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      GPS: <b>{stop.latitude.toFixed(4)}° N, {stop.longitude.toFixed(4)}° E</b> &bull; Geofence: <b>{stop.geofence_radius_meters}m</b>
+                      GPS: <b>{Number(stop.latitude || 0).toFixed(4)}° N, {Number(stop.longitude || 0).toFixed(4)}° E</b> &bull; Geofence: <b>{stop.geofence_radius_meters}m</b>
                     </div>
                   </div>
                 ))}
@@ -574,7 +576,7 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
               />
 
               <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
-                <div>Selected Coordinates: <b>{tempPickerCoords ? `${tempPickerCoords.latitude.toFixed(4)}°, ${tempPickerCoords.longitude.toFixed(4)}°` : 'Default Depot'}</b></div>
+                <div>Selected Coordinates: <b>{tempPickerCoords ? `${Number(tempPickerCoords.latitude || 0).toFixed(4)}°, ${Number(tempPickerCoords.longitude || 0).toFixed(4)}°` : 'Default Depot'}</b></div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem', marginTop: '2px' }}>
                   Geofence Arrival Detection: <b>&plusmn;{tempPickerCoords?.radiusMeters || 150} meters</b>
                 </div>

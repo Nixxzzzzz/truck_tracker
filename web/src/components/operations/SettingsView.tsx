@@ -87,7 +87,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         refreshing={refreshing || syncing}
       />
 
-      {/* 1. Google Sheets Integration */}
+      {/* 1. SAP ONE Portal ERP Integration */}
       <div
         className="card-elevation-1"
         style={{
@@ -103,11 +103,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Cloud size={20} color="var(--brand-primary)" />
           <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            Google Sheets Cloud Ledger Synchronization
+            SAP ONE Portal ERP Enterprise Synchronization
           </h3>
         </div>
         <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: 0 }}>
-          HoseXperts trips, stops, fuel consumption, and audit trail records sync automatically with the enterprise Google Sheets spreadsheet ledger.
+          HoseXperts trips, stops, delivery manifests, fuel consumption, and audit trail records sync directly with the enterprise SAP ONE Portal ERP database.
         </p>
 
         <div
@@ -163,7 +163,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
           >
             <RefreshCw size={14} className={syncing ? 'spin' : ''} />
-            <span>{syncing ? 'Syncing Ledger...' : 'Force Sync All Telemetry'}</span>
+            <span>{syncing ? 'Syncing SAP Portal...' : 'Force Sync SAP ONE Portal'}</span>
           </button>
         </div>
       </div>

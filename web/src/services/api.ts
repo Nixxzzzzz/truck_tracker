@@ -132,6 +132,43 @@ export async function getCurrentGpsPosition(options?: {
   });
 }
 
+function normalizeCoordinates<T = any>(obj: any): T {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(normalizeCoordinates) as any;
+  const clone = { ...obj };
+  if ('latitude' in clone && clone.latitude !== null && clone.latitude !== undefined) {
+    clone.latitude = Number(clone.latitude);
+  }
+  if ('longitude' in clone && clone.longitude !== null && clone.longitude !== undefined) {
+    clone.longitude = Number(clone.longitude);
+  }
+  if ('geofence_radius_meters' in clone && clone.geofence_radius_meters !== null && clone.geofence_radius_meters !== undefined) {
+    clone.geofence_radius_meters = Number(clone.geofence_radius_meters);
+  }
+  if ('starting_latitude' in clone && clone.starting_latitude !== null && clone.starting_latitude !== undefined) {
+    clone.starting_latitude = Number(clone.starting_latitude);
+  }
+  if ('starting_longitude' in clone && clone.starting_longitude !== null && clone.starting_longitude !== undefined) {
+    clone.starting_longitude = Number(clone.starting_longitude);
+  }
+  if (Array.isArray(clone.stops)) {
+    clone.stops = clone.stops.map(normalizeCoordinates);
+  }
+  if (Array.isArray(clone.events)) {
+    clone.events = clone.events.map(normalizeCoordinates);
+  }
+  if (Array.isArray(clone.photos)) {
+    clone.photos = clone.photos.map(normalizeCoordinates);
+  }
+  if (Array.isArray(clone.destinations)) {
+    clone.destinations = clone.destinations.map(normalizeCoordinates);
+  }
+  if (Array.isArray(clone.trips)) {
+    clone.trips = clone.trips.map(normalizeCoordinates);
+  }
+  return clone;
+}
+
 async function request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const currentBase = getApiBase();
   const url = `${currentBase}${endpoint}`;
@@ -145,11 +182,13 @@ async function request<T = any>(endpoint: string, options: RequestInit = {}): Pr
 
   try {
     const response = await fetch(url, { ...options, headers });
-    const data = await response.json().catch(() => ({}));
+    let data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       throw new Error(data.error || `HTTP error ${response.status}`);
     }
+
+    data = normalizeCoordinates(data);
 
     // Cache successful GET responses in localStorage for offline access
     if (isGet && typeof window !== 'undefined') {

@@ -2678,7 +2678,7 @@ export const ManagerView: React.FC<Props> = ({
                     }}
                   >
                     <Compass size={11} />
-                    <span>{dest.latitude.toFixed(4)}, {dest.longitude.toFixed(4)}</span>
+                    <span>{Number(dest.latitude || 0).toFixed(4)}, {Number(dest.longitude || 0).toFixed(4)}</span>
                     <ExternalLink size={10} />
                   </a>
                 )
