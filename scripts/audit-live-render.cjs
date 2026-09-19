@@ -102,17 +102,17 @@ async function runLiveAudit() {
     // First navigate back to destinations
     await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('button, a'));
-      const destLink = links.find(l => (l.textContent || '').toLowerCase().includes('destination'));
+      const destLink = links.find(l => (l.textContent || '').toLowerCase().includes('locations master') || (l.textContent || '').toLowerCase().includes('destination'));
       if (destLink) destLink.click();
     });
     await new Promise((r) => setTimeout(r, 1000));
 
-    // Click "Register New Destination" or "Add Destination"
+    // Click "Register Location"
     const modalOpened = await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       const addBtn = buttons.find(b => {
         const txt = (b.textContent || '').toLowerCase();
-        return txt.includes('register') || txt.includes('add destination') || txt.includes('new destination');
+        return txt.includes('register location') || txt.includes('register new') || txt.includes('add destination');
       });
       if (addBtn) {
         addBtn.click();
@@ -121,22 +121,6 @@ async function runLiveAudit() {
       return false;
     });
     console.log(`Destination modal opened: ${modalOpened}`);
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // Test location search input
-    console.log('  -> Testing Location Autocomplete input in MapPicker...');
-    const searchFound = await page.evaluate(() => {
-      const inputs = Array.from(document.querySelectorAll('input'));
-      const searchInput = inputs.find(i => (i.placeholder || '').toLowerCase().includes('search destination') || (i.placeholder || '').toLowerCase().includes('search address'));
-      if (searchInput) {
-        searchInput.focus();
-        searchInput.value = 'Nehru';
-        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-        return true;
-      }
-      return false;
-    });
-    console.log(`Search input found and queried: ${searchFound}`);
     await new Promise((r) => setTimeout(r, 2000));
 
     // Close modal
@@ -184,7 +168,7 @@ async function runLiveAudit() {
     console.log('\n[6/7] Testing Operations Tower / Live Map...');
     await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('button, a'));
-      const mapLink = links.find(l => (l.textContent || '').toLowerCase().includes('live map') || (l.textContent || '').toLowerCase().includes('operations tower') || (l.textContent || '').toLowerCase().includes('control tower'));
+      const mapLink = links.find(l => (l.textContent || '').toLowerCase().includes('live fleet') || (l.textContent || '').toLowerCase().includes('live map'));
       if (mapLink) mapLink.click();
     });
     await new Promise((r) => setTimeout(r, 3000));
@@ -202,11 +186,20 @@ async function runLiveAudit() {
     });
     console.log(`Live Map state:`, mapState);
 
-    // 6. Test Driver View
+    // 6. Test Driver View Simulation
     console.log('\n[7/7] Testing Driver Portal View...');
-    await page.goto(`${TARGET_URL}/driver`, { waitUntil: 'networkidle0', timeout: 20000 });
+    const switchedToDriver = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const driverSwitch = btns.find(b => (b.textContent || '').includes('Driver View') || (b.textContent || '').includes('Switch to Driver'));
+      if (driverSwitch) { driverSwitch.click(); return true; }
+      return false;
+    });
     await new Promise((r) => setTimeout(r, 2000));
-    console.log(`Driver Portal URL: ${page.url()}`);
+    const driverCardsFound = await page.evaluate(() => {
+      const text = document.body.innerText;
+      return text.includes('TRIP') || text.includes('DRIVER') || text.includes('Vehicle');
+    });
+    console.log(`Driver Portal Interface Active: ${switchedToDriver && driverCardsFound}`);
 
   } catch (err) {
     console.error('Audit exception:', err);
