@@ -114,21 +114,20 @@ export const LeafletMap: React.FC<Props> = ({
         };
       case 'streets':
         return {
-          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
           options: {
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            maxZoom: 20
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
           }
         };
       case 'dark':
       default:
         return {
-          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
           options: {
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> &bull; Ola Maps Telematics',
-            maxZoom: 20
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &bull; Ola Maps Telematics',
+            className: 'map-tiles-dark',
+            maxZoom: 19
           }
         };
     }
