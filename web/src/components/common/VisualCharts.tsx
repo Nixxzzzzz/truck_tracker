@@ -260,7 +260,26 @@ export const FleetStatusBar: React.FC<FleetStatusBarProps> = ({
   total
 }) => {
   const calculatedTotal = total !== undefined ? total : (completed + inTransit + delayed + scheduled);
-  if (calculatedTotal === 0) return null;
+  if (calculatedTotal === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Fleet Dispatch Breakdown</span>
+          <span style={{ color: 'var(--text-muted)' }}>0 total manifests</span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            width: '100%',
+            height: '8px',
+            borderRadius: '4px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)'
+          }}
+        />
+      </div>
+    );
+  }
 
   const pctCompleted = (completed / calculatedTotal) * 100;
   const pctInTransit = (inTransit / calculatedTotal) * 100;

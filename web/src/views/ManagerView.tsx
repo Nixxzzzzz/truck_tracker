@@ -1147,7 +1147,7 @@ export const ManagerView: React.FC<Props> = ({
                 percentage={
                   completedTrips.length > 0
                     ? Math.round(((completedTrips.length - delayedTrips.length) / completedTrips.length) * 100)
-                    : 94
+                    : 100
                 }
                 label="On-Time Delivery SLA"
                 sublabel={`${completedTrips.length} completed manifests`}
@@ -2985,26 +2985,26 @@ export const ManagerView: React.FC<Props> = ({
                     data={
                       reportsPeriod === 'weekly'
                         ? [
-                            { label: 'Mon', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.14)), benchmark: 2 },
-                            { label: 'Tue', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.16)), benchmark: 2 },
-                            { label: 'Wed', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.18)), benchmark: 2 },
-                            { label: 'Thu', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.15)), benchmark: 2 },
-                            { label: 'Fri', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.20)), benchmark: 2, highlight: true },
-                            { label: 'Sat', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.12)), benchmark: 2 },
-                            { label: 'Sun', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 14) * 0.05)), benchmark: 2 }
+                            { label: 'Mon', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.14) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: 'Tue', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.16) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: 'Wed', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.18) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: 'Thu', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.15) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: 'Fri', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.20) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0, highlight: (dailyReport.overview.totalTrips || 0) > 0 },
+                            { label: 'Sat', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.12) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: 'Sun', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.05) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 }
                           ]
                         : reportsPeriod === 'monthly'
                         ? [
-                            { label: 'W1 (1-7)', value: Math.max(2, Math.round((dailyReport.overview.totalTrips || 45) * 0.24)), benchmark: 10 },
-                            { label: 'W2 (8-14)', value: Math.max(2, Math.round((dailyReport.overview.totalTrips || 45) * 0.26)), benchmark: 10 },
-                            { label: 'W3 (15-21)', value: Math.max(2, Math.round((dailyReport.overview.totalTrips || 45) * 0.22)), benchmark: 10 },
-                            { label: 'W4 (22-28)', value: Math.max(2, Math.round((dailyReport.overview.totalTrips || 45) * 0.28)), benchmark: 10, highlight: true }
+                            { label: 'W1 (1-7)', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.24) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 10 : 0 },
+                            { label: 'W2 (8-14)', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.26) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 10 : 0 },
+                            { label: 'W3 (15-21)', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.22) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 10 : 0 },
+                            { label: 'W4 (22-28)', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.28) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 10 : 0, highlight: (dailyReport.overview.totalTrips || 0) > 0 }
                           ]
                         : [
-                            { label: '06:00-09:00', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 8) * 0.25)), benchmark: 2 },
-                            { label: '09:00-12:00', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 8) * 0.40)), benchmark: 2, highlight: true },
-                            { label: '12:00-15:00', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 8) * 0.20)), benchmark: 2 },
-                            { label: '15:00-18:00', value: Math.max(1, Math.round((dailyReport.overview.totalTrips || 8) * 0.15)), benchmark: 2 }
+                            { label: '06:00-09:00', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.25) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: '09:00-12:00', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.40) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0, highlight: (dailyReport.overview.totalTrips || 0) > 0 },
+                            { label: '12:00-15:00', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.20) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 },
+                            { label: '15:00-18:00', value: (dailyReport.overview.totalTrips || 0) > 0 ? Math.round(dailyReport.overview.totalTrips * 0.15) : 0, benchmark: (dailyReport.overview.totalTrips || 0) > 0 ? 2 : 0 }
                           ]
                     }
                     unit=" trips"
@@ -3043,7 +3043,7 @@ export const ManagerView: React.FC<Props> = ({
                       (dailyReport.overview.activeTrips || 0) -
                       (dailyReport.overview.delayedTrips || 0)
                   )}
-                  total={dailyReport.overview.totalTrips || 1}
+                  total={dailyReport.overview.totalTrips || 0}
                 />
               </div>
 
