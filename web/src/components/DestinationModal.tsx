@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, MapPin, Check, AlertCircle, Building2, Phone, User } from 'lucide-react';
 import { api } from '../services/api';
 import { Destination } from '../types';
@@ -20,8 +20,17 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
   const [contactName, setContactName] = useState(initialDestination?.contact_name || '');
   const [contactNumber, setContactNumber] = useState(initialDestination?.contact_number || '');
   const [notes, setNotes] = useState(initialDestination?.notes || '');
+  const [existingDestinations, setExistingDestinations] = useState<Destination[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.fleet.getDestinations()
+      .then((res) => {
+        if (Array.isArray(res)) setExistingDestinations(res);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,10 +176,25 @@ export const DestinationModal: React.FC<Props> = ({ initialDestination, onSucces
                 initialLng={longitude}
                 initialRadius={geofenceRadius}
                 height="240px"
+                savedDestinations={existingDestinations.map((d) => ({
+                  id: d.id,
+                  name: d.name,
+                  address: d.address,
+                  latitude: d.latitude,
+                  longitude: d.longitude
+                }))}
                 onChange={(data) => {
                   setLatitude(data.latitude);
                   setLongitude(data.longitude);
                   setGeofenceRadius(data.radiusMeters);
+                }}
+                onPlaceSelect={(place) => {
+                  if (!name || name.trim() === '') {
+                    setName(place.name);
+                  }
+                  setAddress(place.address);
+                  setLatitude(place.latitude);
+                  setLongitude(place.longitude);
                 }}
               />
             </div>

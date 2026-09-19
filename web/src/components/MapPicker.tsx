@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { Compass, MapPin, Layers, Search } from 'lucide-react';
 import { getCurrentGpsPosition } from '../services/api';
+import { LocationSearchInput } from './common/LocationSearchInput';
+import { PlaceSuggestion } from '../services/geocoding';
 
 interface Props {
   initialLat?: number;
@@ -9,6 +11,9 @@ interface Props {
   initialRadius?: number;
   height?: string;
   onChange: (data: { latitude: number; longitude: number; radiusMeters: number }) => void;
+  onPlaceSelect?: (place: PlaceSuggestion) => void;
+  savedDestinations?: Array<{ id: string; name: string; address: string; latitude: number; longitude: number }>;
+  showSearch?: boolean;
 }
 
 type LayerType = 'dark' | 'streets' | 'satellite';
@@ -18,7 +23,10 @@ export const MapPicker: React.FC<Props> = ({
   initialLng = 77.2680,
   initialRadius = 150,
   height = '320px',
-  onChange
+  onChange,
+  onPlaceSelect,
+  savedDestinations = [],
+  showSearch = true
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -32,13 +40,33 @@ export const MapPicker: React.FC<Props> = ({
   const [activeLayer, setActiveLayer] = useState<LayerType>('streets');
   const [locating, setLocating] = useState(false);
 
+  // Sync when initialLat/initialLng changes from parent
+  useEffect(() => {
+    if (
+      Math.abs(lat - initialLat) > 0.0001 ||
+      Math.abs(lng - initialLng) > 0.0001
+    ) {
+      setLat(initialLat);
+      setLng(initialLng);
+      if (markerRef.current) {
+        markerRef.current.setLatLng([initialLat, initialLng]);
+      }
+      if (circleRef.current) {
+        circleRef.current.setLatLng([initialLat, initialLng]);
+      }
+      if (mapRef.current) {
+        mapRef.current.panTo([initialLat, initialLng]);
+      }
+    }
+  }, [initialLat, initialLng]);
+
   const getTileConfig = (type: LayerType) => {
     switch (type) {
       case 'satellite':
         return {
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           attribution: 'Tiles &copy; Esri',
-          subdomains: undefined,
+          subdomains: 'abc',
           className: '',
           maxZoom: 19
         };
@@ -46,7 +74,7 @@ export const MapPicker: React.FC<Props> = ({
         return {
           url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &bull; Telematics',
-          subdomains: undefined,
+          subdomains: 'abc',
           className: 'map-tiles-dark',
           maxZoom: 19
         };
@@ -55,7 +83,7 @@ export const MapPicker: React.FC<Props> = ({
         return {
           url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          subdomains: undefined,
+          subdomains: 'abc',
           className: '',
           maxZoom: 19
         };
@@ -193,11 +221,29 @@ export const MapPicker: React.FC<Props> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Live Online & Database Place Suggestion Search (Google / Ola / Rapido style) */}
+      {showSearch && (
+        <div style={{ position: 'relative', zIndex: 100 }}>
+          <LocationSearchInput
+            placeholder="Search destination, colony, landmark, or city (e.g. Nehru Place, Cyber Hub, Okhla)..."
+            savedDestinations={savedDestinations}
+            proximity={{ latitude: lat, longitude: lng }}
+            onSelect={(place) => {
+              updatePosition(place.latitude, place.longitude, radius);
+              if (mapRef.current) {
+                mapRef.current.flyTo([place.latitude, place.longitude], 16, { duration: 1.0 });
+              }
+              onPlaceSelect?.(place);
+            }}
+          />
+        </div>
+      )}
+
       {/* Map Header Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
           <MapPin size={14} color="var(--accent-whatsapp)" />
-          <span>Click anywhere or drag the green pin to select location</span>
+          <span>Click anywhere or drag the green pin to set exact coordinates</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

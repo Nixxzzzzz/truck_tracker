@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { Driver, Vehicle, Destination } from '../types';
 import { MapPicker } from './MapPicker';
 import { SearchableDropdown } from './common/SearchableDropdown';
+import { LocationSearchInput } from './common/LocationSearchInput';
 
 interface Props {
   onSuccess: (tripId: string) => void;
@@ -439,21 +440,28 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                     )}
 
                     <div className="trip-modal-stop-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '10px' }}>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Destination name"
-                        value={stop.destination_name}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setStops((prev) => {
-                            const c = [...prev];
-                            c[idx].destination_name = val;
-                            return c;
-                          });
-                        }}
-                        required
-                      />
+                      <div>
+                        <LocationSearchInput
+                          placeholder="Search place, landmark, or database hub..."
+                          initialValue={stop.destination_name}
+                          savedDestinations={destinations.map(d => ({ id: d.id, name: d.name, address: d.address, latitude: d.latitude, longitude: d.longitude }))}
+                          proximity={{ latitude: stop.latitude || 28.5355, longitude: stop.longitude || 77.2680 }}
+                          onSelect={(place) => {
+                            setStops((prev) => {
+                              const c = [...prev];
+                              c[idx] = {
+                                ...c[idx],
+                                destination_name: place.name,
+                                address: place.address,
+                                latitude: place.latitude,
+                                longitude: place.longitude,
+                                destination_id: place.isSavedDestination ? place.id.replace('saved-', '') : undefined
+                              };
+                              return c;
+                            });
+                          }}
+                        />
+                      </div>
 
                       <input
                         type="time"
@@ -572,7 +580,27 @@ export const TripCreatorModal: React.FC<Props> = ({ onSuccess, onClose }) => {
                 initialLng={stops[activeMapPickerStopIdx].longitude || 77.2680}
                 initialRadius={stops[activeMapPickerStopIdx].geofence_radius_meters || 150}
                 height="340px"
+                savedDestinations={destinations.map((d) => ({ id: d.id, name: d.name, address: d.address, latitude: d.latitude, longitude: d.longitude }))}
                 onChange={(coords) => setTempPickerCoords(coords)}
+                onPlaceSelect={(place) => {
+                  setTempPickerCoords({
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                    radiusMeters: stops[activeMapPickerStopIdx].geofence_radius_meters || 150
+                  });
+                  setStops((prev) => {
+                    const copy = [...prev];
+                    copy[activeMapPickerStopIdx] = {
+                      ...copy[activeMapPickerStopIdx],
+                      destination_name: place.name,
+                      address: place.address,
+                      latitude: place.latitude,
+                      longitude: place.longitude,
+                      destination_id: place.isSavedDestination ? place.id.replace('saved-', '') : undefined
+                    };
+                    return copy;
+                  });
+                }}
               />
 
               <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
