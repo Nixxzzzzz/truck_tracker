@@ -60,7 +60,7 @@ export const MoreScreen: React.FC<Props> = ({
         .toUpperCase()
     : 'DR';
 
-  const vehicleNumber = activeTrip?.vehicle_number || 'DL01TA4920';
+  const vehicleNumber = activeTrip?.vehicle_number || '';
   const otherTrips = trips.filter((t) => t.id !== activeTrip?.id);
 
   return (
@@ -280,7 +280,9 @@ export const MoreScreen: React.FC<Props> = ({
                 Vehicle Information
               </div>
               <div style={{ fontSize: '0.74rem', color: 'var(--driver-text-secondary)' }}>
-                {activeTrip?.vehicle_number || 'DL01TA4920'} • {activeTrip?.vehicle_model || 'Tata Ultra T.7'}
+                {activeTrip?.vehicle_number
+                  ? `${activeTrip.vehicle_number}${activeTrip?.vehicle_model ? ` • ${activeTrip.vehicle_model}` : ''}`
+                  : 'No Vehicle Assigned'}
               </div>
             </div>
           </div>

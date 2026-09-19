@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Truck,
   MapPin,
@@ -80,13 +80,20 @@ export const DesktopControlTower: React.FC<Props> = ({
     monthly: 'Monthly (30D)'
   };
 
-  const vehicleOptions = [
-    { id: 'all', label: 'All Vehicles (12)' },
-    { id: 'DL01TA4920', label: 'DL01TA4920 - Tata Ultra T.7 (On Route)' },
-    { id: 'DL01TA5012', label: 'DL01TA5012 - Tata 407 (Stopped)' },
-    { id: 'DL01TA3891', label: 'DL01TA3891 - Eicher Pro 2049 (Delayed)' },
-    { id: 'DL01TA1102', label: 'DL01TA1102 - BharatBenz 1015R (Completed)' }
-  ];
+  const vehicleOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    if (activeTrip?.vehicle_number) {
+      map.set(activeTrip.vehicle_number, `${activeTrip.vehicle_number}${activeTrip.vehicle_model ? ` - ${activeTrip.vehicle_model}` : ''}`);
+    }
+    trips.forEach((t) => {
+      if (t.vehicle_number && !map.has(t.vehicle_number)) {
+        map.set(t.vehicle_number, `${t.vehicle_number}${t.vehicle_model ? ` - ${t.vehicle_model}` : ''}`);
+      }
+    });
+    const list = Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+    return [{ id: 'all', label: `All Vehicles (${list.length})` }, ...list];
+  }, [activeTrip, trips]);
+
 
   const handleTrackOnMap = () => {
     if (currentStop) {
@@ -587,10 +594,14 @@ export const DesktopControlTower: React.FC<Props> = ({
               }}
             >
               <span style={{ fontWeight: 700, color: 'var(--text-primary, #12202F)' }}>
-                {activeTrip?.vehicle_model || 'Tata Ultra T.7 (14ft High Deck)'}
+                {activeTrip?.vehicle_model || (activeTrip?.vehicle_number ? 'Fleet Freight Vehicle' : 'Fleet Vehicle')}
               </span>
-              <span>•</span>
-              <span>{activeTrip?.vehicle_number || 'DL01TA4920'}</span>
+              {activeTrip?.vehicle_number && (
+                <>
+                  <span>•</span>
+                  <span>{activeTrip.vehicle_number}</span>
+                </>
+              )}
               <span>•</span>
               <span>{currentUser.name}</span>
             </div>

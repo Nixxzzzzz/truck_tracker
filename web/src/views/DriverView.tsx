@@ -125,10 +125,16 @@ const DriverViewInner: React.FC<Props> = ({
 
   // Fleet destinations for area codes and radar
   const [fleetDestinations, setFleetDestinations] = useState<Destination[]>([]);
+  // Fleet vehicles state for vehicle info and official papers
+  const [fleetVehicles, setFleetVehicles] = useState<Vehicle[]>([]);
 
   useEffect(() => {
     api.fleet.getDestinations().then((res: any) => {
       if (res?.destinations) setFleetDestinations(res.destinations);
+    }).catch(() => {});
+
+    api.fleet.getVehicles().then((res: any) => {
+      if (res?.vehicles) setFleetVehicles(res.vehicles);
     }).catch(() => {});
   }, []);
 
@@ -399,55 +405,35 @@ const DriverViewInner: React.FC<Props> = ({
     }
   };
 
-  // Synthesize vehicle object for VehiclePapersModal
+  // Resolve vehicle object for VehiclePapersModal from live fleet database
   const vehicleForModal: Vehicle = useMemo(() => {
+    if (activeTrip?.vehicle_id && fleetVehicles.length > 0) {
+      const match = fleetVehicles.find((v) => v.id === activeTrip.vehicle_id || v.vehicle_number === activeTrip.vehicle_number);
+      if (match) return match;
+    }
+    if (activeTrip?.vehicle_number) {
+      const match = fleetVehicles.find((v) => v.vehicle_number === activeTrip.vehicle_number);
+      if (match) return match;
+      return {
+        id: activeTrip.vehicle_id || 'unassigned',
+        vehicle_number: activeTrip.vehicle_number,
+        vehicle_type: 'TRUCK',
+        model: activeTrip.vehicle_model || 'Commercial Fleet Vehicle',
+        status: (activeTrip.status as any) || 'AVAILABLE',
+        documents: [],
+        challans: []
+      };
+    }
     return {
-      id: activeTrip?.vehicle_id || 'veh-1',
-      vehicle_number: activeTrip?.vehicle_number || 'DL01TA4920',
+      id: 'unassigned',
+      vehicle_number: 'Unassigned',
       vehicle_type: 'TRUCK',
-      model: activeTrip?.vehicle_model || 'Tata Ultra T.7',
-      status: 'ON_TRIP',
-      documents: [
-        {
-          id: 'doc-rc',
-          type: 'RC',
-          title: 'Registration Certificate (RC)',
-          document_number: 'DL-01-2024-RC-98421',
-          issue_date: '2024-01-15',
-          expiry_date: '2039-01-14',
-          status: 'VALID'
-        },
-        {
-          id: 'doc-ins',
-          type: 'INSURANCE',
-          title: 'Commercial Comprehensive Insurance',
-          document_number: 'NIC-COMM-9982710',
-          issue_date: '2025-04-01',
-          expiry_date: '2026-03-31',
-          status: 'VALID'
-        },
-        {
-          id: 'doc-fit',
-          type: 'FITNESS',
-          title: 'Annual Road Fitness Certificate',
-          document_number: 'FIT-DL-2025-8812',
-          issue_date: '2025-05-10',
-          expiry_date: '2026-05-09',
-          status: 'VALID'
-        },
-        {
-          id: 'doc-puc',
-          type: 'PUC',
-          title: 'Pollution Under Control (PUC)',
-          document_number: 'PUC-2026-1029',
-          issue_date: '2026-02-01',
-          expiry_date: '2026-08-01',
-          status: 'VALID'
-        }
-      ],
+      model: 'No Vehicle Assigned',
+      status: 'AVAILABLE',
+      documents: [],
       challans: []
     };
-  }, [activeTrip]);
+  }, [activeTrip, fleetVehicles]);
 
   // Next stop calculation for Map & Floating Navigation
   const targetNextStop = selectedStopForWorkflow || currentStop;
@@ -587,7 +573,7 @@ const DriverViewInner: React.FC<Props> = ({
                 {currentUser.name}
               </div>
               <div style={{ fontSize: '0.74rem', color: 'var(--driver-text-secondary)' }}>
-                Assigned Truck: <strong style={{ color: 'var(--driver-primary)' }}>{activeTrip?.vehicle_number || 'DL01TA4920'}</strong>
+                Assigned Truck: <strong style={{ color: 'var(--driver-primary)' }}>{activeTrip?.vehicle_number || 'Unassigned'}</strong>
               </div>
             </div>
             <button
@@ -986,7 +972,9 @@ const DriverViewInner: React.FC<Props> = ({
         <VehiclePapersModal
           vehicle={vehicleForModal}
           onClose={() => setIsVehiclePapersOpen(false)}
-          onUpdate={(_updated) => {}}
+          onUpdate={(updated) => {
+            setFleetVehicles((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+          }}
         />
       )}
 
@@ -1027,19 +1015,23 @@ const DriverViewInner: React.FC<Props> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--driver-text-secondary)' }}>Registration Number:</span>
-                <span style={{ fontWeight: 700 }}>{activeTrip?.vehicle_number || 'DL01TA4920'}</span>
+                <span style={{ fontWeight: 700 }}>{vehicleForModal.vehicle_number !== 'Unassigned' ? vehicleForModal.vehicle_number : 'Unassigned'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--driver-text-secondary)' }}>Model / Body:</span>
-                <span style={{ fontWeight: 700 }}>{activeTrip?.vehicle_model || 'Tata Ultra T.7 High Deck'}</span>
+                <span style={{ fontWeight: 700 }}>{vehicleForModal.model !== 'No Vehicle Assigned' ? vehicleForModal.model : (activeTrip?.vehicle_number ? 'Commercial Freight Body' : 'N/A')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--driver-text-secondary)' }}>Payload Capacity:</span>
-                <span style={{ fontWeight: 700 }}>4.5 Metric Tons</span>
+                <span style={{ fontWeight: 700 }}>
+                  {vehicleForModal.capacity_tons ? `${vehicleForModal.capacity_tons} Metric Tons` : (vehicleForModal.vehicle_number !== 'Unassigned' ? 'Commercial Freight' : 'N/A')}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--driver-text-secondary)' }}>Telematics Device:</span>
-                <span style={{ fontWeight: 700, color: 'var(--driver-success)' }}>Active (GPS Online)</span>
+                <span style={{ fontWeight: 700, color: isRealGps ? 'var(--driver-success)' : 'var(--driver-text-muted)' }}>
+                  {isRealGps ? 'Active (GPS Online)' : isOnline ? 'Network Connected' : 'Offline / Standby'}
+                </span>
               </div>
             </div>
 

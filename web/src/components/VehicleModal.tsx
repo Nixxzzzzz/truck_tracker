@@ -309,7 +309,7 @@ export const VehicleModal: React.FC<Props> = ({ drivers, initialVehicle, onSucce
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. DL01 TA 4920"
+                  placeholder="e.g. DL 01 AB 1234"
                   value={vehicleNumber}
                   onChange={(e) => setVehicleNumber(e.target.value)}
                   style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontWeight: 600 }}

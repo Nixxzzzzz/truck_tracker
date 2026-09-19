@@ -266,13 +266,7 @@ export const api = {
       }
     },
     getTrip: async (id: string) => {
-      try {
-        return await request(`/driver/trips/${id}`);
-      } catch {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id) || trips[0];
-        return { trip };
-      }
+      return await request(`/driver/trips/${id}`);
     },
     startTrip: async (id: string, coords: any) => {
       try {
@@ -525,7 +519,7 @@ export const api = {
       try {
         return await request(`/photos/trip/${tripId}`);
       } catch {
-        return { photos: mockStore.getPhotos(tripId) };
+        return { photos: [] };
       }
     },
     getPhotoUrl: (photoId: string) => {
@@ -659,39 +653,7 @@ export const api = {
         const qs = new URLSearchParams(params as any).toString();
         return await request(`/fleet/exceptions${qs ? `?${qs}` : ''}`);
       } catch {
-        return {
-          exceptions: [
-            {
-              id: 'exc-demo-01',
-              severity: 'HIGH',
-              exception_type: 'DELAY',
-              title: 'Interstate Border Queue Bottleneck',
-              description: 'Commercial goods tax and checkpoint queue caused +22 minutes delay approaching Ghazipur border depot.',
-              location_name: 'Delhi-UP Border Highway Junction, Ghazipur',
-              vehicle_number: 'DL01 TA 4920',
-              driver_name: 'Rahul Sharma',
-              trip_ref: 'TR-DEL-2026-01',
-              impact: '+25 min ETA impact',
-              resolution_status: 'OPEN',
-              is_acknowledged: 0,
-              created_at: new Date().toISOString()
-            },
-            {
-              id: 'exc-demo-02',
-              severity: 'MEDIUM',
-              exception_type: 'CRITICAL_ALERT',
-              title: 'Statutory PUC Expiration Warning',
-              description: 'Pollution Under Control certificate for vehicle UP14 EX 7621 expires within 12 days. RTO testing inspection booking required.',
-              location_name: 'Okhla Central Fleet Yard',
-              vehicle_number: 'UP14 EX 7621',
-              driver_name: 'Rajesh Kumar',
-              impact: 'Compliance Risk',
-              resolution_status: 'ACKNOWLEDGED',
-              is_acknowledged: 1,
-              created_at: new Date(Date.now() - 3600000 * 24).toISOString()
-            }
-          ]
-        };
+        return { exceptions: [] };
       }
     },
     acknowledgeException: async (id: string, notes?: string) => {
@@ -729,12 +691,34 @@ export const api = {
 
   reports: {
     getDaily: async (date?: string) => {
+      const emptyDailyReport = {
+        date: date || new Date().toISOString().split('T')[0],
+        overview: {
+          totalTrips: 0,
+          completedTrips: 0,
+          inProgressTrips: 0,
+          delayedTrips: 0,
+          cancelledTrips: 0,
+          totalDistanceKm: 0,
+          totalPlannedStops: 0,
+          totalCompletedStops: 0,
+          onTimeDeliveries: 0,
+          delayedDeliveries: 0,
+          totalDelayMinutes: 0,
+          slaCompliancePercent: 0,
+          averageTripDurationMinutes: 0
+        },
+        delays: [],
+        driverPerformance: [],
+        vehicleUtilization: [],
+        destinationAnalytics: []
+      };
       try {
         const res = await request(`/reports/daily${date ? `?date=${date}` : ''}`);
         if (res && res.overview) return res;
-        return mockStore.getDailyReport(date);
+        return emptyDailyReport;
       } catch {
-        return mockStore.getDailyReport(date);
+        return emptyDailyReport;
       }
     },
     exportCSV: async (date?: string) => {
@@ -756,18 +740,39 @@ export const api = {
           return { success: true };
         }
       } catch (e) {
-        console.warn('Remote CSV export failed, generating from client data:', e);
+        console.warn('Remote CSV export failed:', e);
       }
-      mockStore.downloadReportCSV(date);
-      return { success: true };
+      return { success: false };
     },
     getPeriodic: async (period: 'weekly' | 'monthly') => {
+      const emptyPeriodicReport = {
+        period,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        overview: {
+          totalTrips: 0,
+          completedTrips: 0,
+          cancelledTrips: 0,
+          totalDistanceKm: 0,
+          totalPlannedStops: 0,
+          totalCompletedStops: 0,
+          onTimeDeliveries: 0,
+          delayedDeliveries: 0,
+          totalDelayMinutes: 0,
+          slaCompliancePercent: 0,
+          averageTripDurationMinutes: 0
+        },
+        trendData: [],
+        topDelays: [],
+        vehicleUtilization: [],
+        driverRankings: []
+      };
       try {
         const res = await request(`/reports/periodic?period=${period}`);
         if (res && res.overview) return res;
-        return mockStore.getPeriodicReport(period);
+        return emptyPeriodicReport;
       } catch {
-        return mockStore.getPeriodicReport(period);
+        return emptyPeriodicReport;
       }
     }
   },
@@ -799,7 +804,7 @@ export const api = {
       try {
         return await request('/google-sheets/sync-all', { method: 'POST' });
       } catch {
-        return { message: 'All telemetry and audit records synchronized with Google Sheets cloud ledger', synced: 14 };
+        return { message: 'Operational records synchronized with central ERP ledger', synced: 0 };
       }
     }
   }

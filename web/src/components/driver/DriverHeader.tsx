@@ -19,7 +19,7 @@ interface Props {
 
 export const DriverHeader: React.FC<Props> = ({
   currentUser,
-  vehicleNumber = 'DL01TA4920',
+  vehicleNumber = '',
   gpsAccuracy,
   isRealGps,
   isRefreshingGps,
@@ -395,7 +395,7 @@ export const DriverHeader: React.FC<Props> = ({
               marginTop: '1px'
             }}
           >
-            {t.driverOnDuty} • {vehicleNumber}
+            {vehicleNumber ? `${t.driverOnDuty} • ${vehicleNumber}` : t.driverOnDuty}
           </div>
         </div>
       </header>

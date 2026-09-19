@@ -260,7 +260,9 @@ export const DesktopSidebar: React.FC<Props> = ({
                   whiteSpace: 'nowrap'
                 }}
               >
-                {currentUser.role === 'DRIVER' ? `Driver • ${activeTrip?.vehicle_number || 'DL01TA4920'}` : 'Operations Manager'}
+                {currentUser.role === 'DRIVER'
+                  ? (activeTrip?.vehicle_number ? `Driver • ${activeTrip.vehicle_number}` : 'Driver on Duty')
+                  : 'Operations Manager'}
               </div>
             </div>
           </div>
