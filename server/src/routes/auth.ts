@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
-import { generateToken, requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { generateToken, requireAuth, requireRole, logAudit, AuthenticatedRequest } from '../middleware/auth';
 import { User } from '../types';
 
 const router = Router();
@@ -69,4 +70,143 @@ router.post('/logout', (_req, res) => {
   return res.json({ message: 'Logged out successfully' });
 });
 
+// ==========================================
+// USER & MANAGER MANAGEMENT (Manager Role Only)
+// ==========================================
+
+router.get('/users', requireAuth, requireRole('MANAGER'), (_req, res) => {
+  try {
+    const users = db.prepare(`
+      SELECT id, name, email, role, phone, created_at
+      FROM users
+      ORDER BY role ASC, name ASC
+    `).all();
+    return res.json({ users });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to retrieve users', details: err.message });
+  }
+});
+
+router.post('/users', requireAuth, requireRole('MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const { name, email, password, phone, role = 'MANAGER' } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required' });
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const existing = db.prepare(`SELECT id FROM users WHERE LOWER(email) = ?`).get(normalizedEmail);
+  if (existing) {
+    return res.status(409).json({ error: `An account with email "${normalizedEmail}" already exists` });
+  }
+
+  try {
+    const id = uuidv4();
+    const hash = await bcrypt.hash(password, 10);
+    const assignedRole = role === 'DRIVER' ? 'DRIVER' : 'MANAGER';
+
+    db.prepare(`
+      INSERT INTO users (id, name, email, password_hash, role, phone)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, name.trim(), normalizedEmail, hash, assignedRole, phone ? phone.trim() : null);
+
+    logAudit({
+      action: 'USER_CREATED',
+      newValue: `Created ${assignedRole} account for ${name} (${normalizedEmail})`,
+      changedBy: req.user!.id
+    });
+
+    return res.status(201).json({
+      message: `${assignedRole === 'MANAGER' ? 'Operations Manager' : 'User'} created successfully`,
+      user: {
+        id,
+        name: name.trim(),
+        email: normalizedEmail,
+        role: assignedRole,
+        phone: phone ? phone.trim() : null
+      }
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to create user', details: err.message });
+  }
+});
+
+router.put('/users/:id', requireAuth, requireRole('MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { name, phone, password, role } = req.body;
+
+  const existing = db.prepare(`SELECT * FROM users WHERE id = ?`).get(id) as User | undefined;
+  if (!existing) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  try {
+    let newHash = existing.password_hash;
+    if (password && String(password).trim().length > 0) {
+      newHash = await bcrypt.hash(String(password).trim(), 10);
+    }
+
+    db.prepare(`
+      UPDATE users
+      SET name = COALESCE(?, name),
+          phone = COALESCE(?, phone),
+          password_hash = ?,
+          role = COALESCE(?, role)
+      WHERE id = ?
+    `).run(
+      name ? name.trim() : null,
+      phone ? phone.trim() : null,
+      newHash,
+      role || null,
+      id
+    );
+
+    logAudit({
+      action: 'USER_UPDATED',
+      newValue: `Updated account details/password for user ${existing.email}`,
+      changedBy: req.user!.id
+    });
+
+    return res.json({ message: 'User updated successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update user', details: err.message });
+  }
+});
+
+router.delete('/users/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  if (req.user!.id === id) {
+    return res.status(400).json({ error: 'You cannot delete your own active session account' });
+  }
+
+  const target = db.prepare(`SELECT * FROM users WHERE id = ?`).get(id) as User | undefined;
+  if (!target) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  // Ensure at least one manager remains in the system
+  if (target.role === 'MANAGER') {
+    const managerCount = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'MANAGER'`).get() as { count: number };
+    if (managerCount.count <= 1) {
+      return res.status(400).json({ error: 'Cannot delete the only remaining manager account' });
+    }
+  }
+
+  try {
+    db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+
+    logAudit({
+      action: 'USER_DELETED',
+      originalValue: `${target.name} (${target.email})`,
+      changedBy: req.user!.id
+    });
+
+    return res.json({ message: `Account for ${target.name} has been removed` });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete user', details: err.message });
+  }
+});
+
 export default router;
+

@@ -332,46 +332,61 @@ router.post('/drivers', requireAuth, requireRole('MANAGER'), async (req: Authent
   }
 });
 
-router.put('/drivers/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+router.put('/drivers/:id', requireAuth, requireRole('MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { name, phone, assigned_vehicle_id, status, employee_id, avatar_url, license_number, license_category, emergency_phone } = req.body;
+  const { name, phone, assigned_vehicle_id, status, employee_id, avatar_url, license_number, license_category, emergency_phone, password } = req.body;
 
   const driver = db.prepare(`SELECT * FROM drivers WHERE id = ?`).get(id) as any;
   if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
-  const tx = db.transaction(() => {
-    db.prepare(`
-      UPDATE users
-      SET name = COALESCE(?, name),
-          phone = COALESCE(?, phone)
-      WHERE id = ?
-    `).run(name || null, phone || null, driver.user_id);
-
-    db.prepare(`
-      UPDATE drivers
-      SET assigned_vehicle_id = ?,
-          status = COALESCE(?, status),
-          employee_id = COALESCE(UPPER(?), employee_id),
-          avatar_url = COALESCE(?, avatar_url),
-          license_number = COALESCE(?, license_number),
-          license_category = COALESCE(?, license_category),
-          emergency_phone = COALESCE(?, emergency_phone)
-      WHERE id = ?
-    `).run(
-      assigned_vehicle_id || null,
-      status || null,
-      employee_id || null,
-      avatar_url || null,
-      license_number || null,
-      license_category || null,
-      emergency_phone || null,
-      id
-    );
-  });
-
   try {
+    let passwordHash: string | null = null;
+    if (password && String(password).trim().length > 0) {
+      passwordHash = await bcrypt.hash(String(password).trim(), 10);
+    }
+
+    const tx = db.transaction(() => {
+      if (passwordHash) {
+        db.prepare(`
+          UPDATE users
+          SET name = COALESCE(?, name),
+              phone = COALESCE(?, phone),
+              password_hash = ?
+          WHERE id = ?
+        `).run(name || null, phone || null, passwordHash, driver.user_id);
+      } else {
+        db.prepare(`
+          UPDATE users
+          SET name = COALESCE(?, name),
+              phone = COALESCE(?, phone)
+          WHERE id = ?
+        `).run(name || null, phone || null, driver.user_id);
+      }
+
+      db.prepare(`
+        UPDATE drivers
+        SET assigned_vehicle_id = ?,
+            status = COALESCE(?, status),
+            employee_id = COALESCE(UPPER(?), employee_id),
+            avatar_url = COALESCE(?, avatar_url),
+            license_number = COALESCE(?, license_number),
+            license_category = COALESCE(?, license_category),
+            emergency_phone = COALESCE(?, emergency_phone)
+        WHERE id = ?
+      `).run(
+        assigned_vehicle_id || null,
+        status || null,
+        employee_id || null,
+        avatar_url || null,
+        license_number || null,
+        license_category || null,
+        emergency_phone || null,
+        id
+      );
+    });
+
     tx();
-    return res.json({ message: 'Driver updated' });
+    return res.json({ message: 'Driver updated successfully' });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }

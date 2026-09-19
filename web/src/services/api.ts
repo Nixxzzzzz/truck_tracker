@@ -235,6 +235,18 @@ export const api = {
     },
     getMe: async () => {
       return await request('/auth/me');
+    },
+    getUsers: async () => {
+      return await request('/auth/users');
+    },
+    createUser: async (userData: { name: string; email: string; password: string; phone?: string; role?: string }) => {
+      return await request('/auth/users', { method: 'POST', body: JSON.stringify(userData) });
+    },
+    updateUser: async (id: string, userData: { name?: string; phone?: string; password?: string; role?: string }) => {
+      return await request(`/auth/users/${id}`, { method: 'PUT', body: JSON.stringify(userData) });
+    },
+    deleteUser: async (id: string) => {
+      return await request(`/auth/users/${id}`, { method: 'DELETE' });
     }
   },
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, UserCheck, Check, AlertCircle, Phone, Mail, BadgeCheck, Camera, Upload, FileText, Trash2, ShieldCheck, Eye } from 'lucide-react';
+import { X, UserCheck, Check, AlertCircle, Phone, Mail, BadgeCheck, Camera, Upload, FileText, Trash2, ShieldCheck, Eye, EyeOff, Lock, Key } from 'lucide-react';
 import { api } from '../services/api';
 import { SearchableDropdown } from './common/SearchableDropdown';
 import { processAndCompressFile } from '../utils/imageCompressor';
@@ -21,6 +21,8 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
   const [employeeId, setEmployeeId] = useState(initialDriver?.employee_id || '');
   const [phone, setPhone] = useState(initialDriver?.phone || '+91 ');
   const [email, setEmail] = useState(initialDriver?.email || '');
+  const [password, setPassword] = useState(isEdit ? '' : 'driver123');
+  const [showPassword, setShowPassword] = useState(false);
   const [assignedVehicleId, setAssignedVehicleId] = useState(initialDriver?.assigned_vehicle_id || '');
   const [status, setStatus] = useState<any>(initialDriver?.status || 'AVAILABLE');
   const [licenseNumber, setLicenseNumber] = useState(initialDriver?.license_number || '');
@@ -111,6 +113,11 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
       return;
     }
 
+    if (!isEdit && !password.trim()) {
+      setError('Please provide a login password for the driver.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -121,6 +128,7 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
       employee_id: (employeeId.trim() || `EMP-DRV-${Math.floor(100 + Math.random() * 900)}`).toUpperCase(),
       phone: phone.trim() || '+91 98100 00000',
       email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@company.com`,
+      password: password.trim() || undefined,
       assigned_vehicle_id: assignedVehicleId || null,
       assigned_vehicle_number: selectedVehicle?.vehicle_number || undefined,
       status: status,
@@ -375,19 +383,100 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
 
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                  Company Email
+                  Emergency Contact Phone
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type="email"
+                    type="tel"
                     className="form-input"
-                    placeholder="vikram@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="+91 98101 99887"
+                    value={emergencyPhone}
+                    onChange={(e) => setEmergencyPhone(e.target.value)}
                   />
-                  <Mail size={13} style={{ position: 'absolute', right: '10px', top: '10px', color: 'var(--text-muted)' }} />
+                  <Phone size={13} style={{ position: 'absolute', right: '10px', top: '10px', color: 'var(--text-muted)' }} />
                 </div>
               </div>
+            </div>
+
+            {/* Dedicated Driver Login & App Credentials */}
+            <div
+              style={{
+                padding: '12px 14px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Lock size={15} color="var(--brand-primary)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Driver Login & App Access Credentials
+                </span>
+              </div>
+
+              <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                    Login Email <span style={{ color: 'var(--status-danger)' }}>*</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="email"
+                      className="form-input"
+                      placeholder="e.g. driver@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required={!isEdit}
+                    />
+                    <Mail size={13} style={{ position: 'absolute', right: '10px', top: '10px', color: 'var(--text-muted)' }} />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                    {isEdit ? 'Reset Password' : <>Login Password <span style={{ color: 'var(--status-danger)' }}>*</span></>}
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-input"
+                      placeholder={isEdit ? 'Leave blank to retain current' : 'e.g. driver123'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required={!isEdit}
+                      style={{ paddingRight: '32px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        display: 'flex'
+                      }}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <span style={{ fontSize: '0.71rem', color: 'var(--text-muted)', margin: 0 }}>
+                {isEdit
+                  ? 'Enter a new password if you want to reset this driver’s login credentials.'
+                  : 'The driver will use this Email and Password to log in on the Android mobile app or Driver web portal.'}
+              </span>
             </div>
 
             <div className="responsive-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
@@ -418,19 +507,6 @@ export const DriverModal: React.FC<Props> = ({ vehicles, initialDriver, onSucces
                   ]}
                 />
               </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                Emergency Contact Phone
-              </label>
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="+91 98101 99887 (Spouse/Family)"
-                value={emergencyPhone}
-                onChange={(e) => setEmergencyPhone(e.target.value)}
-              />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
