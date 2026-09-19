@@ -208,11 +208,51 @@ If deploying on Render Free Tier (which spins down after 15 minutes of idle):
 
 ---
 
-## 6. Step 4: Android Driver App Rollout
+## 6. Step 4: User, Driver & Manager Account Provisioning
+
+TruckTracker enforces role-based access control (RBAC) distinguishing between **Operations Managers** and **Field Drivers**.
+
+### 6.1 Initial Root Manager Account
+When the database is newly initialized, the root administrator account is automatically provisioned using the Render environment variables:
+* **Email:** Set by `INITIAL_ADMIN_EMAIL` (default: `manager@company.com`)
+* **Password:** Set by `INITIAL_ADMIN_PASSWORD` (default: `manager123`)
+
+### 6.2 Adding Additional Operations Managers
+To provision accounts for secondary dispatchers, operations coordinators, or directors:
+1. Log into the Web Portal with any Manager account.
+2. In the navigation sidebar, click **Settings** (gear icon).
+3. Under the **Operations Team & Manager Access Control** section, click **`+ Add Operations Manager`**.
+4. Fill in:
+   * **Full Name** (e.g. *Ananya Sen*)
+   * **Login Email** (e.g. *ananya@company.com*)
+   * **Login Password** (e.g. *manager123* or secure password)
+   * **Phone Number** (e.g. *+91 98100 12345*)
+5. Click **Create Manager Account**. The user can immediately log in with full manager privileges.
+
+### 6.3 Registering Drivers & Setting Mobile App Credentials
+1. From the Manager navigation sidebar, click **Drivers Master** (or Fleet &rarr; Drivers).
+2. Click the green **`+ Add New Driver`** button.
+3. Complete the driver profile:
+   * **Driver Full Name** (e.g. *Vikram Rathore*)
+   * **Phone Line** & **Emergency Phone**
+   * **Employee ID** (e.g. *EMP-DRV-104*)
+   * **Commercial DL #** & Category (Commercial HMV / LMV)
+   * **Primary Vehicle Assignment**
+4. Under **Driver Login & App Access Credentials**:
+   * **Login Email:** Enter the driver's corporate email (e.g. `vikram@company.com`).
+   * **Login Password:** Set the login password (defaults to `driver123`, or enter a custom PIN/password).
+5. Click **Save & Register Driver**.
+
+> [!TIP]
+> **Password Reset for Drivers**: If a driver forgets their password, a manager can open **Drivers Master**, click **Edit** on that driver, enter a new password in the **Reset Password** field, and save.
+
+---
+
+## 7. Step 5: Android Driver App Rollout
 
 Field drivers access the system using the native Android mobile client (`TruckTracker-Driver.apk`).
 
-### 6.1 Download Production APK
+### 7.1 Download Production APK
 Drivers can download the official APK directly from:
 * **Web Landing Page:** Click **"Download Native Android Driver App (APK v1.1.0)"** at the bottom of the login screen.
 * **Direct GitHub Release URL:**
@@ -220,7 +260,7 @@ Drivers can download the official APK directly from:
   https://github.com/Nixxzzzzz/truck_tracker/releases/download/v1.1.0/TruckTracker-Driver-v1.1.0-debug.apk
   ```
 
-### 6.2 Building the APK from Source (Optional)
+### 7.2 Building the APK from Source (Optional)
 If building a customized release APK:
 ```bash
 cd android
@@ -231,7 +271,7 @@ cd android
 # android/app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-### 6.3 Over-The-Air Version Telemetry
+### 7.3 Over-The-Air Version Telemetry
 The backend serves version telemetry at `/api/app-version`:
 ```json
 {
@@ -245,7 +285,7 @@ When drivers open the mobile app, it automatically checks this endpoint and prom
 
 ---
 
-## 7. Step 5: Operational Verification Checklist
+## 8. Step 6: Operational Verification Checklist
 
 After deployment, verify each milestone to confirm production readiness:
 
