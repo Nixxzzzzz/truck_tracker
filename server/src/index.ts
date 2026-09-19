@@ -15,6 +15,8 @@ import fleetRoutes from './routes/fleet';
 import reportsRoutes from './routes/reports';
 import photosRoutes from './routes/photos';
 import { UPLOADS_DIR } from './services/photoStorage';
+import { requireAuth, requireRole } from './middleware/auth';
+import { createBackup } from './backup';
 
 // Initialize database schema
 initDatabase();
@@ -88,6 +90,18 @@ const loginLimiter = rateLimit({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
+// Production HTTP request logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    if (req.path !== '/api/health') {
+      const duration = Date.now() - start;
+      console.log(`[HTTP] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
+    }
+  });
+  next();
+});
+
 // Static file serving for photo uploads
 app.use('/uploads/photos', express.static(UPLOADS_DIR));
 
@@ -117,6 +131,17 @@ app.get('/api/app-version', (_req, res) => {
     latestReleaseUrl: 'https://github.com/Nixxzzzzz/truck_tracker/releases/latest',
     mandatoryUpdate: false
   });
+});
+
+// Database Hot Backup endpoint (Manager only)
+app.post('/api/backup/create', requireAuth, requireRole('MANAGER'), (_req, res) => {
+  try {
+    const result = createBackup();
+    return res.json({ message: 'Backup created successfully', ...result });
+  } catch (err: any) {
+    console.error('[Backup Error]', err);
+    return res.status(500).json({ error: 'Failed to create database backup' });
+  }
 });
 
 // Serve frontend client in production if built

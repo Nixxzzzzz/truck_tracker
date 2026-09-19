@@ -96,6 +96,10 @@ router.post('/users', requireAuth, requireRole('MANAGER'), async (req: Authentic
     return res.status(400).json({ error: 'Name, email, and password are required' });
   }
 
+  if (typeof password !== 'string' || password.trim().length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+  }
+
   const normalizedEmail = String(email).trim().toLowerCase();
   const existing = db.prepare(`SELECT id FROM users WHERE LOWER(email) = ?`).get(normalizedEmail);
   if (existing) {
@@ -146,6 +150,9 @@ router.put('/users/:id', requireAuth, requireRole('MANAGER'), async (req: Authen
   try {
     let newHash = existing.password_hash;
     if (password && String(password).trim().length > 0) {
+      if (String(password).trim().length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+      }
       newHash = await bcrypt.hash(String(password).trim(), 10);
     }
 

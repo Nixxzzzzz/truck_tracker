@@ -1,5 +1,4 @@
 import { offlineQueue } from './offlineQueue';
-import { DEMO_USERS, mockStore, DEMO_PHOTOS_MAP } from './mockData';
 import { Trip, Destination } from '../types';
 
 export const getApiBase = (): string => {
@@ -269,251 +268,53 @@ export const api = {
       return await request(`/driver/trips/${id}`);
     },
     startTrip: async (id: string, coords: any) => {
-      try {
-        return await request(`/driver/trips/${id}/start`, { method: 'POST', body: JSON.stringify(coords) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip) {
-          trip.status = 'IN_PROGRESS';
-          trip.actual_start_time = new Date().toISOString();
-          mockStore.saveTrip(trip);
-          return { message: 'Trip started' };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/start`, { method: 'POST', body: JSON.stringify(coords) });
     },
     arriveStop: async (id: string, stopId: string, coords: any) => {
-      try {
-        return await request(`/driver/trips/${id}/stops/${stopId}/arrive`, { method: 'POST', body: JSON.stringify(coords) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip && trip.stops) {
-          const stop = trip.stops.find((s) => s.id === stopId);
-          if (stop) {
-            stop.status = 'ARRIVED';
-            stop.actual_arrival_time = new Date().toISOString();
-          }
-          trip.status = 'AT_DESTINATION';
-          mockStore.saveTrip(trip);
-          return { message: 'Arrival recorded', geofence: { in_geofence: true, message: 'Geofence verified' } };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/stops/${stopId}/arrive`, { method: 'POST', body: JSON.stringify(coords) });
     },
     completeActivity: async (id: string, stopId: string, data: any) => {
-      try {
-        return await request(`/driver/trips/${id}/stops/${stopId}/complete-activity`, { method: 'POST', body: JSON.stringify(data) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip && trip.stops) {
-          const stop = trip.stops.find((s) => s.id === stopId);
-          if (stop) {
-            if (!stop.activities) stop.activities = [];
-            stop.activities.push({
-              id: `act-${Date.now()}`,
-              stop_id: stopId,
-              trip_id: id,
-              activity_type: data?.activity_type || 'Delivery',
-              status: 'COMPLETED',
-              notes: data?.notes,
-              created_at: new Date().toISOString()
-            } as any);
-          }
-          mockStore.saveTrip(trip);
-          return { message: 'Activity completed' };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/stops/${stopId}/complete-activity`, { method: 'POST', body: JSON.stringify(data) });
     },
     departStop: async (id: string, stopId: string, coords: any) => {
-      try {
-        return await request(`/driver/trips/${id}/stops/${stopId}/depart`, { method: 'POST', body: JSON.stringify(coords) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip && trip.stops) {
-          const stop = trip.stops.find((s) => s.id === stopId);
-          if (stop) {
-            stop.status = 'COMPLETED';
-            stop.actual_departure_time = new Date().toISOString();
-          }
-          const remaining = trip.stops.filter((s) => s.status === 'PENDING').length;
-          trip.status = remaining === 0 ? 'RETURNING' : 'IN_PROGRESS';
-          mockStore.saveTrip(trip);
-          return { message: 'Departure recorded', remainingStops: remaining };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/stops/${stopId}/depart`, { method: 'POST', body: JSON.stringify(coords) });
     },
     reportDelay: async (id: string, data: any) => {
-      try {
-        return await request(`/driver/trips/${id}/delay`, { method: 'POST', body: JSON.stringify(data) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip) {
-          if (!trip.delays) trip.delays = [];
-          const newDelay = {
-            id: `del-${Date.now()}`,
-            trip_id: id,
-            reason: data?.reason || 'Traffic',
-            description: data?.description || '',
-            start_time: new Date().toISOString(),
-            is_resolved: 0,
-            photo_id: data?.photoId || null
-          };
-          trip.delays.unshift(newDelay as any);
-          trip.status = 'DELAYED';
-          mockStore.saveTrip(trip);
-          return { message: 'Delay reported', delayId: newDelay.id, start_time: newDelay.start_time };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/delay`, { method: 'POST', body: JSON.stringify(data) });
     },
     resolveDelay: async (id: string, delayId: string) => {
-      try {
-        return await request(`/driver/trips/${id}/delay/${delayId}/resolve`, { method: 'POST' });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip) {
-          if (trip.delays) {
-            trip.delays.forEach((d: any) => {
-              if (d.id === delayId || !d.is_resolved) d.is_resolved = 1;
-            });
-          }
-          trip.status = trip.return_start_time ? 'RETURNING' : 'IN_PROGRESS';
-          mockStore.saveTrip(trip);
-          return { message: 'Delay resolved' };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/delay/${delayId}/resolve`, { method: 'POST' });
     },
     startReturn: async (id: string, coords: any) => {
-      try {
-        return await request(`/driver/trips/${id}/start-return`, { method: 'POST', body: JSON.stringify(coords) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip) {
-          trip.status = 'RETURNING';
-          trip.return_start_time = new Date().toISOString();
-          mockStore.saveTrip(trip);
-          return { message: 'Return journey started', status: 'RETURNING' };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/start-return`, { method: 'POST', body: JSON.stringify(coords) });
     },
     arriveBase: async (id: string, coords: any) => {
-      try {
-        return await request(`/driver/trips/${id}/arrive-base`, { method: 'POST', body: JSON.stringify(coords) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip) {
-          trip.status = 'RETURNING';
-          trip.base_arrival_time = new Date().toISOString();
-          mockStore.saveTrip(trip);
-          return { message: 'Base arrival recorded', status: 'RETURNING' };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/arrive-base`, { method: 'POST', body: JSON.stringify(coords) });
     },
     completeTrip: async (id: string, coords: any) => {
-      try {
-        return await request(`/driver/trips/${id}/complete`, { method: 'POST', body: JSON.stringify(coords) });
-      } catch (err) {
-        const trips = mockStore.getTrips();
-        const trip = trips.find((t) => t.id === id);
-        if (trip) {
-          trip.status = 'COMPLETED';
-          trip.completion_time = new Date().toISOString();
-          mockStore.saveTrip(trip);
-          return { message: 'Trip completed successfully', status: 'COMPLETED' };
-        }
-        throw err;
-      }
+      return await request(`/driver/trips/${id}/complete`, { method: 'POST', body: JSON.stringify(coords) });
     },
     addCustomStop: async (tripId: string, stopData: any) => {
-      try {
-        return await request(`/driver/trips/${tripId}/custom-stop`, {
-          method: 'POST',
-          body: JSON.stringify(stopData)
-        });
-      } catch {
-        const newStop = mockStore.addCustomStop(tripId, stopData);
-        return { message: 'Custom stop added', stop: newStop };
-      }
+      return await request(`/driver/trips/${tripId}/custom-stop`, {
+        method: 'POST',
+        body: JSON.stringify(stopData)
+      });
     }
   },
 
   photos: {
     upload: async (formData: FormData) => {
-      try {
-        const token = localStorage.getItem('truck_tracker_token');
-        const response = await fetch(`${getApiBase()}/photos/upload`, {
-          method: 'POST',
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          body: formData
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Photo upload failed');
-        return data;
-      } catch (err: any) {
-        // Fallback for offline or local preview
-        const photoFile = formData.get('photo') as File | null;
-        const mockPhotoId = `photo-${Date.now()}`;
-        let photoUrl = '';
-        if (photoFile) {
-          try {
-            photoUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = () => {
-                try {
-                  resolve(URL.createObjectURL(photoFile));
-                } catch {
-                  resolve('');
-                }
-              };
-              reader.readAsDataURL(photoFile);
-            });
-            DEMO_PHOTOS_MAP[mockPhotoId] = photoUrl;
-          } catch {
-            if (typeof window !== 'undefined' && window.URL) {
-              try {
-                photoUrl = URL.createObjectURL(photoFile);
-                DEMO_PHOTOS_MAP[mockPhotoId] = photoUrl;
-              } catch {}
-            }
-          }
-        }
-        const fallbackPhoto = {
-          id: mockPhotoId,
-          trip_id: String(formData.get('trip_id') || ''),
-          stop_id: formData.get('stop_id') ? String(formData.get('stop_id')) : undefined,
-          photo_type: String(formData.get('photo_type') || 'Delay Proof'),
-          timestamp: new Date().toISOString(),
-          file_path: photoUrl,
-          file_size: photoFile?.size || 0,
-          mime_type: photoFile?.type || 'image/jpeg'
-        };
-        const tripId = String(formData.get('trip_id') || '');
-        if (tripId) {
-          const trip = mockStore.getTrips().find((t) => t.id === tripId);
-          if (trip) {
-            if (!trip.photos) trip.photos = [];
-            trip.photos.unshift(fallbackPhoto as any);
-            mockStore.saveTrip(trip);
-          }
-        }
-        return { message: 'Photo uploaded (fallback)', photo: fallbackPhoto };
-      }
+      const token = localStorage.getItem('truck_tracker_token');
+      const response = await fetch(`${getApiBase()}/photos/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: formData
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Photo upload failed');
+      return data;
     },
     getTripPhotos: async (tripId: string) => {
       try {
@@ -524,9 +325,6 @@ export const api = {
     },
     getPhotoUrl: (photoId: string) => {
       if (!photoId) return '';
-      if (DEMO_PHOTOS_MAP[photoId]) {
-        return DEMO_PHOTOS_MAP[photoId];
-      }
       if (photoId.startsWith('data:') || photoId.startsWith('http') || photoId.startsWith('blob:')) {
         return photoId;
       }
@@ -609,44 +407,19 @@ export const api = {
       return await request(`/fleet/destinations/${id}`, { method: 'DELETE' });
     },
     addChallan: async (vehicleId: string, data: any) => {
-      try {
-        return await request(`/fleet/vehicles/${vehicleId}/challans`, { method: 'POST', body: JSON.stringify(data) });
-      } catch {
-        const challan = mockStore.addVehicleChallan(vehicleId, data);
-        return { challan };
-      }
+      return await request(`/fleet/vehicles/${vehicleId}/challans`, { method: 'POST', body: JSON.stringify(data) });
     },
     attachChallanProof: async (vehicleId: string, challanId: string, proof: { proof_url: string; proof_name?: string; proof_size?: number }) => {
-      try {
-        return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/proof`, { method: 'POST', body: JSON.stringify(proof) });
-      } catch {
-        const success = mockStore.updateVehicleChallanProof(vehicleId, challanId, proof);
-        return { success };
-      }
+      return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/proof`, { method: 'POST', body: JSON.stringify(proof) });
     },
     settleChallan: async (vehicleId: string, challanId: string, settlement?: any) => {
-      try {
-        return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/settle`, { method: 'POST', body: JSON.stringify(settlement || {}) });
-      } catch {
-        const success = mockStore.settleVehicleChallan(vehicleId, challanId, settlement);
-        return { success };
-      }
+      return await request(`/fleet/vehicles/${vehicleId}/challans/${challanId}/settle`, { method: 'POST', body: JSON.stringify(settlement || {}) });
     },
     updateDocument: async (vehicleId: string, doc: any) => {
-      try {
-        return await request(`/fleet/vehicles/${vehicleId}/documents`, { method: 'POST', body: JSON.stringify(doc) });
-      } catch {
-        const success = mockStore.updateVehicleDocument(vehicleId, doc);
-        return { success };
-      }
+      return await request(`/fleet/vehicles/${vehicleId}/documents`, { method: 'POST', body: JSON.stringify(doc) });
     },
     updateDriverDocument: async (driverId: string, doc: any) => {
-      try {
-        return await request(`/fleet/drivers/${driverId}/documents`, { method: 'POST', body: JSON.stringify(doc) });
-      } catch {
-        const success = mockStore.updateDriverDocument(driverId, doc);
-        return { success };
-      }
+      return await request(`/fleet/drivers/${driverId}/documents`, { method: 'POST', body: JSON.stringify(doc) });
     },
     getExceptions: async (params: { status?: string; severity?: string; limit?: number } = {}) => {
       try {

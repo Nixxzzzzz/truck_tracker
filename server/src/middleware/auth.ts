@@ -42,6 +42,9 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
     token = authHeader.split(' ')[1];
   } else if (req.cookies && req.cookies.token) {
     token = req.cookies.token;
+  } else if (req.method === 'GET' && req.query && typeof req.query.token === 'string') {
+    // Allow query tokens for GET requests (essential for browser <img> tags that cannot set Authorization headers)
+    token = req.query.token;
   }
 
   if (!token) {

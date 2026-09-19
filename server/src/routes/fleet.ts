@@ -133,7 +133,11 @@ router.post('/vehicles', requireAuth, requireRole('MANAGER'), (req: Authenticate
     tx();
     return res.status(201).json({ message: 'Vehicle created', id });
   } catch (err: any) {
-    return res.status(400).json({ error: 'Failed to create vehicle: ' + err.message });
+    console.error('[Fleet Error] Failed to create vehicle:', err);
+    if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      return res.status(400).json({ error: 'A vehicle with this registration number already exists.' });
+    }
+    return res.status(400).json({ error: 'Failed to create vehicle. Please verify input details.' });
   }
 });
 
@@ -328,7 +332,11 @@ router.post('/drivers', requireAuth, requireRole('MANAGER'), async (req: Authent
     tx();
     return res.status(201).json({ message: 'Driver created successfully', driverId, userId });
   } catch (err: any) {
-    return res.status(400).json({ error: 'Failed to create driver: ' + err.message });
+    console.error('[Fleet Error] Failed to create driver:', err);
+    if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      return res.status(400).json({ error: 'A driver with this email, phone, or license number already exists.' });
+    }
+    return res.status(400).json({ error: 'Failed to create driver. Please verify input details.' });
   }
 });
 
