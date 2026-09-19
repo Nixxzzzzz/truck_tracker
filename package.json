@@ -19,6 +19,8 @@
     "migrate": "npm run migrate --workspace=server",
     "seed": "npm run seed --workspace=server",
     "test": "npm run test:integrity --workspace=server",
+    "test:qa": "node scripts/verify-all-elements.cjs",
+    "test:audit": "node scripts/audit-live-render.cjs",
     "start": "npm run start --workspace=server"
   },
   "engines": {
