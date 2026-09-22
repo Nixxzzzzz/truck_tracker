@@ -46,18 +46,14 @@ Render cannot reach a private on-premises SQL Server unless company IT provides 
 
 ## Application Migration Required
 
-Before production cutover, the backend must be converted from PostgreSQL to SQL Server:
+The repository now contains a dual-driver foundation. The current default remains PostgreSQL; SQL Server is selected explicitly with `DB_DRIVER=sqlserver`. Before production cutover, validate these SQL Server-specific areas against the company's instance:
 
-1. Replace the `pg` driver with `mssql`.
-2. Replace `DATABASE_URL` with SQL Server settings such as `DB_SERVER`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_ENCRYPT`, and `DB_TRUST_SERVER_CERTIFICATE`.
-3. Rewrite migrations for SQL Server schema and catalog rules.
-4. Replace PostgreSQL `$1` binding with named SQL Server parameters.
-5. Replace `NOW()` with `SYSUTCDATETIME()`.
-6. Replace `TIMESTAMPTZ`, `DOUBLE PRECISION`, and PostgreSQL-specific casts with SQL Server types.
-7. Replace `LIMIT` with `TOP` or `OFFSET ... FETCH`.
-8. Replace PostgreSQL date intervals with `DATEADD` expressions.
-9. Replace PostgreSQL catalog queries with `sys.tables`, `sys.columns`, and `sys.indexes` queries.
-10. Replace `pg_dump`/`pg_restore` with SQL Server backup tooling or provider-managed backups.
+1. SQL Server connection, encryption, and named parameter binding.
+2. Migration DDL, object existence checks, and schema version tracking.
+3. SQL Server pagination, date arithmetic, casts, and catalog queries.
+4. Transaction commit and rollback behavior.
+5. SQL Server backup and restore procedures.
+6. Full API, integrity, workflow, and performance tests.
 
 The web frontend, Android application, REST paths, uploaded photo behavior, and API response contracts should remain unchanged.
 
@@ -80,7 +76,7 @@ UPLOADS_DIR=/var/lib/truck-tracker/uploads/photos
 AUTO_SEED=false
 ```
 
-Do not use `DATABASE_URL`, `DB_SSL`, `DB_SSL_REJECT_UNAUTHORIZED`, or Neon values for the SQL Server build.
+Do not use `DATABASE_URL`, `DB_SSL`, `DB_SSL_REJECT_UNAUTHORIZED`, or Neon values when `DB_DRIVER=sqlserver`.
 
 ## Database Provisioning
 
@@ -97,7 +93,7 @@ After `DB_DRIVER=sqlserver` and the SQL Server variables are configured, the ser
 
 Therefore, a new empty database is enough. You do not need to create the TruckTracker tables manually. The first SQL Server startup must still be validated against the company's SQL Server version before production rollout.
 
-The SQL Server migration runner should create `_schema_migrations`, apply every migration in order, and be idempotent. A new empty database should be initialized by the deployment process after the SQL Server implementation is validated.
+The SQL Server migration runner creates `_schema_migrations`, applies every migration in order, and is designed to be idempotent. A new empty database can be initialized automatically after the SQL Server implementation is validated.
 
 ## Data Migration and Cutover
 
@@ -134,9 +130,10 @@ Required production checks:
 - Trip lifecycle actions work.
 - Reports and pagination work.
 - Photo files remain in the approved storage location.
+- Render deployments use a mounted disk at `/data` or approved company object storage; the ephemeral application filesystem is not acceptable for production photos.
 - Backups and restores have been tested.
 - No database password or production data is staged in Git.
 
 ## Current Safe Recommendation
 
-Keep Render + Neon as staging until the company SQL Server migration is implemented and validated. Do not change the current production `DATABASE_URL` to a SQL Server address; the current PostgreSQL driver cannot speak SQL Server protocol.
+Keep Render + Neon as staging until the company SQL Server path is validated. Do not set `DB_DRIVER=sqlserver` on the current Render service until the company SQL Server endpoint is reachable and the complete verification checklist passes.

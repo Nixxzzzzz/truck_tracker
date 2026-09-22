@@ -107,11 +107,14 @@ Edit `.env`:
 NODE_ENV=development
 PORT=5000
 JWT_SECRET=your-strong-random-secret-min-32-chars
+DB_DRIVER=postgres
 DATABASE_URL=postgresql://user:password@localhost:5432/truck_tracker
 DB_POOL_MAX=10
 DB_SSL=false
 UPLOADS_DIR=./uploads/photos
 ```
+
+For the company SQL Server target, use `DB_DRIVER=sqlserver` and follow the [company SQL Server rollout guide](docs/development/company-sql-server-rollout-guide.md). Do not set that driver on the live Render service until SQL Server staging validation is complete.
 
 ### 3. Initialize Database
 
@@ -210,7 +213,9 @@ The current deployed configuration uses PostgreSQL/Neon. Microsoft SQL Server is
 | `DB_SSL_REJECT_UNAUTHORIZED` | `true` | Keep enabled unless provider requires otherwise |
 | `AUTO_SEED` | `false` | Never seed demo data in production |
 | `ALLOWED_ORIGINS` | Exact web app origin | No wildcard |
-| `UPLOADS_DIR` | `/app/server/uploads/photos` | Proof photo storage |
+| `UPLOADS_DIR` | `/data/uploads/photos` | Proof photo storage on a mounted Render disk |
+
+**Photo persistence:** the application stores uploaded photos on `UPLOADS_DIR`. A Render disk must be mounted at `/data` for photos to survive deploys and restarts. Render's Free plan does not provide persistent disks; attach a disk on an eligible paid plan or use company object storage before production rollout.
 
 ### Render Config (`render.yaml` — already in repo)
 

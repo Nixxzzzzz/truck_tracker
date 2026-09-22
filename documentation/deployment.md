@@ -1,6 +1,6 @@
 # 🚀 TruckTracker 2.0 — Enterprise Master Rollout & Deployment Guide
 
-This document is the authoritative, step-by-step production runbook for deploying **HoseXperts TruckTracker 2.0** across **Company GitHub**, **Company Render Web Services**, and integrating with **SAP ONE Portal (SAP Business One ERP Gateway)**.
+This document is the authoritative, step-by-step production runbook for deploying **HoseXperts TruckTracker 2.0** across **Company GitHub**, a company API server or Render staging, the configured PostgreSQL or Microsoft SQL Server database, and **SAP ONE Portal (SAP Business One ERP Gateway)**.
 
 ---
 
@@ -20,8 +20,8 @@ flowchart TB
     subgraph Render["☁️ Company Render Web Service (Node 22)"]
         Express["⚙️ Express API Gateway (:10000)<br/>• Auth / RBAC Middleware<br/>• Geofence & Delay Guard<br/>• Static Asset Server (/web/dist)<br/>• Static Media Server (/uploads/photos)"]
         
-        subgraph Storage["Persistent Volume (/data)"]
-            DB[("🗄️ SQLite Database (WAL Mode)<br/>/data/truck_tracker.sqlite")]
+        subgraph Storage["Database and Photo Storage"]
+          DB[("🗄️ PostgreSQL or Microsoft SQL Server")]
             Photos[("📷 Proof of Delivery Photos<br/>/data/uploads/photos/")]
         end
     end
@@ -54,7 +54,7 @@ Ensure the deployment machine or build agent satisfies the following runtime spe
 | **Android SDK** *(optional, for Android APK)* | `API Level 34` | `sdkmanager --list` |
 
 > [!IMPORTANT]
-> Node.js 22.12+ requires the flag `--experimental-sqlite` (or native Node 24) for built-in synchronous SQLite WAL execution (`node:sqlite`).
+> The backend uses asynchronous database drivers. Set `DB_DRIVER=postgres` for the current Render/Neon deployment or `DB_DRIVER=sqlserver` for the validated company SQL Server deployment. Do not mix the environment variables for the two drivers.
 
 ---
 
@@ -160,12 +160,15 @@ SAP_ONE_SYNC_ENABLED=true
   *Render will not switch traffic to a new build until `GET /api/health` returns HTTP 200.*
 
 ### 5.3 Configure Persistent Disk for Photos
-The PostgreSQL database is external. If photo files must survive restarts, use a persistent disk or external object storage:
-If running on Render Starter ($7/mo):
+The PostgreSQL or SQL Server database is external. Uploaded photos are stored at `UPLOADS_DIR`. If photo files must survive deploys and restarts, use a persistent disk or external object storage.
+
+The Render Free plan does not provide persistent disks. If the company chooses Render disk storage, use an eligible paid plan such as Starter and configure:
 1. In the service settings, navigate to **Disks** &rarr; click **Add Disk**.
 2. **Name:** `trucktracker-data`
 3. **Mount Path:** `/data`
 4. **Size:** `10 GB` (or larger depending on photo retention).
+
+Set `UPLOADS_DIR=/data/uploads/photos`. Do not use `/opt/render/project/src/server/uploads/photos` for production photo retention; that path is ephemeral.
 
 ### 5.4 Environment Variables Configuration
 In the **Environment** tab on Render, add the following key-value pairs:

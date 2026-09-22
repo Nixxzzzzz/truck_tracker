@@ -56,7 +56,7 @@ Primary Navigation:
 - **Geofence Verification Circles**: Visual representation of destination arrival geofences (100–250m radius).
 
 ### D. Operational Reports & Exports
-- Real-time aggregations calculated from SQLite database records:
+- Real-time aggregations calculated from the configured PostgreSQL or Microsoft SQL Server database:
   - Total trips, completed trips, delayed trips, cancelled trips.
   - Total delay duration (minutes) and average delay duration.
   - Average trip duration and on-time arrival percentage.
@@ -66,6 +66,6 @@ Primary Navigation:
 
 ### E. 100% Production Data Fidelity (Zero Mock Data)
 - **Elimination of Mock Data**: The legacy `mockData.ts` and `mockStore` layers have been completely removed.
-- All trips, vehicles, drivers, documents, and challans reflect the authoritative SQLite database state.
+- All trips, vehicles, drivers, documents, and challans reflect the authoritative configured SQL database state.
 - If no trips are assigned, the UI renders authentic empty states rather than fictitious fallback demo trucks.
 - Offline resilience is handled purely via `offlineQueue.ts` (localStorage queue that replays idempotent transactions once reconnected).

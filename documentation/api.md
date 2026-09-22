@@ -200,7 +200,7 @@ Streams a formatted CSV operational report for dispatch and accounting records.
 
 ---
 
-## 7. SQLite Database Backup
+## 7. Database Backup
 
 ### `POST /api/backup/create`
-Executes an atomic WAL checkpoint (`PRAGMA wal_checkpoint(TRUNCATE)`) and creates a verified snapshot in `server/data/backups/`.
+Creates a verified database backup according to the configured database provider policy. PostgreSQL uses provider or `pg_dump` tooling; Microsoft SQL Server uses the company SQL Server backup and restore procedure.

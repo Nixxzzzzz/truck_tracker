@@ -6,7 +6,7 @@ TruckTracker is an internal logistics operational platform designed for company 
 1. **Native Android Driver Application (`android/`)**: Primary mobile field client for drivers built with Kotlin, Jetpack Compose, CameraX, and Room.
 2. **Web Manager Application (`web/`)**: Desktop/tablet dispatch command center for fleet managers built with React 19, TypeScript, and Leaflet.
 3. **Shared Contracts & Models (`shared/`)**: Canonical data models, event definitions, and API contracts ensuring consistency across all layers.
-4. **Authoritative Shared Backend (`server/`)**: Express + Node.js 24 + SQLite (WAL mode) enforcing all business rules, authentication, event integrity, photo storage, reporting, and SAP ONE Portal / ERP integration.
+4. **Authoritative Shared Backend (`server/`)**: Express + Node.js + a selectable PostgreSQL or Microsoft SQL Server database driver enforcing all business rules, authentication, event integrity, photo storage, reporting, and SAP ONE Portal / ERP integration.
 
 ---
 
@@ -30,11 +30,11 @@ graph TD
         GeoService["📍 Geofence & GPS Validator<br/>(Haversine 100-250m)"]
         PhotoService["📷 Photo Proof Service<br/>(Disk Storage & Metadata)"]
         ErpGateway["🏢 SAP ONE Portal Gateway<br/>(Shipment, Cost Center, PM)"]
-        BackupService["💾 Hot Backup Service<br/>(SQLite VACUUM INTO)"]
+        BackupService["💾 Database Backup Service<br/>(Provider or SQL Server Backup Policy)"]
     end
 
     subgraph Storage["Authoritative Single Source of Truth"]
-        SQLiteDB[("🗄️ SQLite Database (WAL Mode)<br/>truck_tracker.sqlite")]
+        Database[("🗄️ PostgreSQL or Microsoft SQL Server<br/>(Company-authoritative database)")]
         PhotoStorage[("📁 Photo Proof Storage<br/>/server/uploads/photos/")]
     end
 
@@ -50,13 +50,13 @@ graph TD
     AuthModule --> PhotoService
 
     TripEngine --> GeoService
-    TripEngine --> SQLiteDB
+    TripEngine --> Database
     TripEngine --> ErpGateway
-    EventEngine --> SQLiteDB
+    EventEngine --> Database
     PhotoService --> PhotoStorage
-    PhotoService --> SQLiteDB
+    PhotoService --> Database
 
-    BackupService --> SQLiteDB
+    BackupService --> Database
 ```
 
 ---
@@ -177,7 +177,7 @@ sequenceDiagram
     participant WebApp as Web Command Center
     participant AndroidApp as Android Driver App
     participant Backend as Express + Engine
-    participant DB as SQLite WAL DB
+    participant DB as Company SQL Database
 
     Note over Manager,WebApp: Dispatch Phase
     Manager->>WebApp: Create Trip TR-2026-0001 (Stops 1..N)
@@ -294,4 +294,4 @@ sequenceDiagram
 1. **Anti-Tampering Timestamps**: Operational timestamps (`actual_start_time`, `actual_arrival_time`, `actual_departure_time`, `trip_completion_time`) are generated strictly by the server. Manipulating device clocks has zero impact on records.
 2. **Planned vs. Actual Immutability**: Planned arrival schedules are immutable baseline targets. Real-world differences are logged as variance metrics (+/- minutes) and never overwrite planned targets.
 3. **Strict RBAC & Driver Isolation**: Drivers can query and mutate only trips assigned to their `driver_id`. Cross-driver access attempts return HTTP 404/403.
-4. **Authoritative SQLite WAL & ERP Gateway**: The local SQLite WAL database is the primary authoritative source of truth. All operational metrics, route logs, and proof records are persistently recorded with atomic transactions, while enterprise fields provide seamless integration with central ERP systems (e.g. SAP Business One).
+4. **Authoritative SQL Database & ERP Gateway**: The configured PostgreSQL or Microsoft SQL Server database is the authoritative source of truth. All operational metrics, route logs, and proof records are persisted with atomic transactions, while enterprise fields integrate with central ERP systems such as SAP Business One.
