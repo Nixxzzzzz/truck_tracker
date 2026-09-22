@@ -1,4 +1,4 @@
-import { initDatabase, query, withTransaction } from './db';
+import { getDatabaseDriver, initDatabase, query, withTransaction } from './db';
 import { getAppliedMigrations } from './migrations/runner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,7 +17,9 @@ export async function runDatabaseIntegrityTests(): Promise<boolean> {
     assert([1, 2, 3, 4, 7].every((version) => applied.some((migration) => migration.version === version)), 'Required migrations are applied');
 
     const requiredTables = ['users', 'vehicles', 'drivers', 'destinations', 'trips', 'trip_stops', 'activities', 'delays', 'photos', 'trip_events', 'vehicle_documents', 'maintenance_records', 'fuel_transactions', 'operational_exceptions', 'audit_logs', 'google_sheet_sync', 'vehicle_challans'];
-    const tables = (await query<{ tablename: string }>(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`)).rows.map((row) => row.tablename);
+    const tables = getDatabaseDriver() === 'sqlserver'
+      ? (await query<{ name: string }>(`SELECT name FROM sys.tables WHERE is_ms_shipped = 0`)).rows.map((row) => row.name)
+      : (await query<{ tablename: string }>(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`)).rows.map((row) => row.tablename);
     for (const table of requiredTables) assert(tables.includes(table), `Table exists: ${table}`);
 
     let foreignKeyBlocked = false;

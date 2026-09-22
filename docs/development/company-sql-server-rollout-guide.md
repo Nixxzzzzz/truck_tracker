@@ -84,7 +84,18 @@ Do not use `DATABASE_URL`, `DB_SSL`, `DB_SSL_REJECT_UNAUTHORIZED`, or Neon value
 
 ## Database Provisioning
 
-Company IT should create the database and application login. The application login should receive only the permissions required by the migration and runtime, according to company policy. Apply schema migrations from the company API server or an approved deployment job; do not manually create tables from screenshots.
+Company IT should create only the empty database and dedicated application login. The application login should receive only the permissions required by the migration and runtime, according to company policy. Do not manually create application tables from screenshots or SSMS scripts.
+
+After `DB_DRIVER=sqlserver` and the SQL Server variables are configured, the server startup process runs the migration runner automatically:
+
+1. It connects to the configured SQL Server.
+2. It creates `_schema_migrations` if it does not exist.
+3. It applies migrations `1` through `7` in order.
+4. It creates all application tables, foreign keys, checks, indexes, and ERP/SAP columns.
+5. It records each applied version so a restart does not recreate or destroy tables.
+6. It provisions the first manager only when the database has no users and the initial admin variables are present.
+
+Therefore, a new empty database is enough. You do not need to create the TruckTracker tables manually. The first SQL Server startup must still be validated against the company's SQL Server version before production rollout.
 
 The SQL Server migration runner should create `_schema_migrations`, apply every migration in order, and be idempotent. A new empty database should be initialized by the deployment process after the SQL Server implementation is validated.
 

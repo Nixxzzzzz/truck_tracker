@@ -4,7 +4,8 @@ import sql from 'mssql';
 
 dotenv.config();
 
-const driver = process.env.DB_DRIVER || 'postgres';
+const driver = (process.env.DB_DRIVER || 'postgres') as 'postgres' | 'sqlserver';
+export function getDatabaseDriver(): 'postgres' | 'sqlserver' { return driver; }
 const poolMax = Number.parseInt(process.env.DB_POOL_MAX || '10', 10);
 if (!Number.isInteger(poolMax) || poolMax < 1) throw new Error('DB_POOL_MAX must be a positive integer.');
 
@@ -44,17 +45,63 @@ export interface QueryExecutor {
 }
 
 function sqlServerBatch(text: string): string {
-  let result = text
+  const normalized = text
     .replace(/\bTIMESTAMPTZ\b/g, 'datetime2')
     .replace(/\bDOUBLE PRECISION\b/g, 'float')
     .replace(/\bNOW\(\)/g, 'SYSUTCDATETIME()')
-    .replace(/CURRENT_DATE/g, 'CAST(SYSUTCDATETIME() AS date)');
-  result = result.replace(/CREATE TABLE IF NOT EXISTS (\w+)/gi, "IF OBJECT_ID(N'$1', N'U') IS NULL BEGIN CREATE TABLE $1");
-  result = result.replace(/CREATE UNIQUE INDEX IF NOT EXISTS (\w+) ON (\w+)/gi, "IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = '$1' AND object_id = OBJECT_ID('$2')) BEGIN CREATE UNIQUE INDEX $1 ON $2");
-  result = result.replace(/CREATE INDEX IF NOT EXISTS (\w+) ON (\w+)/gi, "IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = '$1' AND object_id = OBJECT_ID('$2')) BEGIN CREATE INDEX $1 ON $2");
-  result = result.replace(/ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+) ([^;]+);/gi, "IF COL_LENGTH('$1', '$2') IS NULL ALTER TABLE $1 ADD $2 $3;");
-  const openBlocks = (result.match(/BEGIN\s+(?:CREATE TABLE|CREATE INDEX|CREATE UNIQUE INDEX)/gi) || []).length;
-  if (openBlocks) result += `\n${'END;\n'.repeat(openBlocks)}`;
+    .replace(/CURRENT_DATE\s*-\s*\(\$(\d+)\s*\*\s*INTERVAL\s*'1 day'\)/gi, 'DATEADD(day, -$$1, CAST(SYSUTCDATETIME() AS date))')
+    .replace(/CURRENT_DATE/g, 'CAST(SYSUTCDATETIME() AS date)')
+    .replace(/COUNT\(\*\)::text/gi, 'COUNT(*)')
+    .replace(/\bTEXT\s+PRIMARY KEY\b/gi, 'nvarchar(255) PRIMARY KEY')
+    .replace(/\bTEXT\s+UNIQUE\b/gi, 'nvarchar(255) UNIQUE')
+    .replace(/\bTEXT\s+NOT NULL\b/gi, 'nvarchar(255) NOT NULL')
+    .replace(/\bTEXT\s+CHECK\b/gi, 'nvarchar(255) CHECK')
+    .replace(/\bTEXT\b/gi, 'nvarchar(max)');
+
+  let translated = translateSqlServerLimits(normalized);
+  return translated.split(';').map((rawStatement) => {
+    const statement = rawStatement.trim();
+    if (!statement) return '';
+
+    let match = statement.match(/^CREATE TABLE IF NOT EXISTS (\w+)([\s\S]*)$/i);
+    if (match) return `IF OBJECT_ID(N'${match[1]}', N'U') IS NULL BEGIN CREATE TABLE ${match[1]}${match[2]} END`;
+
+    match = statement.match(/^CREATE UNIQUE INDEX IF NOT EXISTS (\w+) ON (\w+)([\s\S]*)$/i);
+    if (match) return `IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = '${match[1]}' AND object_id = OBJECT_ID('${match[2]}')) BEGIN CREATE UNIQUE INDEX ${match[1]} ON ${match[2]}${match[3]} END`;
+
+    match = statement.match(/^CREATE INDEX IF NOT EXISTS (\w+) ON (\w+)([\s\S]*)$/i);
+    if (match) return `IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = '${match[1]}' AND object_id = OBJECT_ID('${match[2]}')) BEGIN CREATE INDEX ${match[1]} ON ${match[2]}${match[3]} END`;
+
+    match = statement.match(/^ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+) ([\s\S]*)$/i);
+    if (match) return `IF COL_LENGTH('${match[1]}', '${match[2]}') IS NULL ALTER TABLE ${match[1]} ADD ${match[2]} ${match[3]}`;
+
+    return statement;
+  }).filter(Boolean).join(';\n');
+}
+
+function translateSqlServerLimits(text: string): string {
+  let result = text;
+  const pagination = /LIMIT\s+(\$\d+|\d+)\s+OFFSET\s+(\$\d+|\d+)/i;
+  result = result.replace(pagination, 'OFFSET $2 ROWS FETCH NEXT $1 ROWS ONLY');
+
+  const limitPattern = /LIMIT\s+(\$\d+|\d+)/i;
+  while (limitPattern.test(result)) {
+    const match = limitPattern.exec(result);
+    if (!match || match.index === undefined) break;
+    const limitStart = match.index;
+    let depth = 0;
+    let selectStart = -1;
+    for (let index = limitStart - 1; index >= 0; index--) {
+      if (result[index] === ')') depth++;
+      else if (result[index] === '(') depth--;
+      else if (depth === 0 && result.slice(Math.max(0, index - 5), index + 1).toUpperCase() === 'SELECT') {
+        selectStart = index - 5;
+        break;
+      }
+    }
+    if (selectStart < 0) break;
+    result = `${result.slice(0, selectStart + 6)} TOP (${match[1]})${result.slice(selectStart + 6, limitStart)}${result.slice(limitStart + match[0].length)}`;
+  }
   return result;
 }
 

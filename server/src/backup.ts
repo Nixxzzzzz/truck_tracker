@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { query } from './db';
+import { getDatabaseDriver, query } from './db';
 
 const execFileAsync = promisify(execFile);
 const BACKUPS_DIR = process.env.BACKUP_DIR || path.resolve(__dirname, '../../data/backups');
@@ -24,6 +24,9 @@ async function countTable(table: string): Promise<number> {
 }
 
 export async function createBackup(): Promise<{ success: boolean; backupPath: string; stats: any }> {
+  if (getDatabaseDriver() === 'sqlserver') {
+    throw new Error('SQL Server backups must be configured through the company SQL Server or provider backup policy.');
+  }
   await fs.mkdir(BACKUPS_DIR, { recursive: true });
   const backupPath = path.join(BACKUPS_DIR, `truck_tracker_backup_${timestamp()}.dump`);
 
@@ -50,6 +53,9 @@ export async function createBackup(): Promise<{ success: boolean; backupPath: st
 }
 
 export async function restoreBackup(backupPath: string): Promise<boolean> {
+  if (getDatabaseDriver() === 'sqlserver') {
+    throw new Error('SQL Server restores must be performed through the company SQL Server recovery procedure.');
+  }
   await fs.access(backupPath);
   await execFileAsync('pg_restore', ['--clean', '--if-exists', '--dbname', databaseUrl(), backupPath], {
     windowsHide: true
