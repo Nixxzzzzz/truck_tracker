@@ -159,7 +159,8 @@ SAP_ONE_SYNC_ENABLED=true
   ```
   *Render will not switch traffic to a new build until `GET /api/health` returns HTTP 200.*
 
-### 5.3 Configure Persistent Disk (Critical for Photos & Database)
+### 5.3 Configure Persistent Disk for Photos
+The PostgreSQL database is external. If photo files must survive restarts, use a persistent disk or external object storage:
 If running on Render Starter ($7/mo):
 1. In the service settings, navigate to **Disks** &rarr; click **Add Disk**.
 2. **Name:** `trucktracker-data`
@@ -171,19 +172,21 @@ In the **Environment** tab on Render, add the following key-value pairs:
 
 ```env
 NODE_VERSION=22.12.0
-NODE_OPTIONS=--experimental-sqlite
 NODE_ENV=production
 PORT=10000
 JWT_SECRET=generate_a_random_64_character_hex_string_here
 ALLOWED_ORIGINS=https://fleet-managment-system-2-0.onrender.com,https://truck-tracker-api-9yhq.onrender.com
 AUTO_SEED=false
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+DB_POOL_MAX=10
+DB_SSL=true
+DB_SSL_REJECT_UNAUTHORIZED=true
 
 # Initial Administrator Credentials (provisioned if database is brand new)
 INITIAL_ADMIN_EMAIL=manager@company.com
 INITIAL_ADMIN_PASSWORD=SetSecureCompanyPassword2026!
 
 # Persistent Storage Paths (pointing to mounted disk)
-DATA_DIR=/data
 UPLOADS_DIR=/data/uploads/photos
 
 # SAP ONE Portal ERP Integration
@@ -213,7 +216,7 @@ Operations managers can trigger zero-downtime hot database backups directly from
 curl -X POST https://your-service.onrender.com/api/backup/create \
   -H "Authorization: Bearer <MANAGER_JWT_TOKEN>"
 ```
-This executes an atomic SQLite `VACUUM INTO` command, placing a clean snapshot into `/data/backups/` without locking live driver transactions. You can also configure an external cron job or Render Cron to call this endpoint on a daily schedule.
+This creates a PostgreSQL dump using `pg_dump`. The runtime must have the PostgreSQL client tools installed, or backups should be created through the database provider. You can also configure an external cron job to call this endpoint on a daily schedule.
 
 ---
 
@@ -223,8 +226,8 @@ TruckTracker enforces role-based access control (RBAC) distinguishing between **
 
 ### 6.1 Initial Root Manager Account
 When the database is newly initialized, the root administrator account is automatically provisioned using the Render environment variables:
-* **Email:** Set by `INITIAL_ADMIN_EMAIL` (default: `manager@company.com`)
-* **Password:** Set by `INITIAL_ADMIN_PASSWORD` (default: `manager123`)
+* **Email:** Set by `INITIAL_ADMIN_EMAIL`.
+* **Password:** Set by `INITIAL_ADMIN_PASSWORD`; there is no production fallback password.
 
 ### 6.2 Adding Additional Operations Managers
 To provision accounts for secondary dispatchers, operations coordinators, or directors:

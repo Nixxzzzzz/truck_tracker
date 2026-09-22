@@ -134,13 +134,30 @@ After deployment:
 5. Confirm uploaded photo access.
 6. Keep the previous deployment available until verification is complete.
 
-## 7. Backup and Rollback
+## 7. Azure Student Subscription Option
+
+Neon Free is the preferred database for a strictly no-cost setup. Azure for Students provides credits, but Azure Database for PostgreSQL consumes those credits and is not guaranteed to remain free after the allowance ends.
+
+Use Azure only when the subscription shows an active free grant and the expected cost is `0` before creation:
+
+1. Open Azure Portal and select the Student subscription.
+2. Search for **Azure Database for PostgreSQL flexible servers**.
+3. Choose a supported low-cost development configuration only after reviewing the **Cost + pricing** panel.
+4. Do not enable high availability, zone redundancy, backups beyond the free allowance, or paid networking services.
+5. Restrict networking to the minimum required access and create a strong database password.
+6. After creation, copy the TLS connection string from the server's **Connect** page without placing it in Git or chat.
+7. Set that value in Render as `DATABASE_URL` and keep `DB_SSL=true`.
+8. Set an Azure budget alert before using the server. Delete the server and its resource group when the test is complete.
+
+Azure PostgreSQL and Neon are alternatives. Use one database connection at a time; do not create a second production database or attempt to merge connection strings.
+
+## 8. Backup and Rollback
 
 Create a PostgreSQL backup before every production schema change. The API backup endpoint uses `pg_dump` and stores a custom-format dump under `BACKUP_DIR`.
 
 A rollback is an application deployment rollback plus a database plan. Do not blindly restore an old database over newer production writes. For a data rollback, stop writes, confirm the restore point, restore with `pg_restore`, rerun migrations if required, and repeat the verification checklist.
 
-## 8. GitHub Synchronization
+## 9. GitHub Synchronization
 
 Review before committing:
 
