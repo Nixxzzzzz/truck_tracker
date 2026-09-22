@@ -130,7 +130,7 @@ Required production checks:
 - Trip lifecycle actions work.
 - Reports and pagination work.
 - Photo files remain in the approved storage location.
-- Render deployments use a mounted disk at `/data` or approved company object storage; the ephemeral application filesystem is not acceptable for production photos.
+- The company API server uses a company-owned persistent disk for photos, configured through `UPLOADS_DIR`. Render/Neon is staging only and is not the company production photo store.
 - Backups and restores have been tested.
 - No database password or production data is staged in Git.
 

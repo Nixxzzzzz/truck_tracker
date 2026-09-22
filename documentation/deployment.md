@@ -168,7 +168,7 @@ The Render Free plan does not provide persistent disks. If the company chooses R
 3. **Mount Path:** `/data`
 4. **Size:** `10 GB` (or larger depending on photo retention).
 
-Set `UPLOADS_DIR=/data/uploads/photos`. Do not use `/opt/render/project/src/server/uploads/photos` for production photo retention; that path is ephemeral.
+For the company deployment, set `UPLOADS_DIR` to a directory on the company server's persistent disk, for example `/var/lib/truck-tracker/uploads/photos`. Render is staging only for this architecture; do not use either Render application storage or a Render disk as the company production photo store.
 
 ### 5.4 Environment Variables Configuration
 In the **Environment** tab on Render, add the following key-value pairs:

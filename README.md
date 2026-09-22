@@ -213,9 +213,9 @@ The current deployed configuration uses PostgreSQL/Neon. Microsoft SQL Server is
 | `DB_SSL_REJECT_UNAUTHORIZED` | `true` | Keep enabled unless provider requires otherwise |
 | `AUTO_SEED` | `false` | Never seed demo data in production |
 | `ALLOWED_ORIGINS` | Exact web app origin | No wildcard |
-| `UPLOADS_DIR` | `/data/uploads/photos` | Proof photo storage on a mounted Render disk |
+| `UPLOADS_DIR` | Company server photo directory | Proof photo storage on company-owned disk |
 
-**Photo persistence:** the application stores uploaded photos on `UPLOADS_DIR`. A Render disk must be mounted at `/data` for photos to survive deploys and restarts. Render's Free plan does not provide persistent disks; attach a disk on an eligible paid plan or use company object storage before production rollout.
+**Photo persistence:** the company deployment stores uploaded photos on the company server's disk through `UPLOADS_DIR`. Render/Neon is staging only; do not use the Render filesystem as the company production photo store.
 
 ### Render Config (`render.yaml` — already in repo)
 
