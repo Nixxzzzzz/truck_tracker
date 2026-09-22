@@ -2,10 +2,14 @@ services:
   - type: web
     name: truck-tracker-api
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npm ci --include=dev && npm run build:all
     startCommand: npm run start
     healthCheckPath: /api/health
+    disk:
+      name: trucktracker-data
+      mountPath: /data
+      sizeGB: 10
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
@@ -24,7 +28,7 @@ services:
       - key: AUTO_SEED
         value: "false"
       - key: UPLOADS_DIR
-        value: /opt/render/project/src/server/uploads/photos
+        value: /data/uploads/photos
       - key: ALLOWED_ORIGINS
         value: https://fleet-managment-system-2-0.onrender.com
       - key: NODE_ENV
