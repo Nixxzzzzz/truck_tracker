@@ -191,6 +191,9 @@ curl -X POST https://your-app.onrender.com/api/auth/users \
 
 Full deployment guide: [`documentation/deployment.md`](documentation/deployment.md)
 Database migration and release runbook: [`docs/development/postgresql-migration-and-release-guide.md`](docs/development/postgresql-migration-and-release-guide.md)
+Company SQL Server rollout guide: [`docs/development/company-sql-server-rollout-guide.md`](docs/development/company-sql-server-rollout-guide.md)
+
+The current deployed configuration uses PostgreSQL/Neon. Microsoft SQL Server is supported as a separate rollout target only after the company SQL Server migration and validation checklist is complete.
 
 ### Required Environment Variables (Render Dashboard)
 
