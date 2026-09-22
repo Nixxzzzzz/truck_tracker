@@ -20,6 +20,11 @@ import { createBackup } from './backup';
 
 async function startServer() {
 
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret || jwtSecret.length < 32) {
+  throw new Error('JWT_SECRET must be configured with at least 32 characters.');
+}
+
 // Initialize database schema
 await checkDatabaseConnection();
 await initDatabase();
@@ -32,19 +37,24 @@ try {
       console.log('🌱 AUTO_SEED=true — seeding demo routes and test fleet...');
       import('./seed').then(({ seed }) => seed()).catch((e) => console.error('[Auto-Seed Failed]', e));
     } else {
+      const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
+      const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+      if (!initialAdminEmail || !initialAdminPassword) {
+        throw new Error('INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD are required to provision the first manager.');
+      }
       console.log('🔒 Production mode: Provisioning initial manager credentials without dummy data...');
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const bcrypt = require('bcryptjs');
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { v4: uuidv4 } = require('uuid');
-      const managerPasswordHash = bcrypt.hashSync(process.env.INITIAL_ADMIN_PASSWORD || 'manager123', 10);
+      const managerPasswordHash = bcrypt.hashSync(initialAdminPassword, 10);
       await query(`
         INSERT INTO users (id, name, email, password_hash, role, phone)
         VALUES ($1, $2, LOWER($3), $4, 'MANAGER', $5)
       `, [
         uuidv4(),
         'Operations Manager',
-        process.env.INITIAL_ADMIN_EMAIL || 'manager@company.com',
+        initialAdminEmail,
         managerPasswordHash,
         '+91 98100 00000'
       ]);

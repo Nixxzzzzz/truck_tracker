@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { api } from './services/api';
 import { User } from './types';
 import { LoginView } from './views/LoginView';
-import { DriverView } from './views/DriverView';
-import { ManagerView } from './views/ManagerView';
+
+const DriverView = lazy(() => import('./views/DriverView').then((module) => ({ default: module.DriverView })));
+const ManagerView = lazy(() => import('./views/ManagerView').then((module) => ({ default: module.ManagerView })));
 
 import { HoseXpertsLogo } from './components/common/HoseXpertsLogo';
 
@@ -138,25 +139,27 @@ export const App: React.FC = () => {
   const activeRole = simulatedRole || currentUser.role;
 
   return (
-    <div>
-      {activeRole === 'DRIVER' ? (
-        <DriverView
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onSwitchRole={(role) => setSimulatedRole(role)}
-        />
-      ) : (
-        <ManagerView
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onSwitchRole={(role) => setSimulatedRole(role)}
-        />
-      )}
-    </div>
+    <Suspense fallback={<div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary, #0B101B)' }} />}>
+      <div>
+        {activeRole === 'DRIVER' ? (
+          <DriverView
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onSwitchRole={(role) => setSimulatedRole(role)}
+          />
+        ) : (
+          <ManagerView
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onSwitchRole={(role) => setSimulatedRole(role)}
+          />
+        )}
+      </div>
+    </Suspense>
   );
 };
 

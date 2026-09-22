@@ -112,10 +112,16 @@ Set these values in the Render dashboard or secret manager:
 
 - `DATABASE_URL` as a secret.
 - `JWT_SECRET` as a generated secret.
+- `INITIAL_ADMIN_EMAIL` as a secret environment value for first-boot manager provisioning.
+- `INITIAL_ADMIN_PASSWORD` as a secret environment value; use a unique password of at least 32 characters.
 - `DB_POOL_MAX`, normally `10`.
 - `DB_SSL=true`.
 - `DB_SSL_REJECT_UNAUTHORIZED=true` unless the provider explicitly documents another requirement.
+- `AUTO_SEED=false` in production.
+- `ALLOWED_ORIGINS` set to the exact web application origin, with no wildcard.
 - `UPLOADS_DIR` to the persistent upload mount when one is available.
+
+The server requires the initial administrator values only when the database has no users. After first boot, rotate or remove the initial administrator secret according to the account rotation policy; do not put it in the repository.
 
 Do not put `DATABASE_URL` or passwords in `render.yaml` or `docker-compose.yml`. Compose reads them from the shell or a local ignored `.env` file.
 

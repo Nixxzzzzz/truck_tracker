@@ -200,9 +200,13 @@ Database migration and release runbook: [`docs/development/postgresql-migration-
 | `PORT` | `10000` | Render assigns automatically |
 | `JWT_SECRET` | 32+ random chars | Never expose |
 | `DATABASE_URL` | Render PostgreSQL connection string | Secret; never commit |
+| `INITIAL_ADMIN_EMAIL` | First manager email | Secret dashboard value |
+| `INITIAL_ADMIN_PASSWORD` | Unique first manager password | Secret dashboard value |
 | `DB_POOL_MAX` | `10` | Maximum pooled connections |
 | `DB_SSL` | `true` | Required for managed PostgreSQL |
 | `DB_SSL_REJECT_UNAUTHORIZED` | `true` | Keep enabled unless provider requires otherwise |
+| `AUTO_SEED` | `false` | Never seed demo data in production |
+| `ALLOWED_ORIGINS` | Exact web app origin | No wildcard |
 | `UPLOADS_DIR` | `/app/server/uploads/photos` | Proof photo storage |
 
 ### Render Config (`render.yaml` — already in repo)

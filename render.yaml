@@ -13,8 +13,20 @@ services:
         value: "10"
       - key: DB_SSL
         value: "true"
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: "true"
       - key: DATABASE_URL
         sync: false
+      - key: INITIAL_ADMIN_EMAIL
+        sync: false
+      - key: INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: AUTO_SEED
+        value: "false"
+      - key: UPLOADS_DIR
+        value: /opt/render/project/src/server/uploads/photos
+      - key: ALLOWED_ORIGINS
+        value: https://fleet-managment-system-2-0.onrender.com
       - key: NODE_ENV
         value: production
       - key: PORT
