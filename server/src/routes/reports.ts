@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { db } from '../db';
+import { query } from '../db';
 import { requireAuth, requireRole } from '../middleware/auth';
 
 const router = Router();
@@ -143,17 +143,17 @@ function processDelayAttribution(delayReasons: any[], isPeriodic: boolean, daysC
  * GET /api/reports/daily
  * Daily logistics report metrics and breakdown
  */
-router.get('/daily', requireAuth, requireRole('MANAGER'), (req, res) => {
+router.get('/daily', requireAuth, requireRole('MANAGER'), async (req, res) => {
   const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
 
   // Trip stats for date
-  const trips = db.prepare(`
+  const trips = (await query(`
     SELECT t.*, u.name as driver_name, v.vehicle_number 
     FROM trips t
     JOIN users u ON t.driver_id = u.id
     JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.date = ?
-  `).all(date) as any[];
+    WHERE t.date = $1
+  `, [date])).rows as any[];
 
   const totalTrips = trips.length;
   const completedTrips = trips.filter((t) => t.status === 'COMPLETED').length;
@@ -169,12 +169,12 @@ router.get('/daily', requireAuth, requireRole('MANAGER'), (req, res) => {
   );
 
   // Stops and On-time calculation
-  const stops = db.prepare(`
+  const stops = (await query(`
     SELECT ts.* 
     FROM trip_stops ts
     JOIN trips t ON ts.trip_id = t.id
-    WHERE t.date = ?
-  `).all(date) as any[];
+    WHERE t.date = $1
+  `, [date])).rows as any[];
 
   const totalDestinations = stops.length;
   const completedStops = stops.filter((s) => s.status === 'COMPLETED');
@@ -184,37 +184,37 @@ router.get('/daily', requireAuth, requireRole('MANAGER'), (req, res) => {
 
 
 // Delay reason distribution
-const delayReasons = db.prepare(`
+const delayReasons = (await query(`
   SELECT d.reason, COUNT(*) as count, SUM(d.duration_minutes) as total_minutes
   FROM delays d
   JOIN trips t ON d.trip_id = t.id
-  WHERE t.date = ?
+  WHERE t.date = $1
   GROUP BY d.reason
   ORDER BY count DESC
-`).all(date);
+`, [date])).rows;
 
 const delayAttribution = processDelayAttribution(delayReasons, false, 1);
 
   // Driver summary
-  const driverSummary = db.prepare(`
+  const driverSummary = (await query(`
     SELECT u.name as driver_name, COUNT(t.id) as trip_count, 
            SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count,
            SUM(t.total_delay_minutes) as total_delay
     FROM trips t
     JOIN users u ON t.driver_id = u.id
-    WHERE t.date = ?
+    WHERE t.date = $1
     GROUP BY t.driver_id
-  `).all(date);
+  `, [date])).rows;
 
   // Vehicle summary
-  const vehicleSummary = db.prepare(`
+  const vehicleSummary = (await query(`
     SELECT v.vehicle_number, v.model, COUNT(t.id) as trip_count,
            SUM(t.calculated_distance_km) as total_distance_km
     FROM trips t
     JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.date = ?
+    WHERE t.date = $1
     GROUP BY t.vehicle_id
-  `).all(date);
+  `, [date])).rows;
 
   return res.json({
     date,
@@ -240,18 +240,18 @@ const delayAttribution = processDelayAttribution(delayReasons, false, 1);
 /**
  * GET /api/reports/periodic (Weekly / Monthly)
  */
-router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
+router.get('/periodic', requireAuth, requireRole('MANAGER'), async (req, res) => {
   const period = (req.query.period as string) || 'weekly'; // weekly or monthly
   const days = period === 'monthly' ? 30 : 7;
 
-  const trips = db.prepare(`
+  const trips = (await query(`
     SELECT t.*, u.name as driver_name, v.vehicle_number
     FROM trips t
     JOIN users u ON t.driver_id = u.id
     JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.date >= date('now', '-' || ? || ' days')
+    WHERE t.date >= CURRENT_DATE - ($1 * INTERVAL '1 day')
     ORDER BY t.date DESC
-  `).all(days) as any[];
+  `, [days])).rows as any[];
 
   const totalTrips = trips.length;
   const completedTrips = trips.filter((t) => t.status === 'COMPLETED').length;
@@ -265,12 +265,12 @@ router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
   const totalDistance = trips.reduce((acc, t) => acc + (t.calculated_distance_km || 0), 0);
 
   // Stops and On-time calculation for period
-  const stops = db.prepare(`
+  const stops = (await query(`
     SELECT ts.* 
     FROM trip_stops ts
     JOIN trips t ON ts.trip_id = t.id
-    WHERE t.date >= date('now', '-' || ? || ' days')
-  `).all(days) as any[];
+    WHERE t.date >= CURRENT_DATE - ($1 * INTERVAL '1 day')
+  `, [days])).rows as any[];
 
   const totalDestinations = stops.length;
   const completedStops = stops.filter((s) => s.status === 'COMPLETED');
@@ -278,35 +278,35 @@ router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
   const onTimePercentage = completedStops.length > 0 ? Math.round((onTimeStops / completedStops.length) * 100) : 100;
 
   // Delay reason breakdown
-  const delayReasons = db.prepare(`
+  const delayReasons = (await query(`
     SELECT d.reason, COUNT(*) as count, SUM(d.duration_minutes) as total_minutes
     FROM delays d
     JOIN trips t ON d.trip_id = t.id
-    WHERE t.date >= date('now', '-' || ? || ' days')
+    WHERE t.date >= CURRENT_DATE - ($1 * INTERVAL '1 day')
     GROUP BY d.reason
     ORDER BY count DESC
-  `).all(days);
+  `, [days])).rows;
 
   // Driver performance summary
-  const driverSummary = db.prepare(`
+  const driverSummary = (await query(`
     SELECT u.name as driver_name, COUNT(t.id) as trip_count, 
            SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count,
            SUM(t.total_delay_minutes) as total_delay
     FROM trips t
     JOIN users u ON t.driver_id = u.id
-    WHERE t.date >= date('now', '-' || ? || ' days')
+    WHERE t.date >= CURRENT_DATE - ($1 * INTERVAL '1 day')
     GROUP BY t.driver_id
-  `).all(days);
+  `, [days])).rows;
 
   // Vehicle utilization summary
-  const vehicleSummary = db.prepare(`
+  const vehicleSummary = (await query(`
     SELECT v.vehicle_number, v.model, COUNT(t.id) as trip_count,
            SUM(t.calculated_distance_km) as total_distance_km
     FROM trips t
     JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.date >= date('now', '-' || ? || ' days')
+    WHERE t.date >= CURRENT_DATE - ($1 * INTERVAL '1 day')
     GROUP BY t.vehicle_id
-  `).all(days);
+  `, [days])).rows;
 
   const delayAttribution = processDelayAttribution(delayReasons, true, days);
 
@@ -345,10 +345,10 @@ router.get('/periodic', requireAuth, requireRole('MANAGER'), (req, res) => {
 /**
  * GET /api/reports/export (CSV export)
  */
-router.get('/export', requireAuth, requireRole('MANAGER'), (req, res: Response) => {
+router.get('/export', requireAuth, requireRole('MANAGER'), async (req, res: Response) => {
   const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
 
-  const trips = db.prepare(`
+  const trips = (await query(`
     SELECT t.id, t.date, u.name as driver_name, v.vehicle_number, t.starting_location,
            t.planned_departure_time, t.actual_start_time, t.base_arrival_time, t.completion_time,
            t.status, t.total_delay_minutes, t.calculated_distance_km,
@@ -357,9 +357,9 @@ router.get('/export', requireAuth, requireRole('MANAGER'), (req, res: Response) 
     FROM trips t
     JOIN users u ON t.driver_id = u.id
     JOIN vehicles v ON t.vehicle_id = v.id
-    WHERE t.date = ?
+    WHERE t.date = $1
     ORDER BY t.planned_departure_time ASC
-  `).all(date) as any[];
+  `, [date])).rows as any[];
 
   // Build CSV headers and rows
   const headers = [

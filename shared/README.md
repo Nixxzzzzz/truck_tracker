@@ -1,7 +1,7 @@
 # 📦 TruckTracker Shared Contracts
 
 This package contains the canonical data models, operational event types, system constants, and API contract specifications shared across:
-1. **Server / Backend (`server/`)** — authoritative business rule engine and SQLite WAL storage.
+1. **Server / Backend (`server/`)** — authoritative business rule engine and PostgreSQL storage.
 2. **Web Manager Client (`web/`)** — desktop/tablet dispatch command center.
 3. **Android Native Driver Client (`android/`)** — Kotlin models matching the JSON serialization contracts defined here.
 

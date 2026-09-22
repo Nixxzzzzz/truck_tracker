@@ -16,7 +16,7 @@ Endpoints enforce authorization via `requireRole('MANAGER')`:
 ---
 
 ## 3. SQL Injection Prevention
-- **Parameterized Statements**: All database operations use `node:sqlite` parameterized queries (`db.prepare('... WHERE id = ?').get(id)`).
+- **Parameterized Statements**: All database operations use PostgreSQL parameterized queries through `query()` (`... WHERE id = $1`).
 - **Zero Raw Interpolation**: Dynamic user inputs are never concatenated directly into SQL strings.
 
 ---

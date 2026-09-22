@@ -24,7 +24,7 @@ services:
       - key: NODE_VERSION
         value: 22.12.0
       - key: NODE_OPTIONS
-        value: --experimental-sqlite
+        value: "10"
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -42,7 +42,7 @@ services:
      - `web/src` → `web/dist` (Static production bundle)
      - `server/src` → `server/dist` (Node TypeScript bundle)
 2. **`startCommand: npm run start`**:
-   - Invokes `node --experimental-sqlite dist/index.js`
+  - Invokes `node dist/index.js` with `DATABASE_URL` configured by the service.
    - Express binds to `process.env.PORT` (defaults to `10000` on Render)
    - Statically serves `web/dist` on all non-API paths with SPA fallback to `index.html`
 3. **`healthCheckPath: /api/health`**:

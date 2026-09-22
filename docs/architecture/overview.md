@@ -56,7 +56,7 @@ TruckTracker is an enterprise-grade fleet operations and dispatch logistics syst
 ---
 
 ## 3. Technology Stack & Runtime Decisions
-- **Backend Runtime**: Node.js `22.12.0+` with native `node:sqlite` enabled via `--experimental-sqlite`. Eliminates external native C++ binding compilation errors (`node-gyp`) during container builds.
+- **Backend Runtime**: Node.js `22.12.0+` with the asynchronous `pg` PostgreSQL client and managed database connection.
 - **Backend Framework**: Express `4.21.2` with TypeScript `5.7.3`, providing end-to-end typed request/response contracts.
 - **Frontend Architecture**: React 19, Vite 6, Leaflet Maps for spatial geofence visualization, and Lucide React icons.
 - **Mobile Client**: Native Android application engineered with Kotlin, Jetpack Compose, CameraX, and Google Play Services Location.

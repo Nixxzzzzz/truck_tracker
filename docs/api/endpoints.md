@@ -218,7 +218,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ### `POST /api/backup/create`
 - **Role**: `MANAGER`
-- **Purpose**: Execute an atomic SQLite WAL hot backup snapshot via `VACUUM INTO` onto persistent storage without taking the service offline.
+- **Purpose**: Create a verified PostgreSQL dump without taking the service offline.
 - **Response `200 OK`**:
   ```json
   {

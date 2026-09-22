@@ -40,8 +40,10 @@ Create a local `.env` file in the project root:
 PORT=5000
 NODE_ENV=development
 JWT_SECRET=local-development-secret-key-32-chars-min
-DATA_DIR=./data
-UPLOAD_DIR=./uploads
+DATABASE_URL=postgresql://user:password@localhost:5432/truck_tracker
+DB_POOL_MAX=10
+DB_SSL=false
+UPLOADS_DIR=./uploads/photos
 ```
 
 ---

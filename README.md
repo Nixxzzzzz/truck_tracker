@@ -5,14 +5,14 @@
 # 🚛 TruckTracker 2.0 — Enterprise Fleet Operations & Dispatch Logistics
 
 > **Production-grade logistics management platform for HoseXperts fleet operators.**  
-> All data is **live from the company SQLite database** — no hardcoded vehicles, no fake plates, no dummy challans, no placeholder documents.
+> All data is **live from the company PostgreSQL database** — no hardcoded vehicles, no fake plates, no dummy challans, no placeholder documents.
 
 [![Live Production](https://img.shields.io/badge/Production-truck--tracker--api--9yhq.onrender.com-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/)
 [![Health Check](https://img.shields.io/badge/Health-200%20OK-059669.svg?logo=render)](https://truck-tracker-api-9yhq.onrender.com/api/health)
 [![CI/CD Build](https://github.com/Nixxzzzzz/truck_tracker/actions/workflows/deploy.yml/badge.svg)](https://github.com/Nixxzzzzz/truck_tracker/actions)
 [![Android APK](https://img.shields.io/badge/Android%20APK-v1.1.0-4f46e5.svg?logo=android)](https://github.com/Nixxzzzzz/truck_tracker/releases/tag/v1.1.0)
 [![Stack](https://img.shields.io/badge/Stack-Node%2022%20%7C%20React%2019%20%7C%20TypeScript-2563eb.svg)](#)
-[![Database](https://img.shields.io/badge/Database-SQLite%20WAL%20(16%20Tables)-d97706.svg)](#)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL-336791.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -24,7 +24,7 @@ TruckTracker is an **internal enterprise fleet operations platform** built exclu
 - **Dispatch Operations Managers** — Plan multi-stop routes, assign drivers and vehicles, monitor live GPS fleet positions, manage statutory vehicle compliance documents, handle challan records, and generate SLA/delay analytics reports.
 - **Field Route Drivers** — Receive trip manifests, log geofenced stop arrivals, capture proof-of-delivery photos, report delays, and access assigned vehicle papers — from the mobile web cockpit or Android APK.
 
-**Data source**: All vehicles, drivers, trips, documents, and challans come from the live **SQLite database** (backed by SAP ONE Portal ERP references). There is **no Google Sheets dependency**, no mock data, and no static demo records in production.
+**Data source**: All vehicles, drivers, trips, documents, and challans come from the live **PostgreSQL database** (backed by SAP ONE Portal ERP references). There is **no Google Sheets dependency**, no mock data, and no static demo records in production.
 
 ---
 
@@ -37,7 +37,7 @@ Managers (Web Command Center)   ──►   Express API :10000
                                        • State Machine Guard
                                        • Geofence Validator
                                        • Static SPA Server
-                                      ──► /data/truck_tracker.sqlite (WAL)
+                                      ──► Managed PostgreSQL (`DATABASE_URL`)
                                       ──► /data/uploads/photos/
                                 ──► SAP ONE Portal (ERP Reference Sync)
 ```
@@ -72,8 +72,8 @@ TruckTracker 2.0 has been hardened for enterprise company operations:
 - **HTTP Security Headers**: Powered by `helmet` with strict Content-Security-Policy (CSP) allowing trusted CDNs for Leaflet tiles, fonts, and icons.
 - **Brute-Force Rate Limiting**: Powered by `express-rate-limit` (15 login attempts per 15 minutes per IP) to neutralize credential-stuffing attacks.
 - **Dynamic CORS Whitelisting**: Configurable via `ALLOWED_ORIGINS` environment variable to restrict browser API access exclusively to trusted corporate domains.
-- **Zero Schema Leakage**: All 500 error responses are strictly sanitized in production, masking internal SQLite constraint and file path messages.
-- **Atomic Hot Database Backups**: Manager-only `POST /api/backup/create` endpoint executes `VACUUM INTO` snapshots directly onto persistent storage (`/data/backups/`) with zero downtime.
+- **Zero Schema Leakage**: All 500 error responses are strictly sanitized in production, masking internal database constraint and file path messages.
+- **Atomic Hot Database Backups**: Manager-only `POST /api/backup/create` endpoint creates verified PostgreSQL dumps with zero downtime.
 
 ---
 
@@ -107,14 +107,16 @@ Edit `.env`:
 NODE_ENV=development
 PORT=5000
 JWT_SECRET=your-strong-random-secret-min-32-chars
-DB_PATH=./data/truck_tracker.sqlite
-UPLOAD_DIR=./uploads
+DATABASE_URL=postgresql://user:password@localhost:5432/truck_tracker
+DB_POOL_MAX=10
+DB_SSL=false
+UPLOADS_DIR=./uploads/photos
 ```
 
 ### 3. Initialize Database
 
 ```bash
-# Run migrations (creates all 16 tables)
+# Run migrations (creates or upgrades the PostgreSQL schema)
 npm run migrate --workspace=server
 
 # Seed initial demo users (development only)
@@ -187,7 +189,8 @@ curl -X POST https://your-app.onrender.com/api/auth/users \
 
 ## ☁️ Production Deployment — Render
 
-Full guide: [`documentation/deployment.md`](documentation/deployment.md)
+Full deployment guide: [`documentation/deployment.md`](documentation/deployment.md)
+Database migration and release runbook: [`docs/development/postgresql-migration-and-release-guide.md`](docs/development/postgresql-migration-and-release-guide.md)
 
 ### Required Environment Variables (Render Dashboard)
 
@@ -196,8 +199,11 @@ Full guide: [`documentation/deployment.md`](documentation/deployment.md)
 | `NODE_ENV` | `production` | Required |
 | `PORT` | `10000` | Render assigns automatically |
 | `JWT_SECRET` | 32+ random chars | Never expose |
-| `DB_PATH` | `/data/truck_tracker.sqlite` | Persistent disk |
-| `UPLOAD_DIR` | `/data/uploads` | Proof photo storage |
+| `DATABASE_URL` | Render PostgreSQL connection string | Secret; never commit |
+| `DB_POOL_MAX` | `10` | Maximum pooled connections |
+| `DB_SSL` | `true` | Required for managed PostgreSQL |
+| `DB_SSL_REJECT_UNAUTHORIZED` | `true` | Keep enabled unless provider requires otherwise |
+| `UPLOADS_DIR` | `/app/server/uploads/photos` | Proof photo storage |
 
 ### Render Config (`render.yaml` — already in repo)
 
@@ -209,10 +215,7 @@ services:
     region: oregon
     buildCommand: npm ci --include=dev && npm run build:all
     startCommand: npm run start
-    disk:
-      name: truck-tracker-data
-      mountPath: /data
-      sizeGB: 10
+    # DATABASE_URL is configured as a secret environment variable.
 ```
 
 ### Deploy Steps

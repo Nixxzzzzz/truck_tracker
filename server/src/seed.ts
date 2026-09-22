@@ -1,10 +1,29 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { db, initDatabase } from './db';
+import { initDatabase, query } from './db';
+
+function postgresPlaceholders(sql: string): string {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
 
 export async function seed() {
   console.log('🌱 Seeding TruckTracker database with Delhi-Noida logistics demo data...');
-  initDatabase();
+  await initDatabase();
+
+  let pending = Promise.resolve();
+  const db = {
+    exec(sql: string) {
+      pending = pending.then(() => query(sql)).then(() => undefined);
+    },
+    prepare(sql: string) {
+      return {
+        run(...values: unknown[]) {
+          pending = pending.then(() => query(postgresPlaceholders(sql), values)).then(() => undefined);
+        }
+      };
+    }
+  };
 
   // Clear existing records
   db.exec(`
@@ -560,6 +579,8 @@ export async function seed() {
     v4Id, null, null, 'Okhla Central Fleet Yard',
     1, 'ACKNOWLEDGED', '2026-09-12T08:00:00.000Z'
   );
+
+  await pending;
 
   console.log('✅ Database seeded with Delhi-Noida demo data successfully!');
   console.log('-------------------------------------------------');

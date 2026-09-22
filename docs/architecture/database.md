@@ -1,15 +1,12 @@
 # Database Architecture & Persistence Strategy
 
 ## 1. Relational Engine Specification
-TruckTracker utilizes the Node 22 native synchronous SQLite engine (`node:sqlite.DatabaseSync`).
+TruckTracker uses PostgreSQL through a single asynchronous `pg.Pool`, configured with `DATABASE_URL` and `DB_POOL_MAX`.
 
-### Key PRAGMAs & Guarantees
-- **`PRAGMA journal_mode = WAL;`**:
-  Write-Ahead Logging provides concurrent read access while write operations execute, eliminating reader-writer lock contention during high-frequency GPS telemetry pings.
-- **`PRAGMA foreign_keys = ON;`**:
-  Strict referential integrity enforcement. Foreign key violations (such as creating stops without a valid `trip_id` or assigning trips to non-existent drivers) are rejected at the database engine level.
-- **`BEGIN IMMEDIATE;`**:
-  Transactional operations (e.g. creating a multi-stop trip manifest with activities) execute in immediate mode, preventing deadlock and ensuring atomic rollback on failure.
+### Connection & Transaction Guarantees
+- All database calls are asynchronous and use PostgreSQL `$1`, `$2`, ... parameter placeholders.
+- `withTransaction()` checks out one `PoolClient` and uses it for every query in the transaction.
+- PostgreSQL foreign keys, unique constraints, and check constraints enforce relational integrity.
 
 ---
 
@@ -17,19 +14,19 @@ TruckTracker utilizes the Node 22 native synchronous SQLite engine (`node:sqlite
 
 ### Free Tier Single-Instance Environment
 - **Container Disk Nature**: The filesystem on Render Web Services (`plan: free`) is **ephemeral**.
-- **Persistence Reality**: If the free web service spins down after 15 minutes of inactivity or upon deployment of a new commit, local files (including `data/truck_tracker.sqlite`) are recreated fresh.
+- **Persistence Reality**: Database state lives in managed PostgreSQL and is independent of web-service restarts or deployments.
 - **Auto-Boot Mitigation**:
-  The application migration runner (`server/src/migrations/runner.ts`) executes idempotently on startup (`initDatabase()`). If the database file is fresh, it constructs all 16 relational tables and default seed data automatically, ensuring zero runtime failure on cold boot.
+  The application migration runner (`server/src/migrations/runner.ts`) executes idempotently on startup (`initDatabase()`). It creates or upgrades the PostgreSQL schema without inserting demo data in production.
 
-### Production Enterprise Path (PostgreSQL Migration)
-For multi-node, high-availability deployments, the persistence layer can be switched to PostgreSQL:
-1. SQLite queries use standard ANSI SQL (`SELECT`, `INSERT`, `UPDATE`, `JOIN`, `GROUP BY`, `ORDER BY`).
-2. Schema migrations (`001`, `002`, `003`) map 1:1 to standard PostgreSQL data types:
+### Production PostgreSQL Configuration
+The backend connects to PostgreSQL directly:
+1. Queries use parameterized `SELECT`, `INSERT`, `UPDATE`, and `JOIN` statements through `query()`.
+2. Schema migrations (`001` through `007`) use PostgreSQL-compatible data types:
    - `TEXT` → `VARCHAR` / `TEXT`
    - `INTEGER` → `INT` / `BIGINT`
-   - `REAL` → `DOUBLE PRECISION`
-   - `DATETIME` → `TIMESTAMPTZ`
-3. A connection adapter wrapping `pg` or `pg-promise` satisfies the identical query interface without rewriting business logic in `routes/trips.ts` or `routes/fleet.ts`.
+  - `REAL` → PostgreSQL `REAL`
+  - timestamp fields → `TIMESTAMPTZ` where applicable
+3. Managed services can enable TLS with `DB_SSL=true`; credentials are never stored in the repository.
 
 ---
 

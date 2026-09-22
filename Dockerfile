@@ -31,7 +31,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=5000
-ENV NODE_OPTIONS="--experimental-sqlite"
 
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
@@ -46,13 +45,13 @@ COPY --from=builder /app/web/dist ./web/dist
 # Copy seed photo assets for demonstrations
 COPY server/uploads/ ./server/uploads/
 
-# Ensure persistent data directories exist
-RUN mkdir -p /app/server/data /app/server/uploads/photos /app/data /app/uploads/photos
+# Ensure persistent upload directory exists
+RUN mkdir -p /app/server/uploads/photos
 
 EXPOSE 5000
 
-# Volume mount points for SQLite database and uploaded photos
-VOLUME ["/app/data", "/app/uploads/photos"]
+# Volume mount point for uploaded photos
+VOLUME ["/app/uploads/photos"]
 
 WORKDIR /app/server
-CMD ["node", "--experimental-sqlite", "dist/index.js"]
+CMD ["node", "dist/index.js"]

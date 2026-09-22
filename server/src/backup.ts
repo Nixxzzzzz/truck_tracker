@@ -1,112 +1,74 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
-import { DatabaseSync } from 'node:sqlite';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { query } from './db';
 
-const DB_DIR = process.env.DATA_DIR || path.resolve(__dirname, '../../data');
-const BACKUPS_DIR = path.join(DB_DIR, 'backups');
-const SOURCE_DB_PATH = path.join(DB_DIR, 'truck_tracker.sqlite');
+const execFileAsync = promisify(execFile);
+const BACKUPS_DIR = process.env.BACKUP_DIR || path.resolve(__dirname, '../../data/backups');
 
-if (!fs.existsSync(BACKUPS_DIR)) {
-  fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+function databaseUrl(): string {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required.');
+  }
+  return process.env.DATABASE_URL;
 }
 
-/**
- * Creates a verified point-in-time backup of the SQLite database
- */
-export function createBackup(): { success: boolean; backupPath: string; stats: any } {
-  if (!fs.existsSync(SOURCE_DB_PATH)) {
-    throw new Error(`Source database file not found at: ${SOURCE_DB_PATH}`);
-  }
+function timestamp(): string {
+  return new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+}
 
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[:.]/g, '-')
-    .replace('T', '_')
-    .slice(0, 19);
+async function countTable(table: string): Promise<number> {
+  const result = await query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table}`);
+  return Number(result.rows[0]?.count || 0);
+}
 
-  const backupFilename = `truck_tracker_backup_${timestamp}.sqlite`;
-  const targetPath = path.join(BACKUPS_DIR, backupFilename);
+export async function createBackup(): Promise<{ success: boolean; backupPath: string; stats: any }> {
+  await fs.mkdir(BACKUPS_DIR, { recursive: true });
+  const backupPath = path.join(BACKUPS_DIR, `truck_tracker_backup_${timestamp()}.dump`);
 
-  // In WAL mode, checkpoint before copy
-  try {
-    const activeDb = new DatabaseSync(SOURCE_DB_PATH);
-    activeDb.exec('PRAGMA wal_checkpoint(TRUNCATE);');
-    activeDb.close();
-  } catch (e: any) {
-    console.warn('[Backup] Checkpoint warning (proceeding with copy):', e.message);
-  }
+  await execFileAsync('pg_dump', ['--format=custom', '--file', backupPath, databaseUrl()], {
+    windowsHide: true
+  });
 
-  // Copy primary sqlite database
-  fs.copyFileSync(SOURCE_DB_PATH, targetPath);
-
-  // Verify the backup file by opening it and checking tables
-  const backupDb = new DatabaseSync(targetPath);
-  const tripCount = (backupDb.prepare(`SELECT COUNT(*) as count FROM trips`).get() as any).count;
-  const userCount = (backupDb.prepare(`SELECT COUNT(*) as count FROM users`).get() as any).count;
-  const eventCount = (backupDb.prepare(`SELECT COUNT(*) as count FROM trip_events`).get() as any).count;
-  backupDb.close();
-
+  const [tripCount, userCount, eventCount, fileStats] = await Promise.all([
+    countTable('trips'),
+    countTable('users'),
+    countTable('trip_events'),
+    fs.stat(backupPath)
+  ]);
   const stats = {
-    fileSize: fs.statSync(targetPath).size,
+    fileSize: fileStats.size,
     tripCount,
     userCount,
     eventCount,
     createdAt: new Date().toISOString()
   };
 
-  console.log(`[Backup] Successfully created verified backup at: ${targetPath}`);
-  console.log(`[Backup] Stats: ${tripCount} trips, ${eventCount} events, ${stats.fileSize} bytes.`);
-
-  return {
-    success: true,
-    backupPath: targetPath,
-    stats
-  };
+  console.log(`[Backup] Created PostgreSQL dump at ${backupPath}`);
+  return { success: true, backupPath, stats };
 }
 
-/**
- * Verifies and restores a backup to the active database
- */
-export function restoreBackup(backupPath: string): boolean {
-  if (!fs.existsSync(backupPath)) {
-    throw new Error(`Backup file not found at: ${backupPath}`);
-  }
-
-  // 1. Verify integrity of the backup file first
-  const testDb = new DatabaseSync(backupPath);
-  const testRow = testDb.prepare(`SELECT COUNT(*) as count FROM trips`).get() as any;
-  testDb.close();
-
-  if (typeof testRow?.count !== 'number') {
-    throw new Error('Backup verification failed: Invalid SQLite database structure');
-  }
-
-  // 2. Clean up WAL and SHM files of current active db
-  const walPath = `${SOURCE_DB_PATH}-wal`;
-  const shmPath = `${SOURCE_DB_PATH}-shm`;
-  if (fs.existsSync(walPath)) fs.unlinkSync(walPath);
-  if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath);
-
-  // 3. Overwrite current DB with backup
-  fs.copyFileSync(backupPath, SOURCE_DB_PATH);
-  console.log(`[Restore] Successfully restored database from: ${backupPath}`);
+export async function restoreBackup(backupPath: string): Promise<boolean> {
+  await fs.access(backupPath);
+  await execFileAsync('pg_restore', ['--clean', '--if-exists', '--dbname', databaseUrl(), backupPath], {
+    windowsHide: true
+  });
+  console.log(`[Restore] Restored PostgreSQL database from ${backupPath}`);
   return true;
 }
 
 if (require.main === module) {
   const args = process.argv.slice(2);
   const command = args[0] || 'backup';
+  const operation = command === 'restore' && args[1]
+    ? restoreBackup(args[1])
+    : command === 'backup'
+    ? createBackup()
+    : Promise.reject(new Error('Usage: npx tsx src/backup.ts [backup|restore <file>]'));
 
-  if (command === 'backup') {
-    createBackup();
-  } else if (command === 'restore') {
-    const target = args[1];
-    if (!target) {
-      console.error('Please specify the backup file path to restore.');
-      process.exit(1);
-    }
-    restoreBackup(target);
-  } else {
-    console.log('Usage: npx tsx src/backup.ts [backup|restore <file>]');
-  }
+  operation.catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }

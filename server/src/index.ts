@@ -137,9 +137,9 @@ app.get('/api/app-version', (_req, res) => {
 });
 
 // Database Hot Backup endpoint (Manager only)
-app.post('/api/backup/create', requireAuth, requireRole('MANAGER'), (_req, res) => {
+app.post('/api/backup/create', requireAuth, requireRole('MANAGER'), async (_req, res) => {
   try {
-    const result = createBackup();
+    const result = await createBackup();
     return res.json({ message: 'Backup created successfully', ...result });
   } catch (err: any) {
     console.error('[Backup Error]', err);

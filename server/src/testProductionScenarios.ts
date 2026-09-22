@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { db } from './db';
+import { query } from './db';
 
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
 
@@ -225,10 +225,10 @@ async function runProductionHardeningTests() {
     });
     // Create a mock photo record in database for stop
     const mockPhotoId = uuidv4();
-    db.prepare(`
+    await query(`
       INSERT INTO photos (id, trip_id, stop_id, driver_id, vehicle_id, photo_type, file_path, file_size, mime_type, timestamp)
-      VALUES (?, ?, ?, ?, ?, 'Delivery Proof', 'test_proof.jpg', 12345, 'image/jpeg', CURRENT_TIMESTAMP)
-    `).run(mockPhotoId, t2Id, t2Stop1.id, d1Id, vehicle.id);
+      VALUES ($1, $2, $3, $4, $5, 'Delivery Proof', 'test_proof.jpg', 12345, 'image/jpeg', CURRENT_TIMESTAMP)
+    `, [mockPhotoId, t2Id, t2Stop1.id, d1Id, vehicle.id]);
     const actPassedRes = await fetch(`${BASE_URL}/driver/trips/${t2Id}/stops/${t2Stop1.id}/complete-activity`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${d1Token}` },
@@ -265,7 +265,7 @@ async function runProductionHardeningTests() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${d1Token}` },
       body: JSON.stringify({}) // No GPS
     });
-    const latestEvent = db.prepare(`SELECT * FROM trip_events WHERE trip_id = ? ORDER BY timestamp DESC LIMIT 1`).get(t2Id) as any;
+    const latestEvent = (await query(`SELECT * FROM trip_events WHERE trip_id = $1 ORDER BY timestamp DESC LIMIT 1`, [t2Id])).rows[0] as any;
     record(8, 'GPS unavailable handling', gpsUnavailDepartRes.status === 200 && latestEvent.latitude === null && latestEvent.longitude === null, 'Recorded event with NULL GPS coordinates without fabricating');
 
     // -------------------------------------------------------------
@@ -276,7 +276,7 @@ async function runProductionHardeningTests() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${d1Token}` },
       body: JSON.stringify({ latitude: 23.24, longitude: 77.43, gps_accuracy: 450 }) // 450m poor accuracy
     });
-    const returnEvent = db.prepare(`SELECT * FROM trip_events WHERE trip_id = ? AND event_type = 'RETURN_STARTED'`).get(t2Id) as any;
+    const returnEvent = (await query(`SELECT * FROM trip_events WHERE trip_id = $1 AND event_type = 'RETURN_STARTED'`, [t2Id])).rows[0] as any;
     record(9, 'Poor GPS accuracy recorded', poorGpsReturnRes.status === 200 && returnEvent.gps_accuracy === 450, 'Recorded accuracy of 450m faithfully');
 
     // -------------------------------------------------------------
@@ -306,14 +306,14 @@ async function runProductionHardeningTests() {
     // TEST 12: Failed activity flagged in Attention Required
     // -------------------------------------------------------------
     const failActStopId = uuidv4();
-    db.prepare(`
+    await query(`
       INSERT INTO trip_stops (id, trip_id, stop_number, destination_name, address, latitude, longitude, planned_arrival_time, status)
-      VALUES (?, ?, 99, 'Damaged Depot', 'Zone X', 23.2, 77.4, '12:00', 'IN_PROGRESS')
-    `).run(failActStopId, t3Id);
-    db.prepare(`
+      VALUES ($1, $2, 99, 'Damaged Depot', 'Zone X', 23.2, 77.4, '12:00', 'IN_PROGRESS')
+    `, [failActStopId, t3Id]);
+    await query(`
       INSERT INTO activities (id, trip_id, stop_id, activity_type, status, notes)
-      VALUES (?, ?, ?, 'Delivery', 'FAILED', 'Customer refused delivery: broken packaging')
-    `).run(uuidv4(), t3Id, failActStopId);
+      VALUES ($1, $2, $3, 'Delivery', 'FAILED', 'Customer refused delivery: broken packaging')
+    `, [uuidv4(), t3Id, failActStopId]);
     const attentionCheck = await (await fetch(`${BASE_URL}/trips/overview/attention`, { headers: { Authorization: `Bearer ${mgrToken}` } })).json();
     const hasFailed = attentionCheck.failedActivities.some((fa: any) => fa.trip_id === t3Id);
     record(12, 'Failed activity flagged in Attention Required', hasFailed, 'Failed activity appears in manager attention feed');
@@ -365,7 +365,7 @@ async function runProductionHardeningTests() {
     // -------------------------------------------------------------
     // TEST 15: Audit log verification (immutable ledger of mutations)
     // -------------------------------------------------------------
-    const auditLogs = db.prepare(`SELECT * FROM audit_logs WHERE trip_id = ? ORDER BY timestamp DESC`).all(t3Id) as any[];
+    const auditLogs = (await query(`SELECT * FROM audit_logs WHERE trip_id = $1 ORDER BY created_at DESC`, [t3Id])).rows as any[];
     record(15, 'Audit log verification', auditLogs.length > 0 && auditLogs.some((l) => l.action === 'TRIP_CANCELLED'), `Captured ${auditLogs.length} audit trail records for trip ${t3Id}`);
 
     // -------------------------------------------------------------

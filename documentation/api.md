@@ -5,7 +5,7 @@ flowchart LR
     Client["📱 Android / 💻 Web Client"] -->|Bearer JWT + JSON Payload| Gateway["Express API Gateway"]
     Gateway --> Auth["🔐 Auth & RBAC Middleware<br/>(verifyToken & requireRole)"]
     Auth --> Guard["🛡️ State Machine Guard<br/>(Transition & Geofence Validator)"]
-    Guard --> DB[("🗄️ SQLite WAL Database<br/>(Authoritative Write)")]
+    Guard --> DB[("🗄️ PostgreSQL Database<br/>(Authoritative Write)")]
     DB --> Response["JSON Operational Response<br/>(200 OK / 201 Created)"]
     Response --> Client
 ```
