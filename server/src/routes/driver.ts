@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { db } from '../db';
+import { query } from '../db';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 import { isWithinGeofence, calculateCumulativeDistanceKm } from '../services/geo';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,7 +8,7 @@ import { Trip, TripStop } from '../types';
 const router = Router();
 
 // Helper to record a GPS Event
-function recordEvent(params: {
+async function recordEvent(params: {
   tripId: string;
   stopId?: string;
   eventType: string;
@@ -23,12 +23,12 @@ function recordEvent(params: {
   const eventId = uuidv4();
   const timestamp = params.timestamp || new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     INSERT INTO trip_events (
       id, trip_id, stop_id, event_type, timestamp, 
       driver_id, vehicle_id, latitude, longitude, gps_accuracy, details
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  `, [
     eventId,
     params.tripId,
     params.stopId || null,
@@ -40,16 +40,16 @@ function recordEvent(params: {
     params.longitude ?? null,
     params.gpsAccuracy ?? null,
     params.details || null
-  );
+  ]);
 
   return eventId;
 }
 
-function getAuthorizedTrip(tripId: string, user: { id: string; role: string }): Trip | undefined {
+async function getAuthorizedTrip(tripId: string, user: { id: string; role: string }): Promise<Trip | undefined> {
   if (user.role === 'MANAGER') {
-    return db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as Trip | undefined;
+    return (await query<Trip>(`SELECT * FROM trips WHERE id = $1`, [tripId])).rows[0];
   }
-  return db.prepare(`SELECT * FROM trips WHERE id = ? AND driver_id = ?`).get(tripId, user.id) as Trip | undefined;
+  return (await query<Trip>(`SELECT * FROM trips WHERE id = $1 AND driver_id = $2`, [tripId, user.id])).rows[0];
 }
 
 /**
@@ -57,11 +57,11 @@ function getAuthorizedTrip(tripId: string, user: { id: string; role: string }): 
  * Returns the driver's single currently active trip with full stop/event detail.
  * Preferred for fast initial load on Android startup or reconnect after offline period.
  */
-router.get('/trips/active', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.get('/trips/active', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const driverId = req.user!.id;
   const isManager = req.user!.role === 'MANAGER';
 
-  const query = isManager
+  const sql = isManager
     ? `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
        FROM trips t
        JOIN vehicles v ON t.vehicle_id = v.id
@@ -71,23 +71,23 @@ router.get('/trips/active', requireAuth, (req: AuthenticatedRequest, res: Respon
     : `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
        FROM trips t
        JOIN vehicles v ON t.vehicle_id = v.id
-       WHERE t.driver_id = ? AND t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
+      WHERE t.driver_id = $1 AND t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING')
        ORDER BY t.actual_start_time DESC
        LIMIT 1`;
 
-  const trip = (isManager ? db.prepare(query).get() : db.prepare(query).get(driverId)) as any;
+  const trip = (await query(sql, isManager ? [] : [driverId])).rows[0] as any;
 
   if (!trip) {
     return res.json({ trip: null, message: 'No active trip found' });
   }
 
-  trip.stops = db.prepare(`SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_number ASC`).all(trip.id);
+  trip.stops = (await query(`SELECT * FROM trip_stops WHERE trip_id = $1 ORDER BY stop_number ASC`, [trip.id])).rows;
   for (const stop of trip.stops) {
-    stop.activities = db.prepare(`SELECT * FROM activities WHERE stop_id = ?`).all(stop.id);
-    stop.photos = db.prepare(`SELECT * FROM photos WHERE stop_id = ?`).all(stop.id);
+    stop.activities = (await query(`SELECT * FROM activities WHERE stop_id = $1`, [stop.id])).rows;
+    stop.photos = (await query(`SELECT * FROM photos WHERE stop_id = $1`, [stop.id])).rows;
   }
-  trip.delays = db.prepare(`SELECT * FROM delays WHERE trip_id = ? AND is_resolved = 0 ORDER BY start_time DESC`).all(trip.id);
-  trip.events = db.prepare(`SELECT * FROM trip_events WHERE trip_id = ? ORDER BY timestamp ASC`).all(trip.id);
+  trip.delays = (await query(`SELECT * FROM delays WHERE trip_id = $1 AND is_resolved = 0 ORDER BY start_time DESC`, [trip.id])).rows;
+  trip.events = (await query(`SELECT * FROM trip_events WHERE trip_id = $1 ORDER BY timestamp ASC`, [trip.id])).rows;
 
   return res.json({ trip });
 });
@@ -96,12 +96,12 @@ router.get('/trips/active', requireAuth, (req: AuthenticatedRequest, res: Respon
  * GET /api/driver/trips/today
  * Returns trips assigned to the logged-in driver for today or currently active
  */
-router.get('/trips/today', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.get('/trips/today', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const driverId = req.user!.id;
   const isManager = req.user!.role === 'MANAGER';
   const today = new Date().toISOString().split('T')[0];
 
-  const query = isManager
+  const sql = isManager
     ? `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
        FROM trips t
        JOIN vehicles v ON t.vehicle_id = v.id
@@ -114,23 +114,23 @@ router.get('/trips/today', requireAuth, (req: AuthenticatedRequest, res: Respons
     : `SELECT t.*, v.vehicle_number, v.vehicle_type, v.model as vehicle_model
        FROM trips t
        JOIN vehicles v ON t.vehicle_id = v.id
-       WHERE t.driver_id = ? AND (t.date = ? OR t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'))
+      WHERE t.driver_id = $1 AND (t.date = $2 OR t.status IN ('ASSIGNED', 'IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING'))
        ORDER BY CASE 
          WHEN t.status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING') THEN 1
          WHEN t.status = 'ASSIGNED' THEN 2
          ELSE 3
        END, t.planned_departure_time ASC`;
 
-  const trips = (isManager ? db.prepare(query).all(today) : db.prepare(query).all(driverId, today)) as any[];
+  const trips = (await query(sql, isManager ? [today] : [driverId, today])).rows as any[];
 
   // Attach stops summary to each trip
   for (const trip of trips) {
-    trip.stops = db.prepare(`
+    trip.stops = (await query(`
       SELECT id, stop_number, destination_name, address, planned_arrival_time, actual_arrival_time, actual_departure_time, status
       FROM trip_stops
-      WHERE trip_id = ?
+      WHERE trip_id = $1
       ORDER BY stop_number ASC
-    `).all(trip.id);
+    `, [trip.id])).rows;
   }
 
   return res.json({ trips });
@@ -140,29 +140,29 @@ router.get('/trips/today', requireAuth, (req: AuthenticatedRequest, res: Respons
  * GET /api/driver/trips/:id
  * Returns complete operational trip details for driver
  */
-router.get('/trips/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.get('/trips/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = req.params.id;
   const driverId = req.user!.id;
 
-  const trip = getAuthorizedTrip(tripId, req.user!) as any;
+  const trip = await getAuthorizedTrip(tripId, req.user!) as any;
 
   if (!trip) {
     return res.status(404).json({ error: 'Trip not found or not assigned to you' });
   }
 
-  trip.stops = db.prepare(`
-    SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_number ASC
-  `).all(tripId);
+  trip.stops = (await query(`
+    SELECT * FROM trip_stops WHERE trip_id = $1 ORDER BY stop_number ASC
+  `, [tripId])).rows;
 
   // Attach activities and photos to each stop
   for (const stop of trip.stops) {
-    stop.activities = db.prepare(`SELECT * FROM activities WHERE stop_id = ?`).all(stop.id);
-    stop.photos = db.prepare(`SELECT * FROM photos WHERE stop_id = ?`).all(stop.id);
+    stop.activities = (await query(`SELECT * FROM activities WHERE stop_id = $1`, [stop.id])).rows;
+    stop.photos = (await query(`SELECT * FROM photos WHERE stop_id = $1`, [stop.id])).rows;
   }
 
-  trip.delays = db.prepare(`SELECT * FROM delays WHERE trip_id = ? ORDER BY start_time DESC`).all(tripId);
-  trip.events = db.prepare(`SELECT * FROM trip_events WHERE trip_id = ? ORDER BY timestamp ASC`).all(tripId);
-  trip.photos = db.prepare(`SELECT * FROM photos WHERE trip_id = ? ORDER BY timestamp DESC`).all(tripId);
+  trip.delays = (await query(`SELECT * FROM delays WHERE trip_id = $1 ORDER BY start_time DESC`, [tripId])).rows;
+  trip.events = (await query(`SELECT * FROM trip_events WHERE trip_id = $1 ORDER BY timestamp ASC`, [tripId])).rows;
+  trip.photos = (await query(`SELECT * FROM photos WHERE trip_id = $1 ORDER BY timestamp DESC`, [tripId])).rows;
 
   return res.json({ trip });
 });
@@ -171,12 +171,12 @@ router.get('/trips/:id', requireAuth, (req: AuthenticatedRequest, res: Response)
  * POST /api/driver/trips/:id/start
  * Driver starts the trip
  */
-router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/start', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) {
     return res.status(404).json({ error: 'Trip not found or not assigned to you' });
   }
@@ -187,16 +187,16 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
 
   const now = new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     UPDATE trips 
-    SET status = 'IN_PROGRESS', actual_start_time = ?, updated_at = ?
-    WHERE id = ?
-  `).run(now, now, tripId);
+    SET status = 'IN_PROGRESS', actual_start_time = $1, updated_at = $2
+    WHERE id = $3
+  `, [now, now, tripId]);
 
-  db.prepare(`UPDATE vehicles SET status = 'ON_TRIP' WHERE id = ?`).run(trip.vehicle_id);
-  db.prepare(`UPDATE drivers SET status = 'ON_TRIP' WHERE user_id = ?`).run(driverId);
+  await query(`UPDATE vehicles SET status = 'ON_TRIP' WHERE id = $1`, [trip.vehicle_id]);
+  await query(`UPDATE drivers SET status = 'ON_TRIP' WHERE user_id = $1`, [driverId]);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     eventType: 'TRIP_STARTED',
     driverId,
@@ -216,7 +216,7 @@ router.post('/trips/:id/start', requireAuth, (req: AuthenticatedRequest, res: Re
  * POST /api/driver/trips/:id/telemetry
  * Driver / mobile client sends real-time GPS telemetry ping (coordinates, accuracy, speed)
  */
-router.post('/trips/:id/telemetry', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/telemetry', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const { latitude, longitude, gps_accuracy, speed_kmh } = req.body;
 
@@ -224,11 +224,11 @@ router.post('/trips/:id/telemetry', requireAuth, (req: AuthenticatedRequest, res
     return res.status(400).json({ error: 'Valid numeric latitude and longitude are required' });
   }
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or unauthorized' });
 
   const now = new Date().toISOString();
-  recordEvent({
+  await recordEvent({
     tripId,
     eventType: 'TELEMETRY_PING',
     driverId: req.user!.id,
@@ -247,7 +247,7 @@ router.post('/trips/:id/telemetry', requireAuth, (req: AuthenticatedRequest, res
  * POST /api/driver/trips/:id/custom-stop
  * Driver adds an ad-hoc custom stop during transit
  */
-router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/custom-stop', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const { destination_name, address, latitude, longitude, geofence_radius_meters = 150, planned_arrival_time, notes } = req.body;
 
@@ -255,21 +255,21 @@ router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, r
     return res.status(400).json({ error: 'Destination name is required' });
   }
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
   // Get current stop count
-  const maxStop = db.prepare(`SELECT MAX(stop_number) as max_num FROM trip_stops WHERE trip_id = ?`).get(tripId) as any;
+  const maxStop = (await query<{ max_num: number | null }>(`SELECT MAX(stop_number) as max_num FROM trip_stops WHERE trip_id = $1`, [tripId])).rows[0];
   const nextNum = (maxStop?.max_num || 0) + 1;
   const stopId = uuidv4();
 
   try {
-    db.prepare(`
+    await query(`
       INSERT INTO trip_stops (
         id, trip_id, stop_number, destination_name, address, 
         latitude, longitude, geofence_radius_meters, planned_arrival_time, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
-    `).run(
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING', $10)
+    `, [
       stopId,
       tripId,
       nextNum,
@@ -280,9 +280,9 @@ router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, r
       geofence_radius_meters,
       planned_arrival_time || '12:00',
       notes || '[Driver Custom Stop]'
-    );
+    ]);
 
-    recordEvent({
+    await recordEvent({
       tripId,
       stopId,
       eventType: 'CUSTOM_STOP_ADDED',
@@ -293,7 +293,7 @@ router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, r
       details: `Driver added custom stop: ${destination_name} (Stop #${nextNum})`
     });
 
-    const createdStop = db.prepare(`SELECT * FROM trip_stops WHERE id = ?`).get(stopId);
+    const createdStop = (await query(`SELECT * FROM trip_stops WHERE id = $1`, [stopId])).rows[0];
     return res.status(201).json({ message: 'Custom stop added successfully', stop: createdStop });
   } catch (err: any) {
     console.error('[Driver Error] Failed to add custom stop:', err);
@@ -305,20 +305,20 @@ router.post('/trips/:id/custom-stop', requireAuth, (req: AuthenticatedRequest, r
  * POST /api/driver/trips/:id/stops/:stopId/arrive
  * Driver reaches a destination stop
  */
-router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/stops/:stopId/arrive', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const stopId = String(req.params.stopId);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
   if (trip.status !== 'IN_PROGRESS' && trip.status !== 'DELAYED') {
     return res.status(400).json({ error: 'Trip must be in progress to record stop arrival' });
   }
 
-  const stop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
+  const stop = (await query<TripStop>(`SELECT * FROM trip_stops WHERE id = $1 AND trip_id = $2`, [stopId, tripId])).rows[0];
   if (!stop) return res.status(404).json({ error: 'Stop not found' });
 
   if (stop.status !== 'PENDING') {
@@ -326,12 +326,12 @@ router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedR
   }
 
   // Verify previous stops are completed
-  const uncompletedPrior = db.prepare(`
+  const uncompletedPrior = (await query<{ count: string }>(`
     SELECT COUNT(*) as count FROM trip_stops 
-    WHERE trip_id = ? AND stop_number < ? AND status NOT IN ('COMPLETED', 'SKIPPED')
-  `).get(tripId, stop.stop_number) as { count: number };
+    WHERE trip_id = $1 AND stop_number < $2 AND status NOT IN ('COMPLETED', 'SKIPPED')
+  `, [tripId, stop.stop_number])).rows[0];
 
-  if (uncompletedPrior.count > 0) {
+  if (Number(uncompletedPrior.count) > 0) {
     return res.status(400).json({ error: 'Prior destination stops must be completed before arriving at this stop' });
   }
 
@@ -364,20 +364,20 @@ router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedR
     arrivalStatus = 'UNKNOWN';
   }
 
-  db.prepare(`
+  await query(`
     UPDATE trip_stops
     SET status = 'ARRIVED',
-        actual_arrival_time = ?,
-        arrival_latitude = ?,
-        arrival_longitude = ?,
-        arrival_status = ?,
-        arrival_diff_minutes = ?
-    WHERE id = ?
-  `).run(nowIso, latitude ?? null, longitude ?? null, arrivalStatus, diffMinutes, stopId);
+        actual_arrival_time = $1,
+        arrival_latitude = $2,
+        arrival_longitude = $3,
+        arrival_status = $4,
+        arrival_diff_minutes = $5
+    WHERE id = $6
+  `, [nowIso, latitude ?? null, longitude ?? null, arrivalStatus, diffMinutes, stopId]);
 
-  db.prepare(`UPDATE trips SET status = 'AT_DESTINATION', updated_at = ? WHERE id = ?`).run(nowIso, tripId);
+  await query(`UPDATE trips SET status = 'AT_DESTINATION', updated_at = $1 WHERE id = $2`, [nowIso, tripId]);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     stopId,
     eventType: 'ARRIVED_DESTINATION',
@@ -404,20 +404,20 @@ router.post('/trips/:id/stops/:stopId/arrive', requireAuth, (req: AuthenticatedR
  * POST /api/driver/trips/:id/stops/:stopId/complete-activity
  * Driver completes delivery/pickup/loading activity at stop
  */
-router.post('/api/driver/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/api/driver/trips/:id/stops/:stopId/complete-activity', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   // mapped under /stops/:stopId/complete-activity
 });
 
-router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const stopId = String(req.params.stopId);
   const driverId = req.user!.id;
   const { activity_type, status, quantity, reference_number, recipient_name, notes, require_photo } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
-  const stop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
+  const stop = (await query<TripStop>(`SELECT * FROM trip_stops WHERE id = $1 AND trip_id = $2`, [stopId, tripId])).rows[0];
   if (!stop) return res.status(404).json({ error: 'Stop not found' });
 
   if (stop.status !== 'ARRIVED' && stop.status !== 'IN_PROGRESS') {
@@ -426,8 +426,8 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
 
   // Photo requirement validation
   if (require_photo) {
-    const photoCount = db.prepare(`SELECT COUNT(*) as count FROM photos WHERE stop_id = ?`).get(stopId) as { count: number };
-    if (photoCount.count === 0) {
+    const photoCount = (await query<{ count: string }>(`SELECT COUNT(*)::text as count FROM photos WHERE stop_id = $1`, [stopId])).rows[0];
+    if (Number(photoCount.count) === 0) {
       return res.status(400).json({
         error: 'Required photo proof is missing. Please capture at least one photo before completing this activity.'
       });
@@ -437,12 +437,12 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
   const activityId = uuidv4();
   const now = new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     INSERT INTO activities (
       id, trip_id, stop_id, activity_type, status, start_time, completion_time, 
       quantity, reference_number, recipient_name, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  `, [
     activityId,
     tripId,
     stopId,
@@ -454,11 +454,11 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
     reference_number || null,
     recipient_name || null,
     notes || null
-  );
+  ]);
 
-  db.prepare(`UPDATE trip_stops SET status = 'IN_PROGRESS' WHERE id = ?`).run(stopId);
+  await query(`UPDATE trip_stops SET status = 'IN_PROGRESS' WHERE id = $1`, [stopId]);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     stopId,
     eventType: 'ACTIVITY_COMPLETED',
@@ -475,16 +475,16 @@ router.post('/trips/:id/stops/:stopId/complete-activity', requireAuth, (req: Aut
  * POST /api/driver/trips/:id/stops/:stopId/depart
  * Driver departs from destination stop
  */
-router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/stops/:stopId/depart', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const stopId = String(req.params.stopId);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
-  const stop = db.prepare(`SELECT * FROM trip_stops WHERE id = ? AND trip_id = ?`).get(stopId, tripId) as TripStop | undefined;
+  const stop = (await query<TripStop>(`SELECT * FROM trip_stops WHERE id = $1 AND trip_id = $2`, [stopId, tripId])).rows[0];
   if (!stop) return res.status(404).json({ error: 'Stop not found' });
 
   if (stop.status !== 'ARRIVED' && stop.status !== 'IN_PROGRESS') {
@@ -493,23 +493,23 @@ router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedR
 
   const now = new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     UPDATE trip_stops
     SET status = 'COMPLETED',
-        actual_departure_time = ?,
-        departure_latitude = ?,
-        departure_longitude = ?
-    WHERE id = ?
-  `).run(now, latitude ?? null, longitude ?? null, stopId);
+        actual_departure_time = $1,
+        departure_latitude = $2,
+        departure_longitude = $3
+    WHERE id = $4
+  `, [now, latitude ?? null, longitude ?? null, stopId]);
 
   // Check remaining stops
-  const remaining = db.prepare(`
-    SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ? AND status = 'PENDING'
-  `).get(tripId) as { count: number };
+  const remaining = (await query<{ count: string }>(`
+    SELECT COUNT(*)::text as count FROM trip_stops WHERE trip_id = $1 AND status = 'PENDING'
+  `, [tripId])).rows[0];
 
-  db.prepare(`UPDATE trips SET status = 'IN_PROGRESS', updated_at = ? WHERE id = ?`).run(now, tripId);
+  await query(`UPDATE trips SET status = 'IN_PROGRESS', updated_at = $1 WHERE id = $2`, [now, tripId]);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     stopId,
     eventType: 'DEPARTED_DESTINATION',
@@ -525,8 +525,8 @@ router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedR
 
   return res.json({
     message: 'Departure recorded',
-    allStopsCompleted: remaining.count === 0,
-    remainingStops: remaining.count
+    allStopsCompleted: Number(remaining.count) === 0,
+    remainingStops: Number(remaining.count)
   });
 });
 
@@ -534,12 +534,12 @@ router.post('/trips/:id/stops/:stopId/depart', requireAuth, (req: AuthenticatedR
  * POST /api/driver/trips/:id/delay
  * Driver reports a delay
  */
-router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/delay', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { reason, description, stopId, latitude, longitude, gps_accuracy, photoId } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'PLANNED' || trip.status === 'ASSIGNED') {
@@ -557,12 +557,12 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
   const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
   const isPoorAccuracy = hasGps && typeof gps_accuracy === 'number' && gps_accuracy > 300;
 
-  db.prepare(`
+  await query(`
     INSERT INTO delays (
       id, trip_id, stop_id, driver_id, vehicle_id, reason, description, 
       start_time, latitude, longitude, gps_accuracy, photo_id, is_resolved
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0)
+  `, [
     delayId,
     tripId,
     stopId || null,
@@ -575,15 +575,15 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
     hasGps ? longitude : null,
     hasGps ? gps_accuracy ?? null : null,
     photoId || null
-  );
+  ]);
 
-  db.prepare(`UPDATE trips SET status = 'DELAYED', updated_at = ? WHERE id = ?`).run(now, tripId);
+  await query(`UPDATE trips SET status = 'DELAYED', updated_at = $1 WHERE id = $2`, [now, tripId]);
 
   const gpsNotice = hasGps
     ? (isPoorAccuracy ? ` (Poor GPS accuracy: Â±${Math.round(gps_accuracy!)}m)` : '')
     : ' (GPS UNAVAILABLE)';
 
-  recordEvent({
+  await recordEvent({
     tripId,
     stopId,
     eventType: 'DELAY_REPORTED',
@@ -604,18 +604,18 @@ router.post('/trips/:id/delay', requireAuth, (req: AuthenticatedRequest, res: Re
  * POST /api/driver/trips/:id/delay/:delayId/resolve
  * Driver marks active delay resolved
  */
-router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/delay/:delayId/resolve', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const delayId = String(req.params.delayId);
   const driverId = req.user!.id;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
-  let delay = db.prepare(`SELECT * FROM delays WHERE id = ? AND trip_id = ?`).get(delayId, tripId) as any;
+  let delay = (await query(`SELECT * FROM delays WHERE id = $1 AND trip_id = $2`, [delayId, tripId])).rows[0] as any;
   if (!delay) {
     // Fallback: match latest unresolved delay for this trip
-    delay = db.prepare(`SELECT * FROM delays WHERE trip_id = ? AND is_resolved = 0 ORDER BY start_time DESC LIMIT 1`).get(tripId) as any;
+    delay = (await query(`SELECT * FROM delays WHERE trip_id = $1 AND is_resolved = 0 ORDER BY start_time DESC LIMIT 1`, [tripId])).rows[0] as any;
   }
   if (!delay) return res.status(404).json({ error: 'Delay record not found' });
 
@@ -628,16 +628,16 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
   const startDate = new Date(delay.start_time);
   const durationMinutes = Math.max(1, Math.round((now.getTime() - startDate.getTime()) / 60000));
 
-  db.prepare(`
+  await query(`
     UPDATE delays
-    SET end_time = ?, duration_minutes = ?, is_resolved = 1
-    WHERE id = ?
-  `).run(nowIso, durationMinutes, delay.id);
+    SET end_time = $1, duration_minutes = $2, is_resolved = 1
+    WHERE id = $3
+  `, [nowIso, durationMinutes, delay.id]);
 
   // Recalculate total trip delay
-  const sumDelay = db.prepare(`
-    SELECT SUM(duration_minutes) as total FROM delays WHERE trip_id = ?
-  `).get(tripId) as { total: number | null };
+  const sumDelay = (await query<{ total: number | null }>(`
+    SELECT SUM(duration_minutes) as total FROM delays WHERE trip_id = $1
+  `, [tripId])).rows[0];
 
   const totalDelay = sumDelay.total || 0;
 
@@ -646,19 +646,19 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
   if (trip.return_start_time) {
     newStatus = 'RETURNING';
   } else {
-    const atStop = db.prepare(`
-      SELECT COUNT(*) as count FROM trip_stops WHERE trip_id = ? AND status IN ('ARRIVED', 'IN_PROGRESS')
-    `).get(tripId) as { count: number };
-    newStatus = atStop.count > 0 ? 'AT_DESTINATION' : 'IN_PROGRESS';
+    const atStop = (await query<{ count: string }>(`
+      SELECT COUNT(*)::text as count FROM trip_stops WHERE trip_id = $1 AND status IN ('ARRIVED', 'IN_PROGRESS')
+    `, [tripId])).rows[0];
+    newStatus = Number(atStop.count) > 0 ? 'AT_DESTINATION' : 'IN_PROGRESS';
   }
 
-  db.prepare(`
+  await query(`
     UPDATE trips
-    SET total_delay_minutes = ?, status = ?, updated_at = ?
-    WHERE id = ?
-  `).run(totalDelay, newStatus, nowIso, tripId);
+    SET total_delay_minutes = $1, status = $2, updated_at = $3
+    WHERE id = $4
+  `, [totalDelay, newStatus, nowIso, tripId]);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     stopId: delay.stop_id,
     eventType: 'DELAY_RESOLVED',
@@ -681,12 +681,12 @@ router.post('/trips/:id/delay/:delayId/resolve', requireAuth, (req: Authenticate
  * POST /api/driver/trips/:id/start-return
  * Driver finishes all stops and starts journey back to base
  */
-router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/start-return', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'RETURNING') {
@@ -706,12 +706,12 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
   }
 
   // Ensure all required destinations are completed or skipped/failed
-  const incompleteStops = db.prepare(`
+  const incompleteStops = (await query<{ count: string }>(`
     SELECT COUNT(*) as count FROM trip_stops 
-    WHERE trip_id = ? AND status NOT IN ('COMPLETED', 'SKIPPED', 'FAILED')
-  `).get(tripId) as { count: number };
+    WHERE trip_id = $1 AND status NOT IN ('COMPLETED', 'SKIPPED', 'FAILED')
+  `, [tripId])).rows[0];
 
-  if (incompleteStops.count > 0) {
+  if (Number(incompleteStops.count) > 0) {
     return res.status(400).json({ 
       error: `Cannot start return journey: ${incompleteStops.count} destination stop(s) remain incomplete or un-departed` 
     });
@@ -719,15 +719,15 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
 
   const now = new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     UPDATE trips
-    SET status = 'RETURNING', return_start_time = ?, updated_at = ?
-    WHERE id = ?
-  `).run(now, now, tripId);
+    SET status = 'RETURNING', return_start_time = $1, updated_at = $2
+    WHERE id = $3
+  `, [now, now, tripId]);
 
   const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     eventType: 'RETURN_STARTED',
     driverId,
@@ -747,12 +747,12 @@ router.post('/trips/:id/start-return', requireAuth, (req: AuthenticatedRequest, 
  * POST /api/driver/trips/:id/arrive-base
  * Driver arrives at company base
  */
-router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/arrive-base', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'COMPLETED') {
@@ -773,15 +773,15 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
 
   const now = new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     UPDATE trips
-    SET base_arrival_time = ?, updated_at = ?
-    WHERE id = ?
-  `).run(now, now, tripId);
+    SET base_arrival_time = $1, updated_at = $2
+    WHERE id = $3
+  `, [now, now, tripId]);
 
   const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     eventType: 'ARRIVED_BASE',
     driverId,
@@ -801,12 +801,12 @@ router.post('/trips/:id/arrive-base', requireAuth, (req: AuthenticatedRequest, r
  * POST /api/driver/trips/:id/complete
  * Driver completes the trip
  */
-router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.post('/trips/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const tripId = String(req.params.id);
   const driverId = req.user!.id;
   const { latitude, longitude, gps_accuracy } = req.body;
 
-  const trip = getAuthorizedTrip(tripId, req.user!);
+  const trip = await getAuthorizedTrip(tripId, req.user!);
   if (!trip) return res.status(404).json({ error: 'Trip not found or not assigned to you' });
 
   if (trip.status === 'COMPLETED') {
@@ -829,28 +829,28 @@ router.post('/trips/:id/complete', requireAuth, (req: AuthenticatedRequest, res:
   const now = new Date().toISOString();
 
   // Compute total distance from chronological GPS events
-  const events = db.prepare(`
-    SELECT latitude, longitude FROM trip_events WHERE trip_id = ? ORDER BY timestamp ASC
-  `).all(tripId) as Array<{ latitude?: number; longitude?: number }>;
+  const events = (await query<{ latitude?: number; longitude?: number }>(`
+    SELECT latitude, longitude FROM trip_events WHERE trip_id = $1 ORDER BY timestamp ASC
+  `, [tripId])).rows;
 
   const calculatedDistance = calculateCumulativeDistanceKm(events);
 
-  db.prepare(`
+  await query(`
     UPDATE trips
     SET status = 'COMPLETED',
-        completion_time = ?,
-        calculated_distance_km = ?,
-        updated_at = ?
-    WHERE id = ?
-  `).run(now, calculatedDistance, now, tripId);
+        completion_time = $1,
+        calculated_distance_km = $2,
+        updated_at = $3
+    WHERE id = $4
+  `, [now, calculatedDistance, now, tripId]);
 
   // Set vehicle and driver status back to AVAILABLE
-  db.prepare(`UPDATE vehicles SET status = 'AVAILABLE' WHERE id = ?`).run(trip.vehicle_id);
-  db.prepare(`UPDATE drivers SET status = 'AVAILABLE' WHERE user_id = ?`).run(driverId);
+  await query(`UPDATE vehicles SET status = 'AVAILABLE' WHERE id = $1`, [trip.vehicle_id]);
+  await query(`UPDATE drivers SET status = 'AVAILABLE' WHERE user_id = $1`, [driverId]);
 
   const hasGps = typeof latitude === 'number' && typeof longitude === 'number' && !isNaN(latitude) && !isNaN(longitude);
 
-  recordEvent({
+  await recordEvent({
     tripId,
     eventType: 'TRIP_COMPLETED',
     driverId,

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { db } from '../db';
+import { query } from '../db';
 import { UserRole } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -76,7 +76,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
   };
 }
 
-export function logAudit(params: {
+export async function logAudit(params: {
   tripId?: string;
   action: string;
   fieldChanged?: string;
@@ -86,10 +86,10 @@ export function logAudit(params: {
   reason?: string;
 }) {
   try {
-    db.prepare(`
+    await query(`
       INSERT INTO audit_logs (id, trip_id, action, field_changed, original_value, new_value, changed_by, reason)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [
       uuidv4(),
       params.tripId || null,
       params.action,
@@ -98,7 +98,7 @@ export function logAudit(params: {
       params.newValue || null,
       params.changedBy,
       params.reason || null
-    );
+    ]);
   } catch (err: any) {
     console.error('[AuditLog] Failed to record audit log:', err.message);
   }

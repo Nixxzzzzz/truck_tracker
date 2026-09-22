@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../db';
+import { query } from '../db';
 import { PhotoType } from '../types';
 
 export const UPLOADS_DIR = process.env.UPLOADS_DIR || path.resolve(__dirname, '../../uploads/photos');
@@ -58,12 +58,12 @@ export async function savePhotoRecord(params: {
   const id = uuidv4();
   const timestamp = params.timestamp || new Date().toISOString();
 
-  db.prepare(`
+  await query(`
     INSERT INTO photos (
       id, trip_id, stop_id, driver_id, vehicle_id, photo_type, 
       file_path, file_size, mime_type, timestamp, latitude, longitude, gps_accuracy
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+  `, [
     id,
     params.tripId,
     params.stopId || null,
@@ -77,7 +77,8 @@ export async function savePhotoRecord(params: {
     params.latitude ?? null,
     params.longitude ?? null,
     params.gpsAccuracy ?? null
-  );
+  ]);
 
-  return db.prepare(`SELECT * FROM photos WHERE id = ?`).get(id);
+  const result = await query(`SELECT * FROM photos WHERE id = $1`, [id]);
+  return result.rows[0];
 }

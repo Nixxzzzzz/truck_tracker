@@ -7,7 +7,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
-import { initDatabase, db } from './db';
+import { initDatabase, query, checkDatabaseConnection } from './db';
 import authRoutes from './routes/auth';
 import driverRoutes from './routes/driver';
 import tripsRoutes from './routes/trips';
@@ -18,13 +18,16 @@ import { UPLOADS_DIR } from './services/photoStorage';
 import { requireAuth, requireRole } from './middleware/auth';
 import { createBackup } from './backup';
 
+async function startServer() {
+
 // Initialize database schema
-initDatabase();
+await checkDatabaseConnection();
+await initDatabase();
 
 // Ensure clean initial credentials if database is empty, without seeding dummy trips or data
 try {
-  const userCountRow = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number } | undefined;
-  if (!userCountRow || userCountRow.count === 0) {
+  const userCountRow = (await query<{ count: string }>('SELECT COUNT(*)::text as count FROM users')).rows[0];
+  if (!userCountRow || Number(userCountRow.count) === 0) {
     if (process.env.AUTO_SEED === 'true') {
       console.log('🌱 AUTO_SEED=true — seeding demo routes and test fleet...');
       import('./seed').then(({ seed }) => seed()).catch((e) => console.error('[Auto-Seed Failed]', e));
@@ -35,16 +38,16 @@ try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { v4: uuidv4 } = require('uuid');
       const managerPasswordHash = bcrypt.hashSync(process.env.INITIAL_ADMIN_PASSWORD || 'manager123', 10);
-      db.prepare(`
+      await query(`
         INSERT INTO users (id, name, email, password_hash, role, phone)
-        VALUES (?, ?, LOWER(?), ?, 'MANAGER', ?)
-      `).run(
+        VALUES ($1, $2, LOWER($3), $4, 'MANAGER', $5)
+      `, [
         uuidv4(),
         'Operations Manager',
         process.env.INITIAL_ADMIN_EMAIL || 'manager@company.com',
         managerPasswordHash,
         '+91 98100 00000'
-      );
+      ]);
       console.log('✅ Initial manager user ready (0 dummy trips, 0 dummy fleet data).');
     }
   }
@@ -173,4 +176,10 @@ app.listen(PORT, () => {
   console.log(`🚀 TruckTracker Server active on http://localhost:${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`=================================================`);
+});
+}
+
+startServer().catch((error) => {
+  console.error('[Startup] Failed to initialize server:', error);
+  process.exit(1);
 });

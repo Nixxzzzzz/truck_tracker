@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { db } from '../db';
+import { query } from '../db';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 import { uploadPhotoMiddleware, savePhotoRecord, UPLOADS_DIR } from '../services/photoStorage';
 import { PhotoType } from '../types';
@@ -37,7 +37,7 @@ router.post(
       return res.status(400).json({ error: 'trip_id is required' });
     }
 
-    const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(trip_id) as any;
+    const trip = (await query(`SELECT * FROM trips WHERE id = $1`, [trip_id])).rows[0] as any;
     if (!trip) {
       fs.unlinkSync(req.file.path);
       return res.status(404).json({ error: 'Trip not found' });
@@ -83,11 +83,11 @@ router.post(
  * GET /api/photos/trip/:tripId
  * List all photos for a trip (manager use)
  */
-router.get('/trip/:tripId', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.get('/trip/:tripId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { tripId } = req.params;
 
   // Security: Drivers can only view photos on their own trips
-  const trip = db.prepare(`SELECT * FROM trips WHERE id = ?`).get(tripId) as any;
+  const trip = (await query(`SELECT * FROM trips WHERE id = $1`, [tripId])).rows[0] as any;
   if (!trip) {
     return res.status(404).json({ error: 'Trip not found' });
   }
@@ -96,13 +96,13 @@ router.get('/trip/:tripId', requireAuth, (req: AuthenticatedRequest, res: Respon
     return res.status(403).json({ error: 'Not authorized to view photos for this trip' });
   }
 
-  const photos = db.prepare(`
+  const photos = (await query(`
     SELECT p.*, ts.destination_name, ts.stop_number
     FROM photos p
     LEFT JOIN trip_stops ts ON p.stop_id = ts.id
-    WHERE p.trip_id = ?
+    WHERE p.trip_id = $1
     ORDER BY p.timestamp ASC
-  `).all(tripId) as any[];
+  `, [tripId])).rows as any[];
 
   // Append a convenience URL for each photo
   const photosWithUrl = photos.map((p) => ({
@@ -117,15 +117,15 @@ router.get('/trip/:tripId', requireAuth, (req: AuthenticatedRequest, res: Respon
  * GET /api/photos/:id/file
  * Secure photo file streaming — requires authentication
  */
-router.get('/:id/file', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const photo = db.prepare(`SELECT * FROM photos WHERE id = ?`).get(req.params.id) as any;
+router.get('/:id/file', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const photo = (await query(`SELECT * FROM photos WHERE id = $1`, [req.params.id])).rows[0] as any;
   if (!photo) {
     return res.status(404).json({ error: 'Photo record not found' });
   }
 
   // Security: Drivers can only stream their own trip photos
   if (req.user!.role === 'DRIVER') {
-    const trip = db.prepare(`SELECT driver_id FROM trips WHERE id = ?`).get(photo.trip_id) as any;
+    const trip = (await query(`SELECT driver_id FROM trips WHERE id = $1`, [photo.trip_id])).rows[0] as any;
     if (!trip || trip.driver_id !== req.user!.id) {
       return res.status(403).json({ error: 'Not authorized to view this photo' });
     }

@@ -1,42 +1,58 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'path';
-import fs from 'fs';
+import dotenv from 'dotenv';
+import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
-const DB_DIR = process.env.DATA_DIR || path.resolve(__dirname, '../../data');
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+dotenv.config();
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is required.');
 }
 
-const DB_PATH = path.join(DB_DIR, 'truck_tracker.sqlite');
+const poolMax = Number.parseInt(process.env.DB_POOL_MAX || '10', 10);
+if (!Number.isInteger(poolMax) || poolMax < 1) {
+  throw new Error('DB_POOL_MAX must be a positive integer.');
+}
 
-const rawDb = new DatabaseSync(DB_PATH);
+const sslEnabled = process.env.DB_SSL === 'true';
+const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
 
-// Enable WAL mode and foreign keys
-rawDb.exec('PRAGMA journal_mode = WAL;');
-rawDb.exec('PRAGMA foreign_keys = ON;');
+export const pool = new Pool({
+  connectionString: databaseUrl,
+  max: poolMax,
+  ssl: sslEnabled ? { rejectUnauthorized } : undefined
+});
 
-// Provide transaction helper compatible with better-sqlite3
-(rawDb as any).transaction = function <T>(fn: () => T) {
-  return function () {
-    rawDb.exec('BEGIN IMMEDIATE;');
-    try {
-      const res = fn();
-      rawDb.exec('COMMIT;');
-      return res;
-    } catch (err) {
-      rawDb.exec('ROLLBACK;');
-      throw err;
-    }
-  };
-};
+export function query<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  values: unknown[] = []
+): Promise<QueryResult<T>> {
+  return pool.query<T>(text, values);
+}
 
-export const db = rawDb as DatabaseSync & {
-  transaction: <T>(fn: () => T) => () => T;
-};
+export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
 
-export function initDatabase() {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { runMigrations } = require('./migrations/runner');
-  const result = runMigrations();
-  return result;
+export async function checkDatabaseConnection(): Promise<void> {
+  await pool.query('SELECT 1');
+}
+
+export async function closeDatabase(): Promise<void> {
+  await pool.end();
+}
+
+export async function initDatabase() {
+  const { runMigrations } = await import('./migrations/runner');
+  return runMigrations();
 }

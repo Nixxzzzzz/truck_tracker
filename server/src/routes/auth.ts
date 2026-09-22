@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../db';
+import { query } from '../db';
 import { generateToken, requireAuth, requireRole, logAudit, AuthenticatedRequest } from '../middleware/auth';
 import { User } from '../types';
 
@@ -15,9 +15,10 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const user = db
-      .prepare(`SELECT * FROM users WHERE LOWER(email) = LOWER(?)`)
-      .get(email) as User | undefined;
+    const user = (await query<User>(
+      `SELECT * FROM users WHERE LOWER(email) = LOWER($1)`,
+      [email]
+    )).rows[0];
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -51,14 +52,15 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const user = db
-    .prepare(`SELECT id, name, email, role, phone, created_at FROM users WHERE id = ?`)
-    .get(req.user.id) as any;
+  const user = (await query(
+    `SELECT id, name, email, role, phone, created_at FROM users WHERE id = $1`,
+    [req.user.id]
+  )).rows[0];
 
   if (!user) {
     return res.status(404).json({ error: 'User record not found' });
@@ -75,13 +77,13 @@ router.post('/logout', (_req, res) => {
 // USER & MANAGER MANAGEMENT (Manager Role Only)
 // ==========================================
 
-router.get('/users', requireAuth, requireRole('MANAGER'), (_req, res) => {
+router.get('/users', requireAuth, requireRole('MANAGER'), async (_req, res) => {
   try {
-    const users = db.prepare(`
+    const users = (await query(`
       SELECT id, name, email, role, phone, created_at
       FROM users
       ORDER BY role ASC, name ASC
-    `).all();
+    `)).rows;
     return res.json({ users });
   } catch (err: any) {
     console.error('[Auth Error] Retrieve users failure:', err);
@@ -101,7 +103,7 @@ router.post('/users', requireAuth, requireRole('MANAGER'), async (req: Authentic
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();
-  const existing = db.prepare(`SELECT id FROM users WHERE LOWER(email) = ?`).get(normalizedEmail);
+  const existing = (await query(`SELECT id FROM users WHERE LOWER(email) = $1`, [normalizedEmail])).rows[0];
   if (existing) {
     return res.status(409).json({ error: `An account with email "${normalizedEmail}" already exists` });
   }
@@ -111,12 +113,12 @@ router.post('/users', requireAuth, requireRole('MANAGER'), async (req: Authentic
     const hash = await bcrypt.hash(password, 10);
     const assignedRole = role === 'DRIVER' ? 'DRIVER' : 'MANAGER';
 
-    db.prepare(`
+    await query(`
       INSERT INTO users (id, name, email, password_hash, role, phone)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, name.trim(), normalizedEmail, hash, assignedRole, phone ? phone.trim() : null);
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [id, name.trim(), normalizedEmail, hash, assignedRole, phone ? phone.trim() : null]);
 
-    logAudit({
+    await logAudit({
       action: 'USER_CREATED',
       newValue: `Created ${assignedRole} account for ${name} (${normalizedEmail})`,
       changedBy: req.user!.id
@@ -142,7 +144,7 @@ router.put('/users/:id', requireAuth, requireRole('MANAGER'), async (req: Authen
   const { id } = req.params;
   const { name, phone, password, role } = req.body;
 
-  const existing = db.prepare(`SELECT * FROM users WHERE id = ?`).get(id) as User | undefined;
+  const existing = (await query<User>(`SELECT * FROM users WHERE id = $1`, [id])).rows[0];
   if (!existing) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -156,22 +158,22 @@ router.put('/users/:id', requireAuth, requireRole('MANAGER'), async (req: Authen
       newHash = await bcrypt.hash(String(password).trim(), 10);
     }
 
-    db.prepare(`
+    await query(`
       UPDATE users
-      SET name = COALESCE(?, name),
-          phone = COALESCE(?, phone),
-          password_hash = ?,
-          role = COALESCE(?, role)
-      WHERE id = ?
-    `).run(
+      SET name = COALESCE($1, name),
+          phone = COALESCE($2, phone),
+          password_hash = $3,
+          role = COALESCE($4, role)
+      WHERE id = $5
+    `, [
       name ? name.trim() : null,
       phone ? phone.trim() : null,
       newHash,
       role || null,
       id
-    );
+    ]);
 
-    logAudit({
+    await logAudit({
       action: 'USER_UPDATED',
       newValue: `Updated account details/password for user ${existing.email}`,
       changedBy: req.user!.id
@@ -184,30 +186,30 @@ router.put('/users/:id', requireAuth, requireRole('MANAGER'), async (req: Authen
   }
 });
 
-router.delete('/users/:id', requireAuth, requireRole('MANAGER'), (req: AuthenticatedRequest, res: Response) => {
+router.delete('/users/:id', requireAuth, requireRole('MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
 
   if (req.user!.id === id) {
     return res.status(400).json({ error: 'You cannot delete your own active session account' });
   }
 
-  const target = db.prepare(`SELECT * FROM users WHERE id = ?`).get(id) as User | undefined;
+  const target = (await query<User>(`SELECT * FROM users WHERE id = $1`, [id])).rows[0];
   if (!target) {
     return res.status(404).json({ error: 'User not found' });
   }
 
   // Ensure at least one manager remains in the system
   if (target.role === 'MANAGER') {
-    const managerCount = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'MANAGER'`).get() as { count: number };
-    if (managerCount.count <= 1) {
+    const managerCount = (await query<{ count: string }>(`SELECT COUNT(*)::text as count FROM users WHERE role = 'MANAGER'`)).rows[0];
+    if (Number(managerCount.count) <= 1) {
       return res.status(400).json({ error: 'Cannot delete the only remaining manager account' });
     }
   }
 
   try {
-    db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+    await query(`DELETE FROM users WHERE id = $1`, [id]);
 
-    logAudit({
+    await logAudit({
       action: 'USER_DELETED',
       originalValue: `${target.name} (${target.email})`,
       changedBy: req.user!.id

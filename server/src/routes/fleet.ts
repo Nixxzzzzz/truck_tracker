@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { db } from '../db';
+import { query, withTransaction } from '../db';
 import { requireAuth, requireRole, logAudit, AuthenticatedRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { generateAreaCode } from '../services/areaCode';
@@ -22,55 +22,40 @@ function normalizeDocTypeKey(typeStr?: string): string {
   return upper;
 }
 
-router.get('/vehicles', requireAuth, (req, res) => {
-  const vehicles = db.prepare(`
+router.get('/vehicles', requireAuth, async (req, res) => {
+  const vehicles = (await query(`
     SELECT v.*, u.name as assigned_driver_name,
            (SELECT COUNT(*) FROM trips WHERE vehicle_id = v.id) as total_trips,
            (SELECT id FROM trips WHERE vehicle_id = v.id AND status IN ('IN_PROGRESS', 'AT_DESTINATION', 'DELAYED', 'RETURNING') LIMIT 1) as active_trip_id
     FROM vehicles v
     LEFT JOIN users u ON v.assigned_driver_id = u.id
     ORDER BY v.created_at DESC
-  `).all() as any[];
+  `)).rows as any[];
 
   // Attach vehicle compliance documents and traffic challans
-  const docStmt = db.prepare(`SELECT * FROM vehicle_documents WHERE vehicle_id = ? ORDER BY expiry_date ASC`);
-  const latestEventStmt = db.prepare(`
-    SELECT latitude, longitude, gps_accuracy, timestamp, details
-    FROM trip_events
-    WHERE vehicle_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
-    ORDER BY timestamp DESC
-    LIMIT 1
-  `);
-  const tripLocationStmt = db.prepare(`
-    SELECT starting_latitude, starting_longitude, starting_location, status
-    FROM trips
-    WHERE id = ?
-  `);
-
-  let challanStmt: any = null;
-  try {
-    challanStmt = db.prepare(`SELECT * FROM vehicle_challans WHERE vehicle_id = ? ORDER BY date DESC`);
-  } catch {}
-
   for (const v of vehicles) {
-    const rawDocs = docStmt.all(v.id) as any[];
+    const rawDocs = (await query(`SELECT * FROM vehicle_documents WHERE vehicle_id = $1 ORDER BY expiry_date ASC`, [v.id])).rows as any[];
     v.documents = rawDocs.map((d) => ({
       ...d,
       type: normalizeDocTypeKey(d.document_type || d.type),
       document_type: d.document_type || d.type
     }));
-    if (challanStmt) {
-      try {
-        v.challans = challanStmt.all(v.id) as any[];
-      } catch {
-        v.challans = [];
-      }
-    } else {
-      v.challans = [];
-    }
+    const challans = await query(`SELECT * FROM vehicle_challans WHERE vehicle_id = $1 ORDER BY date DESC`, [v.id]).catch(() => ({ rows: [] }));
+    v.challans = challans.rows;
+    const latestEvent = (await query(`
+    SELECT latitude, longitude, gps_accuracy, timestamp, details
+    FROM trip_events
+    WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
+    ORDER BY timestamp DESC
+    LIMIT 1
+  `, [v.id])).rows[0] as any;
+    const activeTrip = v.active_trip_id ? (await query(`
+    SELECT starting_latitude, starting_longitude, starting_location, status
+    FROM trips
+    WHERE id = $1
+  `, [v.active_trip_id])).rows[0] as any : null;
 
     // Attach live telematics GPS coordinates
-    const latestEvent = latestEventStmt.get(v.id) as any;
     if (latestEvent && typeof latestEvent.latitude === 'number' && typeof latestEvent.longitude === 'number') {
       v.latitude = latestEvent.latitude;
       v.longitude = latestEvent.longitude;
@@ -80,7 +65,6 @@ router.get('/vehicles', requireAuth, (req, res) => {
       v.speed_kmh = v.status === 'ON_TRIP' ? 44 : 0;
       v.heading_deg = 45;
     } else if (v.active_trip_id) {
-      const activeTrip = tripLocationStmt.get(v.active_trip_id) as any;
       if (activeTrip && typeof activeTrip.starting_latitude === 'number' && typeof activeTrip.starting_longitude === 'number') {
         v.latitude = activeTrip.starting_latitude;
         v.longitude = activeTrip.starting_longitude;

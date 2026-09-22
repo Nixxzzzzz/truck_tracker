@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { query } from '../db';
 
 const STOP_WORDS = new Set([
   'the', 'and', 'of', 'facility', 'depot', 'hub', 'terminal', 'warehouse',
@@ -24,10 +24,13 @@ function getPlaceCode(name: string): string {
   return (words[0] || 'SITE').slice(0, 3).toUpperCase();
 }
 
-export function generateAreaCode(name: string, address: string): string {
+export async function generateAreaCode(name: string, address: string): Promise<string> {
   const postalCode = address.match(/\b\d{6}\b/)?.[0] || '000000';
   const base = `${getRegionCode(name, address)}-${getPlaceCode(name)}-${postalCode}`;
-  const existing = db.prepare(`SELECT area_code FROM destinations WHERE area_code LIKE ?`).all(`${base}-%`) as { area_code: string }[];
+  const existing = (await query<{ area_code: string }>(
+    `SELECT area_code FROM destinations WHERE area_code LIKE $1`,
+    [`${base}-%`]
+  )).rows;
   const nextSequence = existing.reduce((max, row) => {
     const sequence = Number(row.area_code.slice(base.length + 1));
     return Number.isFinite(sequence) ? Math.max(max, sequence) : max;

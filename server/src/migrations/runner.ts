@@ -1,6 +1,4 @@
-import { db } from '../db';
-import fs from 'fs';
-import path from 'path';
+import { query, withTransaction } from '../db';
 import { generateAreaCode } from '../services/areaCode';
 
 export interface MigrationRecord {
@@ -15,37 +13,49 @@ export interface MigrationResult {
   migrations: MigrationRecord[];
 }
 
+type MigrationClient = {
+  query: (text: string, values?: unknown[]) => Promise<any>;
+};
+type Migration = {
+  version: number;
+  name: string;
+  up: (client: MigrationClient) => Promise<void>;
+};
+
 /**
  * Ensures the migration catalog table exists.
  */
-function ensureMigrationCatalog(): void {
-  db.exec(`
+async function ensureMigrationCatalog(client: MigrationClient = { query }): Promise<void> {
+  await client.query(`
     CREATE TABLE IF NOT EXISTS _schema_migrations (
       version INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
-      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
   `);
 }
 
 /**
  * Returns all migration versions already applied to this database.
  */
-export function getAppliedMigrations(): MigrationRecord[] {
-  ensureMigrationCatalog();
-  return (db.prepare(`SELECT version, name, applied_at FROM _schema_migrations ORDER BY version ASC`).all() as unknown) as MigrationRecord[];
+export async function getAppliedMigrations(): Promise<MigrationRecord[]> {
+  await ensureMigrationCatalog();
+  const result = await query<MigrationRecord>(
+    `SELECT version, name, applied_at FROM _schema_migrations ORDER BY version ASC`
+  );
+  return result.rows;
 }
 
 /**
  * Canonical ordered migrations.
  * Each migration is executed inside a single atomic transaction.
  */
-const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
+const MIGRATIONS: Migration[] = [
   {
     version: 1,
     name: '001_initial_core_schema',
-    up: () => {
-      db.exec(`
+    up: async (client) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
@@ -53,7 +63,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           password_hash TEXT NOT NULL,
           role TEXT CHECK(role IN ('DRIVER', 'MANAGER')) NOT NULL,
           phone TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS vehicles (
@@ -64,7 +74,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           assigned_driver_id TEXT REFERENCES users(id),
           status TEXT CHECK(status IN ('AVAILABLE', 'ON_TRIP', 'MAINTENANCE', 'INACTIVE')) DEFAULT 'AVAILABLE',
           notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS drivers (
@@ -73,7 +83,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           employee_id TEXT UNIQUE NOT NULL,
           assigned_vehicle_id TEXT REFERENCES vehicles(id),
           status TEXT CHECK(status IN ('AVAILABLE', 'ON_TRIP', 'OFF_DUTY', 'INACTIVE')) DEFAULT 'AVAILABLE',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS destinations (
@@ -87,7 +97,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           geofence_radius_meters INTEGER DEFAULT 150,
           notes TEXT,
           is_active INTEGER DEFAULT 1,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS trips (
@@ -110,8 +120,8 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           calculated_distance_km REAL,
           notes TEXT,
           created_by TEXT REFERENCES users(id),
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS trip_stops (
@@ -135,7 +145,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           arrival_diff_minutes INTEGER,
           status TEXT CHECK(status IN ('PENDING', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED', 'FAILED')) DEFAULT 'PENDING',
           notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS activities (
@@ -150,7 +160,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           reference_number TEXT,
           recipient_name TEXT,
           notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS delays (
@@ -169,7 +179,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           gps_accuracy REAL,
           is_resolved INTEGER DEFAULT 0,
           photo_id TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS photos (
@@ -186,7 +196,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           latitude REAL,
           longitude REAL,
           gps_accuracy REAL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS trip_events (
@@ -201,7 +211,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           longitude REAL,
           gps_accuracy REAL,
           details TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS audit_logs (
@@ -213,7 +223,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           new_value TEXT,
           changed_by TEXT NOT NULL REFERENCES users(id),
           reason TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS google_sheet_sync (
@@ -222,8 +232,8 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           record_id TEXT NOT NULL,
           sync_status TEXT CHECK(sync_status IN ('SYNCED', 'PENDING', 'FAILED')) DEFAULT 'PENDING',
           error_message TEXT,
-          last_synced_at DATETIME,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          last_synced_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE INDEX IF NOT EXISTS idx_trips_driver_status ON trips(driver_id, status);
@@ -240,8 +250,8 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
   {
     version: 2,
     name: '002_add_enterprise_compliance_and_maintenance',
-    up: () => {
-      db.exec(`
+    up: async (client) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS vehicle_documents (
           id TEXT PRIMARY KEY,
           vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
@@ -254,8 +264,8 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           status TEXT CHECK(status IN ('VALID', 'EXPIRING_SOON', 'EXPIRED', 'PENDING_VERIFICATION')) DEFAULT 'VALID',
           file_path TEXT,
           notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS maintenance_records (
@@ -273,7 +283,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           performed_by TEXT,
           next_service_due_km INTEGER,
           next_service_due_date TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS fuel_transactions (
@@ -290,7 +300,7 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           payment_mode TEXT CHECK(payment_mode IN ('FLEET_CARD', 'CASH', 'CORPORATE_UPI', 'DIRECT_BILLING')) DEFAULT 'FLEET_CARD',
           receipt_reference TEXT,
           notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS operational_exceptions (
@@ -305,10 +315,10 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           location_context TEXT,
           is_acknowledged INTEGER DEFAULT 0,
           acknowledged_by TEXT REFERENCES users(id),
-          acknowledged_at DATETIME,
+          acknowledged_at TIMESTAMPTZ,
           resolution_status TEXT CHECK(resolution_status IN ('OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED')) DEFAULT 'OPEN',
           resolution_notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
         CREATE INDEX IF NOT EXISTS idx_vehicle_docs_vehicle ON vehicle_documents(vehicle_id, expiry_date);
@@ -322,32 +332,14 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
   {
     version: 3,
     name: '003_add_erp_references_and_performance_indexes',
-    up: () => {
-      // Safely alter tables if columns do not exist
-      const vehicleCols = (db.prepare(`PRAGMA table_info(vehicles)`).all() as any[]).map((c) => c.name);
-      if (!vehicleCols.includes('fleet_unit_id')) {
-        db.exec(`ALTER TABLE vehicles ADD COLUMN fleet_unit_id TEXT;`);
-      }
-      if (!vehicleCols.includes('chassis_number')) {
-        db.exec(`ALTER TABLE vehicles ADD COLUMN chassis_number TEXT;`);
-      }
-      if (!vehicleCols.includes('telematics_imei')) {
-        db.exec(`ALTER TABLE vehicles ADD COLUMN telematics_imei TEXT;`);
-      }
-
-      const tripCols = (db.prepare(`PRAGMA table_info(trips)`).all() as any[]).map((c) => c.name);
-      if (!tripCols.includes('sap_shipment_num')) {
-        db.exec(`ALTER TABLE trips ADD COLUMN sap_shipment_num TEXT;`);
-      }
-      if (!tripCols.includes('erp_delivery_doc')) {
-        db.exec(`ALTER TABLE trips ADD COLUMN erp_delivery_doc TEXT;`);
-      }
-      if (!tripCols.includes('cost_center')) {
-        db.exec(`ALTER TABLE trips ADD COLUMN cost_center TEXT;`);
-      }
-
-      // Additional performance indexes for multi-stop queries
-      db.exec(`
+    up: async (client) => {
+      await client.query(`
+        ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fleet_unit_id TEXT;
+        ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS chassis_number TEXT;
+        ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS telematics_imei TEXT;
+        ALTER TABLE trips ADD COLUMN IF NOT EXISTS sap_shipment_num TEXT;
+        ALTER TABLE trips ADD COLUMN IF NOT EXISTS erp_delivery_doc TEXT;
+        ALTER TABLE trips ADD COLUMN IF NOT EXISTS cost_center TEXT;
         CREATE INDEX IF NOT EXISTS idx_trips_created_at ON trips(created_at);
         CREATE INDEX IF NOT EXISTS idx_destinations_active ON destinations(is_active);
       `);
@@ -356,59 +348,43 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
   {
     version: 4,
     name: '004_add_destination_area_code',
-    up: () => {
-      const destCols = (db.prepare(`PRAGMA table_info(destinations)`).all() as any[]).map((c) => c.name);
-      if (!destCols.includes('area_code')) {
-        db.exec(`ALTER TABLE destinations ADD COLUMN area_code TEXT;`);
-      }
-      db.exec(`CREATE INDEX IF NOT EXISTS idx_destinations_area_code ON destinations(area_code);`);
+    up: async (client) => {
+      await client.query(`
+        ALTER TABLE destinations ADD COLUMN IF NOT EXISTS area_code TEXT;
+        CREATE INDEX IF NOT EXISTS idx_destinations_area_code ON destinations(area_code);
+      `);
     }
   },
   {
     version: 5,
     name: '005_generate_destination_area_codes',
-    up: () => {
-      const destinations = db.prepare(`
+    up: async (client) => {
+      const destinations = (await client.query(`
         SELECT id, name, address FROM destinations
         WHERE area_code IS NULL OR area_code = ''
         ORDER BY created_at ASC, id ASC
-      `).all() as { id: string; name: string; address: string }[];
+      `)).rows as { id: string; name: string; address: string }[];
 
       for (const destination of destinations) {
-        db.prepare(`UPDATE destinations SET area_code = ? WHERE id = ?`)
-          .run(generateAreaCode(destination.name, destination.address), destination.id);
+        await client.query(
+          `UPDATE destinations SET area_code = $1 WHERE id = $2`,
+          [await generateAreaCode(destination.name, destination.address), destination.id]
+        );
       }
 
-      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_destinations_area_code_unique ON destinations(area_code);`);
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_destinations_area_code_unique ON destinations(area_code)`);
     }
   },
   {
     version: 6,
     name: '006_add_driver_vehicle_docs_and_photos',
-    up: () => {
-      // 1. Add photo_url to vehicles
-      const vehicleCols = (db.prepare(`PRAGMA table_info(vehicles)`).all() as any[]).map((c) => c.name);
-      if (!vehicleCols.includes('photo_url')) {
-        db.exec(`ALTER TABLE vehicles ADD COLUMN photo_url TEXT;`);
-      }
-
-      // 2. Add columns to drivers
-      const driverCols = (db.prepare(`PRAGMA table_info(drivers)`).all() as any[]).map((c) => c.name);
-      if (!driverCols.includes('avatar_url')) {
-        db.exec(`ALTER TABLE drivers ADD COLUMN avatar_url TEXT;`);
-      }
-      if (!driverCols.includes('license_number')) {
-        db.exec(`ALTER TABLE drivers ADD COLUMN license_number TEXT;`);
-      }
-      if (!driverCols.includes('license_category')) {
-        db.exec(`ALTER TABLE drivers ADD COLUMN license_category TEXT;`);
-      }
-      if (!driverCols.includes('emergency_phone')) {
-        db.exec(`ALTER TABLE drivers ADD COLUMN emergency_phone TEXT;`);
-      }
-
-      // 3. Create driver_documents table
-      db.exec(`
+    up: async (client) => {
+      await client.query(`
+        ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS photo_url TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_number TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_category TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_phone TEXT;
         CREATE TABLE IF NOT EXISTS driver_documents (
           id TEXT PRIMARY KEY,
           driver_id TEXT NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
@@ -422,36 +398,27 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           file_url TEXT,
           file_name TEXT,
           file_size INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_driver_docs_driver ON driver_documents(driver_id);
+        ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS file_url TEXT;
+        ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS file_name TEXT;
+        ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS file_size INTEGER;
       `);
-
-      // 4. Ensure vehicle_documents has file_url, file_name, file_size
-      const vDocCols = (db.prepare(`PRAGMA table_info(vehicle_documents)`).all() as any[]).map((c) => c.name);
-      if (!vDocCols.includes('file_url')) {
-        db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_url TEXT;`);
-      }
-      if (!vDocCols.includes('file_name')) {
-        db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_name TEXT;`);
-      }
-      if (!vDocCols.includes('file_size')) {
-        db.exec(`ALTER TABLE vehicle_documents ADD COLUMN file_size INTEGER;`);
-      }
     }
   },
   {
     version: 7,
     name: '007_add_vehicle_challans_and_proofs',
-    up: () => {
-      db.exec(`
+    up: async (client) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS vehicle_challans (
           id TEXT PRIMARY KEY,
           vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
           challan_number TEXT NOT NULL,
           date TEXT NOT NULL,
           violation_reason TEXT NOT NULL,
-          amount REAL NOT NULL,
+          amount DOUBLE PRECISION NOT NULL,
           status TEXT CHECK(status IN ('PENDING', 'PAID')) DEFAULT 'PENDING',
           location TEXT,
           payment_date TEXT,
@@ -459,8 +426,8 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
           proof_url TEXT,
           proof_name TEXT,
           proof_size INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_vehicle_challans_vehicle ON vehicle_challans(vehicle_id, status);
       `);
@@ -471,9 +438,9 @@ const MIGRATIONS: Array<{ version: number; name: string; up: () => void }> = [
 /**
  * Executes all pending schema migrations idempotently.
  */
-export function runMigrations(): MigrationResult {
-  ensureMigrationCatalog();
-  const applied = getAppliedMigrations();
+export async function runMigrations(): Promise<MigrationResult> {
+  await ensureMigrationCatalog();
+  const applied = await getAppliedMigrations();
   const appliedVersions = new Set(applied.map((m) => m.version));
 
   let appliedCount = 0;
@@ -482,21 +449,19 @@ export function runMigrations(): MigrationResult {
     if (!appliedVersions.has(migration.version)) {
       console.log(`[Migrations] Applying version ${migration.version}: ${migration.name}...`);
       
-      const execute = db.transaction(() => {
-        migration.up();
-        db.prepare(`
-          INSERT INTO _schema_migrations (version, name, applied_at)
-          VALUES (?, ?, CURRENT_TIMESTAMP)
-        `).run(migration.version, migration.name);
+      await withTransaction(async (client) => {
+        await migration.up(client);
+        await client.query(
+          `INSERT INTO _schema_migrations (version, name, applied_at) VALUES ($1, $2, NOW())`,
+          [migration.version, migration.name]
+        );
       });
-
-      execute();
       appliedCount++;
       console.log(`[Migrations] ✓ Version ${migration.version} applied successfully.`);
     }
   }
 
-  const finalApplied = getAppliedMigrations();
+  const finalApplied = await getAppliedMigrations();
   const currentVersion = finalApplied.length > 0 ? finalApplied[finalApplied.length - 1].version : 0;
 
   return {
@@ -507,12 +472,13 @@ export function runMigrations(): MigrationResult {
 }
 
 if (require.main === module) {
-  try {
-    const result = runMigrations();
+  runMigrations()
+    .then((result) => {
     console.log(`[Migrations] Execution complete. Current schema version: ${result.currentVersion} (${result.appliedCount} applied this run).`);
     process.exit(0);
-  } catch (err) {
+    })
+    .catch((err) => {
     console.error('[Migrations] Execution failed:', err);
     process.exit(1);
-  }
+    });
 }
