@@ -134,11 +134,13 @@ After deployment:
 5. Confirm uploaded photo access.
 6. Keep the previous deployment available until verification is complete.
 
-## 7. Azure Student Subscription Option
+## 7. Azure Student Subscription: Not For Company Production
 
-Neon Free is the preferred database for a strictly no-cost setup. Azure for Students provides credits, but Azure Database for PostgreSQL consumes those credits and is not guaranteed to remain free after the allowance ends.
+Do not use a personal Azure Student subscription for the company production database. The subscription is tied to an individual student, its credits expire, and the company may lose access to the database when the student account or allowance ends. It also does not provide appropriate company billing and ownership controls.
 
-Use Azure only when the subscription shows an active free grant and the expected cost is `0` before creation:
+Use Neon Free only for development or a temporary test environment. For company production, use a company-owned Neon, Render Postgres, or managed PostgreSQL account with an organization-owned email, billing account, backups, and access policy.
+
+If Azure is later approved by the company, create the database under the company's Azure tenant and subscription. Do not use a Student subscription for that deployment:
 
 1. Open Azure Portal and select the Student subscription.
 2. Search for **Azure Database for PostgreSQL flexible servers**.
